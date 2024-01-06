@@ -13,7 +13,20 @@ from scipy import stats
 from tqdm import tqdm
 
 
+def calculate_ME(arr):
+    print("[+] Calculating motion energy")
+    for i, frame in enumerate(tqdm(arr)):
+        if i > 0:
+            arr_ME[i-1] = cv2.absdiff(frame, old_frame)
+        else:
+            arr_ME = np.empty(shape=(arr.shape[0]-1, arr.shape[1], arr.shape[2]), dtype=np.uint8)
+        old_frame = frame
+    
+    return arr_ME
+
+
 def extract_metadata(file_2p):
+    print("[+] Extracting metadata from 2p video")
     filepath, filename = os.path.split(os.path.abspath(file_2p))
     
     all_meta = scanimage.ScanImageTiffReader(file_2p).metadata()
@@ -82,79 +95,54 @@ def extract_metadata(file_2p):
         return metadata_file
 		
 
-def segment_2p_video(file_2p, metadata_file, do_binning):    
-    print("[+] Parsing " + metadata_file)
-    num_rois = 0
-    true_image_size = 0
-    roi_y = []
-        
-    search_rois = True
-    while search_rois:
-        with open(metadata_file, 'r') as f:
-            last_line = f.readlines()[-(num_rois+1)]
-            if 'roi0 ' in last_line: # done searching for rois
-                search_rois = False
-        
-        roi_y.insert(0, int(last_line[last_line.find(',')+1:-2]))
-        true_image_size += roi_y[0]
-        num_rois += 1
-      
-    print("\tFound {} ROIs".format(num_rois))
-                    
-    print("[+] Reading " + file_2p + "...")
-    data2p = scanimage.ScanImageTiffReader(file_2p).data()
-    num_junk_lines = data2p.shape[1] - true_image_size
-    junk_lines_per_frame = int(num_junk_lines/num_rois)
+def ffmpeg_read_video(beh_vid_file):
+    probe = ffmpeg.probe(beh_vid_file)
+    video_info = next(s for s in probe['streams'] if s['codec_type'] == 'video')
+    width = int(video_info['width'])
+    height = int(video_info['height'])
+    fps = eval(video_info['avg_frame_rate'])
+    # num_frames = int(video_info['nb_frames'])
+    out, err = (
+        ffmpeg
+            .input(beh_vid_file)
+            .output('pipe:', format='rawvideo', pix_fmt='rgb24', loglevel="quiet")
+            .run(capture_stdout=True)
+    )
+    beh_stack = (
+        np
+            .frombuffer(out, np.uint8)
+            .reshape([-1, height, width, 3])
+    )
+    return beh_stack, fps
 
-    parent_directory = os.path.dirname(os.path.abspath(file_2p))
 
-    for i, true_roi_height in enumerate(roi_y[::-1]): # index it backwards to account for junk lines
-        roi_path = parent_directory + os.path.sep + 'roi_{}'.format(num_rois-i)
-        set_path(roi_path)
-        
-        frame_height = true_roi_height + junk_lines_per_frame
+def ffmpeg_video_info(beh_vid_file):
+    probe = ffmpeg.probe(beh_vid_file)
+    video_info = next(s for s in probe['streams'] if s['codec_type'] == 'video')
+    width = int(video_info['width'])
+    height = int(video_info['height'])
+    fps = eval(video_info['avg_frame_rate'])
+    # num_frames = int(video_info['nb_frames'])
 
-        cropped_data = data2p[:, -frame_height:, :]
-        data2p = data2p[:, 0:-frame_height, :]
-		
-        print("\t Writing region {} with no binning...".format(num_rois - i))
-        tf.imwrite(roi_path + os.path.sep + 'data.tif', cropped_data, photometric='minisblack')
+    return width, height, fps
 
-        if do_binning:
-            print("\t\t[+] Binning region {}...".format(num_rois-i))
-            set_path(roi_path)
-            cropped_data = downscale_local_mean(cropped_data, (1, 2, 2)).astype('int16')
-            print("\t\t[+] Writing region {} with binning...".format(num_rois - i))
-            tf.imwrite(roi_path + os.path.sep + 'bin2x2x1' + os.path.sep + 'data.tif', cropped_data, photometric='minisblack')
-		
-        del cropped_data # memory management
 
-        
-		
-def bin_2p(file2p, bin_factor=(1, 2, 2)):
-    parent_directory = os.path.dirname(os.path.abspath(file2p))
-    print("[+] Reading " + file2p + "...")
-    data2p = scanimage.ScanImageTiffReader(file2p).data()
-    data2p -= data2p.min()
-    print("\t\t[+] Binning " + file2p + " by {}x{}x{}...".format(*bin_factor))
-    binned_data = downscale_local_mean(data2p, bin_factor).astype('uint16')
-    
-    print("\t\t[+] Writing binned data...")
-    set_path(parent_directory + os.path.sep + 'bin{}x{}x{}'.format(*bin_factor))
-    tf.imwrite(parent_directory + os.path.sep + 'bin{}x{}x{}'.format(*bin_factor) + os.path.sep + 'data.tif', binned_data, photometric='minisblack')
-    
-def set_path(path):
-    """
-    Generates path recursively
-    """
-    if not os.path.exists(path):
-        if len(path.split(os.path.sep)) == 1:
-            raise Exception("Root path has been reached.")
+def ffmpeg_write_video(rgb_stack, video_path, fps=30):
+    process = (
+        ffmpeg
+            .input('pipe:', format='rawvideo', pix_fmt='rgb24', framerate=fps, s='{}x{}'.format(rgb_stack.shape[2], rgb_stack.shape[1]))
+            .output(video_path, pix_fmt='yuv420p')
+            .overwrite_output()
+            .run_async(pipe_stdin=True)
+    )
+    process.stdin.write(
+        rgb_stack
+            .tobytes()
+    )
+    process.stdin.close()
+    process.wait()
 
-        set_path(os.path.sep.join(path.split(os.path.sep)[:-1]))
-        os.mkdir(path)
-        
-        
+     
 def get_dark_frames(frames):
     start_index = 0
     end_index = len(frames)
@@ -189,35 +177,16 @@ def get_dark_frames_gradient_method(behaviour_frames, sigma=15, show_plot=False,
     assert (len(stop) == 1)
     return (start[0][0], stop[0][0])
     
-def ffmpeg_video_info(beh_vid_file):
-    probe = ffmpeg.probe(beh_vid_file)
-    video_info = next(s for s in probe['streams'] if s['codec_type'] == 'video')
-    width = int(video_info['width'])
-    height = int(video_info['height'])
-    fps = eval(video_info['avg_frame_rate'])
-    # num_frames = int(video_info['nb_frames'])
+    
+def movie_svd(movie, k):
+    print("[+] Computing SVD")
+    U, s, Vt = np.linalg.svd(movie, full_matrices=False)
+    U_k = U[:, :k]
+    s_k = np.diag(s[:k])
+    Vt_k = Vt[:k, :]
 
-    return width, height, fps
+    return U_k, s_k, Vt_k
 
-def ffmpeg_read_video(beh_vid_file):
-    probe = ffmpeg.probe(beh_vid_file)
-    video_info = next(s for s in probe['streams'] if s['codec_type'] == 'video')
-    width = int(video_info['width'])
-    height = int(video_info['height'])
-    fps = eval(video_info['avg_frame_rate'])
-    # num_frames = int(video_info['nb_frames'])
-    out, err = (
-        ffmpeg
-            .input(beh_vid_file)
-            .output('pipe:', format='rawvideo', pix_fmt='rgb24', loglevel="quiet")
-            .run(capture_stdout=True)
-    )
-    beh_stack = (
-        np
-            .frombuffer(out, np.uint8)
-            .reshape([-1, height, width, 3])
-    )
-    return beh_stack, fps
 
 def open_cv_read_video(video_path):
     cap = cv2.VideoCapture(video_path)
@@ -233,6 +202,7 @@ def open_cv_read_video(video_path):
 
     cap.release()
     return buf
+
     
 def open_cv_write_video(video_path, output_path, beh_start, beh_stop):
     cap = cv2.VideoCapture(video_path)
@@ -257,6 +227,7 @@ def open_cv_write_video(video_path, output_path, beh_start, beh_stop):
     cap.release()
     out.release()
 
+
 def open_cv_write_video_from_arr(output_path, arr, fps=30):
     print("[+] Writing video")
     height, width = arr[0].shape[:2]
@@ -267,44 +238,76 @@ def open_cv_write_video_from_arr(output_path, arr, fps=30):
         
     out.release()
 
-def calculate_ME(arr):
-    print("[+] Calculating motion energy")
-    for i, frame in enumerate(tqdm(arr)):
-        if i > 0:
-            arr_ME[i-1] = cv2.absdiff(frame, old_frame)
-        else:
-            arr_ME = np.empty(shape=(arr.shape[0]-1, arr.shape[1], arr.shape[2]), dtype=np.uint8)
-        old_frame = frame
-    
-    return arr_ME
-
-def ffmpeg_write_video(rgb_stack, video_path, fps=30):
-    process = (
-        ffmpeg
-            .input('pipe:', format='rawvideo', pix_fmt='rgb24', framerate=fps, s='{}x{}'.format(rgb_stack.shape[2], rgb_stack.shape[1]))
-            .output(video_path, pix_fmt='yuv420p')
-            .overwrite_output()
-            .run_async(pipe_stdin=True)
-    )
-    process.stdin.write(
-        rgb_stack
-            .tobytes()
-    )
-    process.stdin.close()
-    process.wait()
-    
-def movie_svd(movie, k):
-    print("[+] Computing SVD")
-    U, s, Vt = np.linalg.svd(movie, full_matrices=False)
-    U_k = U[:, :k]
-    s_k = np.diag(s[:k])
-    Vt_k = Vt[:k, :]
-
-    return U_k, s_k, Vt_k
 
 def reconstruct_svd(U, s, V):
     print("[+] Reconstructing movie from SVD")
     return np.dot(U, np.dot(s, V))
+
+   
+def segment_2p_video(file_2p, metadata_file, do_binning):    
+    print("[+] Parsing ROIs from metadata")
+    num_rois = 0
+    true_image_size = 0
+    roi_y = []
+        
+    search_rois = True
+    while search_rois:
+        with open(metadata_file, 'r') as f:
+            last_line = f.readlines()[-(num_rois+1)]
+            if 'roi0 ' in last_line: # done searching for rois
+                search_rois = False
+        
+        roi_y.insert(0, int(last_line[last_line.find(',')+1:-2]))
+        true_image_size += roi_y[0]
+        num_rois += 1
+      
+    print("\tFound {} ROIs".format(num_rois))
+                    
+    print("[+] Reading 2-photon data")
+    data2p = scanimage.ScanImageTiffReader(file_2p).data()
+    print(data2p.dtype)
+    
+    if data2p.max() < np.iinfo(np.int16).max:
+        data2p -= data2p.min()
+        data2p = data2p.astype('uint16')
+    
+    num_junk_lines = data2p.shape[1] - true_image_size
+    junk_lines_per_frame = int(num_junk_lines/num_rois)
+
+    parent_directory = os.path.dirname(os.path.abspath(file_2p))
+
+    for i, true_roi_height in enumerate(roi_y[::-1]): # index it backwards to account for junk lines
+        roi_path = parent_directory + os.path.sep + 'roi_{}'.format(num_rois-i)
+        set_path(roi_path)
+        
+        frame_height = true_roi_height + junk_lines_per_frame
+
+        cropped_data = data2p[:, -frame_height:, :]
+        data2p = data2p[:, 0:-frame_height, :]
+
+
+        if do_binning:
+            print("[+] Binning region {}".format(num_rois-i))
+            roi_path = roi_path + os.path.sep + 'bin2x2x1'
+            set_path(roi_path)
+            cropped_data = downscale_local_mean(cropped_data, (1, 2, 2)).astype('uint16')
+
+        roi_filename = roi_path + os.path.sep + 'data.tif'
+        print("[+] Writing region {}".format(num_rois - i))
+        tf.imwrite(roi_filename, cropped_data, photometric='minisblack')
+
+
+def set_path(path):
+    """
+    Generates path recursively
+    """
+    if not os.path.exists(path):
+        if len(path.split(os.path.sep)) == 1:
+            raise Exception("Root path has been reached.")
+
+        set_path(os.path.sep.join(path.split(os.path.sep)[:-1]))
+        os.mkdir(path)
+
 
 def xt(data, fs):
     return np.divide(range(0, data.shape[0]), fs)
