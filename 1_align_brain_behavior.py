@@ -12,7 +12,7 @@ import pandas as pd
 from scipy import signal
 from pathlib import Path
 from tqdm import tqdm
-from get_list_data import expt1_data_list, expt2_data_list, expt2_start_end_idx
+from get_list_data import expt1_data_list, expt2_data_list, expt2_start_end_idx, expt3_data_list
 from helper import *
 import gc
 import numpy as np
@@ -21,10 +21,11 @@ from skimage.transform import rescale, resize, downscale_local_mean
 
 
 # data_root = '/media/user/teamshare/nick/behavior/grooming/1p/'
-data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'
+# data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'
+data_root = '/media/user/teamshare/pankaj/closedloop_rig5_data/'
 
 # data_root = '/mnt/njm/nick/behavior/grooming/1p/'
-data_list = expt2_data_list
+data_list = expt3_data_list
 data_list_idx = expt2_start_end_idx
 
 k = int(1000)
@@ -44,7 +45,11 @@ for ii, expt in enumerate(data_list):
         elif '2p' in data_root:
             brain_arm1_file = data_root + os.sep + mouse_id + os.sep + rec_dir + os.sep + 'arm1' + os.sep + 'resonant.tif'
             brain_arm2_file = data_root + os.sep + mouse_id + os.sep + rec_dir + os.sep + 'arm2' + os.sep + 'resonant.tif'
-
+        elif 'closedloop' in data_root:
+            brain_cam0_file = data_root + os.sep + mouse_id + os.sep + rec_dir + os.sep + mouse_id + '_' + rec_dir + '_cam0.tif'
+            brain_frame_file = str(brain_cam0_file).replace('.tif', '_singleFrame.tif')
+            brain_svd_file = str(brain_cam0_file).replace('.tif', '_svd.mat')
+            brain_cam0_trim_file = str(brain_cam0_file).replace('.tif', '_trim.tif')
 
         beh_vid_trim_file = str(beh_vid_file).replace('.mp4', '_trim.mp4')
         beh_log_trim_file = str(beh_log_file).replace('.txt', '_trim.txt')
@@ -54,7 +59,7 @@ for ii, expt in enumerate(data_list):
         beh_motion_file = str(beh_vid_file).replace('.mp4', '_ME.avi')
         beh_motion_svd_file = str(beh_vid_file).replace('.mp4', '_MEsvd.mat')
 
-        if '1p' in data_root and os.path.isfile(brain_svd_file):
+        if ('1p' in data_root or 'closedloop' in data_root) and os.path.isfile(brain_svd_file):
             print(mouse_id + "_" + rec_dir + " already processed. Skipping...")
             continue
         
@@ -66,7 +71,7 @@ for ii, expt in enumerate(data_list):
         #     continue
 
         if not os.path.isfile(beh_vid_trim_file):
-            if '1p' in data_root:
+            if '1p' in data_root or 'closedloop' in data_root:
                 beh_start, beh_stop = get_dark_frames(beh_stack)
             elif '2p' in data_root: # issues with TTL to scanimage cause inconsistent event timings: use manually selected indices
                 beh_start, beh_stop = data_list_idx[ii][1][jj]
@@ -91,7 +96,7 @@ for ii, expt in enumerate(data_list):
             del beh_log_trim
             del beh_stack
         else:
-            if '1p' in data_root:
+            if '1p' in data_root or 'closedloop' in data_root:
                 print("Reading trim behavior video")
                 beh_stack_trim = open_cv_read_video(beh_vid_trim_file)
                 num_beh_frames = beh_stack_trim.shape[0]
@@ -112,7 +117,10 @@ for ii, expt in enumerate(data_list):
             beh_stack_for_svd = np.reshape(beh_stack_trim, newshape=(beh_stack_trim.shape[0], int(beh_stack_trim.shape[1]*int(beh_stack_trim.shape[2])))).T
             print("Behavior video SVD")
             U, s, V = movie_svd(beh_stack_for_svd, k)
-            V_upsampled = signal.resample(V, num_beh_frames, axis=1)
+            if not "drinking" in mouse_id:
+                V_upsampled = signal.resample(V, num_beh_frames, axis=1)
+            else:
+                V_upsampled = np.copy(V)
             mdic = {"U": U, "s": s, "V": V_upsampled}
             savemat(beh_svd_file, mdic)
             del U
@@ -120,23 +128,24 @@ for ii, expt in enumerate(data_list):
             del V
             del s
             del beh_stack_for_svd
-        
-        if not os.path.isfile(beh_motion_svd_file) or not os.path.isfile(beh_motion_file):
-            beh_stack_ME = calculate_ME(beh_stack_trim)
-            del beh_stack_trim
-            open_cv_write_video_from_arr(beh_motion_file, beh_stack_ME, fps=90)
 
-            beh_stack_ME = np.reshape(beh_stack_ME, newshape=(beh_stack_ME.shape[0], int(beh_stack_ME.shape[1]*int(beh_stack_ME.shape[2])))).T
-            print("Behavior video SVD")
-            U, s, V = movie_svd(beh_stack_ME, k)
-            V_upsampled = signal.resample(V, num_beh_frames, axis=1)
-            mdic = {"U": U, "s": s, "V": V_upsampled}
-            savemat(beh_motion_svd_file, mdic)
-            del U
-            del V_upsampled
-            del V
-            del s
-            del beh_stack_ME
+        if not "drinking" in mouse_id:
+            if not os.path.isfile(beh_motion_svd_file) or not os.path.isfile(beh_motion_file):
+                beh_stack_ME = calculate_ME(beh_stack_trim)
+                del beh_stack_trim
+                open_cv_write_video_from_arr(beh_motion_file, beh_stack_ME, fps=90)
+
+                beh_stack_ME = np.reshape(beh_stack_ME, newshape=(beh_stack_ME.shape[0], int(beh_stack_ME.shape[1]*int(beh_stack_ME.shape[2])))).T
+                print("Behavior video SVD")
+                U, s, V = movie_svd(beh_stack_ME, k)
+                V_upsampled = signal.resample(V, num_beh_frames, axis=1)
+                mdic = {"U": U, "s": s, "V": V_upsampled}
+                savemat(beh_motion_svd_file, mdic)
+                del U
+                del V_upsampled
+                del V
+                del s
+                del beh_stack_ME
             
         #    U, V = movie_svd(beh_stack_ME, k)
         #    V_upsampled = signal.resample(V, num_beh_frames, axis=1)
@@ -145,7 +154,7 @@ for ii, expt in enumerate(data_list):
 
         gc.collect()        
 
-        if '1p' in data_root:
+        if '1p' in data_root or 'closedloop' in data_root:
             if not os.path.isfile(brain_cam0_file):
                 print('No Brain data, Skip ', brain_cam0_file)
                 continue
@@ -165,7 +174,10 @@ for ii, expt in enumerate(data_list):
                 brain_stack_trim = np.reshape(brain_stack_trim, newshape=(brain_stack_trim.shape[0], int(brain_stack_trim.shape[1] * brain_stack_trim.shape[2]))).T
                 print("SVD on brain")
                 U, s, V = movie_svd(brain_stack_trim, k)
-                V_upsampled = signal.resample(V, num_beh_frames, axis=1)            
+                if not "drinking" in mouse_id:
+                    V_upsampled = signal.resample(V, num_beh_frames, axis=1)     
+                else:       
+                    V_upsampled = np.copy(V)
                 mdic = {"U": U, "s": s, "V": V_upsampled}
                 savemat(brain_svd_file, mdic)
         elif '2p' in data_root:
