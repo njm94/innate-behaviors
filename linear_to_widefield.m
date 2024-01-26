@@ -2,11 +2,10 @@ clear, clc
 
 addpath(genpath('Y:\nick\2p\code'));
 
-[wfi_file, wfi_path] = uigetfile('*.tif','Select widefield reference image.', 'Y:\nick\2p');
-data_wfi = loadtiff([wfi_path, wfi_file]);
+[wfi_file, wfi_path] = uigetfile('*.tif','Select widefield reference image.', 'Y:\nick\behavior\grooming\2p')
 frame_wfi = uint16(imflatfield(mean(data_wfi, 3), 100));
 
-[lin_file, lin_path] = uigetfile('*.tif','Select 2-photon linear scan image.', 'Y:\nick\2p');
+[lin_file, lin_path] = uigetfile('*.tif','Select 2-photon linear scan image.', 'Y:\nick\behavior\grooming\2p');
 data_lin = loadtiff([lin_path, lin_file]);
 frame_lin = uint16(mean(data_lin, 3));
 

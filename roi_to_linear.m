@@ -1,12 +1,12 @@
 clear, clc
 
-addpath(genpath('Y:\nick\2p\code'));
+% addpath(genpath('C:\Users\user\Documents\Nick\grooming'));
 
-[roi_file, roi_path] = uigetfile('*.tif','Select resonant scan ROI data.', 'Y:\nick\2p');
+[roi_file, roi_path] = uigetfile('*.tif','Select resonant scan ROI data.', 'Y:\nick\behavior\grooming\2p');
 data_roi = loadtiff([roi_path, roi_file]);
 frame_roi = uint16(mean(data_roi, 3));
 
-[lin_file, lin_path] = uigetfile('*.tif','Select 2-photon linear scan image.', 'Y:\nick\2p');
+[lin_file, lin_path] = uigetfile('*.tif','Select 2-photon linear scan image.', 'Y:\nick\behavior\grooming\2p');
 data_lin = loadtiff([lin_path, lin_file]);
 frame_lin = uint16(mean(data_lin, 3));
 
