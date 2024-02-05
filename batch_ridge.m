@@ -9,7 +9,7 @@ addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff')
 fileID = fopen('expt1_datalist.txt','r');
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
-for j = 19%1:length(data_list{1})
+for j = 14:19%1:length(data_list{1})
     data_dir = data_list{1}{j};
     disp(['Starting ' data_dir])
     fPath = [data_dir filesep 'ridge_outputs_ipsi_contra_bilatInc_forelimbMovExc_audio_drop_lick_granular' filesep];
@@ -32,6 +32,7 @@ for j = 19%1:length(data_list{1})
         grooming_file = [data_dir, filesep, 'grooming_events_roi_filtered.mat'];
         dlc_speed_file = [data_dir, filesep, get_file_with_str(data_dir, 'speed.csv')];
         timestamp_file = [data_dir, filesep, get_file_with_str(data_dir, 'trim.txt')];
+        snippets_dir = [data_dir filesep 'snippets'];
     catch
         disp('Missing one or more of the required files. Skipping...')
         continue
@@ -147,9 +148,6 @@ for j = 19%1:length(data_list{1})
         water_drop(trial_start+ceil(2*fs): trial_start+ceil(3.5*fs))=1;
     end
     
-    
-    
-    
     %% build design matrix
     disp('Building design matrix')
     bopts.frameRate = fs;
@@ -241,7 +239,7 @@ moveLabels = {'audio', 'drop', 'lick', 'elliptical', 'largeleft', 'largeright', 
             reducedMat(:, i) = modelCorr(Vbrain, Vreduced{i}, Ubrain) .^2; %compute explained variance
         end
     %     reducedMat = reshape(reducedMat, 128, 128, length(regLabels));
-        save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels'); %save some results
+        save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
     end
 
     

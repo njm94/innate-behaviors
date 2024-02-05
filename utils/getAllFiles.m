@@ -3,15 +3,13 @@ function fileList = getAllFiles(dirName, ext)
 %
 % input:
 %   dirName (directory name, string)
-%   ext     (filename extension, string, eg .tif, .mat, .csv, etc)
+%   ext     (string, eg .tif, .mat, .csv, etc)
 %
 % output:
 %   fileList (list of file names, cell array of strings)
 
 if nargin < 2 || isempty(ext), ext = '.'; end
 
-assert(contains(ext, '.'), ...
-    'Filename extension must include the dot (eg .mat or .csv).');
 
 dirData = dir(dirName); 
 
@@ -21,5 +19,7 @@ fileList = {dirData(~dirIndex).name}';
 
 % restrict fileList to specified filename extension
 fileList = fileList( contains(fileList, ext) );
+
+if length(fileList) == 1, fileList = cell2mat(fileList); end
 
 end
