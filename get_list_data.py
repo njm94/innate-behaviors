@@ -10,12 +10,12 @@ expt1_data_list.append(['HYL3_tTA', [
     ]])
 
 expt1_data_list.append(['IBL2_tTA', [
-    #'20231106160858', # spontaneous
-    #'20231110102111', # spontaneous
-    #'20231112060901', # evoked
-    #'20231114144125', # evoked
-    #'20231116164500', # evoked
-    #'20231120033323', # evoked
+    '20231106160858', # spontaneous
+    '20231110102111', # spontaneous
+    '20231112060901', # evoked
+    '20231114144125', # evoked
+    '20231116164500', # evoked
+    '20231120033323', # evoked
     ]])
     
 expt1_data_list.append(['HYR3_tTA', [ # ignore HYR3 due to bad window
@@ -26,24 +26,24 @@ expt1_data_list.append(['HYR3_tTA', [ # ignore HYR3 due to bad window
     #'20231116180734', # evoked
     # '20231120040417', # evoked
     ]])
-
+  
 expt1_data_list.append(['GER2_ai94', [
-    #'20231106165217', # spontaneous
-    #'20231110151516', # spontaneous
-    #'20231112080621', # evoked
-    #'20231114170556', # evoked
-    #'20231116173257', # evoked
-    #'20231120025554', # evoked
+    '20231106165217', # spontaneous
+    '20231110151516', # spontaneous
+    '20231112080621', # evoked
+    '20231114170556', # evoked
+    '20231116173257', # evoked
+    '20231120025554', # evoked
     ]])
     
 expt1_data_list.append(['ECR2_thy1', [
-    #'20231106185006', # spontaneous
-    #'20231110160844', # spontaneous
-    #'20231112052459', # evoked
-    #'20231114151923', # evoked
-    #'20231116161015', # evoked
-    #'20231119121329', # evoked
-    #'20231120051613', # evoked
+    '20231106185006', # spontaneous
+    '20231110160844', # spontaneous
+    '20231112052459', # evoked
+    '20231114151923', # evoked
+    '20231116161015', # evoked
+    '20231119121329', # evoked
+    '20231120051613', # evoked
     ]])
     
    
@@ -55,10 +55,10 @@ expt1_data_list.append(['ECR2_thy1', [
 expt2_data_list = [] # 2p grooming
 
 expt2_data_list.append(['ETL3_thy1', [
-    '20231109110512', # spontaneous
-    '20231111193330', # spontaneous
-    '20231113134311', # evoked
-    '20231115163212', # evoked
+    # '20231109110512', # spontaneous
+    # '20231111193330', # spontaneous
+    # '20231113134311', # evoked
+    # '20231115163212', # evoked
     ]])
    
 expt2_data_list.append(['ETR3_thy1', [
