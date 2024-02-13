@@ -5,11 +5,11 @@ import glob
 from get_list_data import expt1_data_list, expt2_data_list
 import deeplabcut as dlc
 
-# config_path = '/scratch/st-thmurphy-1/pgupta02/run_optostim/optostim-pankaj-2023-02-06/config.yaml'
-config_path = '/media/user/teamshare/nick/behavior/grooming/mouse_grooming-nick-2023-11-27/config.yaml'
+config_path = '/home/pankaj/teamshare/TM_Lab/nick/behavior/grooming/mouse_grooming-nick-2023-11-27/config.yaml'
+# config_path = '/media/user/teamshare/nick/behavior/grooming/mouse_grooming-nick-2023-11-27/config.yaml'
 
-data_root = '/media/user/teamshare/nick/behavior/grooming/1p/'
-
+data_root = '/home/pankaj/teamshare/TM_Lab/nick/behavior/grooming/1p/'
+# data_root = '/media/user/teamshare/nick/behavior/grooming/1p/'
 
 data_list = expt1_data_list
 # data_list.extend(expt2_data_list)
