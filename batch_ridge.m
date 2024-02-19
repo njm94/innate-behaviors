@@ -9,7 +9,7 @@ addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff')
 fileID = fopen('expt1_datalist.txt','r');
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
-for j = 14:19%1:length(data_list{1})
+for j = length(data_list{1})
     data_dir = data_list{1}{j};
     disp(['Starting ' data_dir])
     fPath = [data_dir filesep 'ridge_outputs_ipsi_contra_bilatInc_forelimbMovExc_audio_drop_lick_granular' filesep];
