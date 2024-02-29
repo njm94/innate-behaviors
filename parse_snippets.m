@@ -3,8 +3,8 @@ function [behaviors, annotations] = parse_snippets(snippets_dir)
 % annotations = ["Left", "Right", "Elliptical", "LargeLeft", "LargeRight", "LargeBilateral", "Lick"];
 annotations = ["elliptical", "largeleft", "largeright", "largebilateral", "left", "right", "lick"];
 
-snippets = getAllFiles(snippets_dir, '.tif');
-snippets(contains(snippets, '_discard')) = [];
+snippets = convertCharsToStrings(getAllFiles(snippets_dir, '.tif'));
+snippets(contains(snippets, 'discard')) = [];
 
 behaviors = prune_snippets(snippets, annotations);
 end
@@ -22,13 +22,21 @@ end
 function behaviors = prune_snippets(snippets, annotations)
     behaviors = cell(1, length(annotations));
     for i = 1:length(annotations)
-        index = contains(snippets, annotations(i));
-        behavior_i = snippets(index);
-        for j = 1:length(behavior_i)
-            [behaviors{i}(j,1), behaviors{i}(j,2)] = get_timestamps_from_str(behavior_i{j});
+        if ~any(contains(snippets, annotations(i)))
+            continue
+        else
+            index = contains(snippets, annotations(i));
+            behavior_i = snippets(index);
+            for j = 1:length(behavior_i)
+                [behaviors{i}(j,1), behaviors{i}(j,2)] = get_timestamps_from_str(behavior_i{j});
+            end
+            snippets(index) = [];
         end
-        snippets(index) = [];
     end
+
+    index = contains(snippets, "discard");
+    snippets(index) = [];
+
     if ~isempty(snippets)
         error(['Improperly labeled behavior annotation was detected: ', snippets{:}])
     end

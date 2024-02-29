@@ -1,8 +1,99 @@
 % clear
-addpath C:\Users\user\Documents\Nick\grooming\utils
-data_dir = 'Y:\nick\behavior\grooming\1p\HYL3_tTA\20231120043753';
-data_dir = 'Y:\nick\behavior\grooming\1p\HYL3_tTA\20231116184954';
-% data_dir = 'Y:\nick\behavior\grooming\1p\HYL3_tTA\20231112090820';
+addpath('C:\Users\user\Documents\Nick\ridgeModel');
+addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
+addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
+addpath('C:\Users\user\Documents\Nick\grooming\utils')
+
+
+
+clc, clear
+fileID = fopen('expt1_datalist.txt','r');
+
+formatSpec = '%s';
+data_list = textscan(fileID, formatSpec);
+current_mouse = '';
+
+fs = 90 ;
+
+thy1_idx = 1:7;
+ai94_idx = 8:13;
+camk_idx = 14:25;
+ 
+
+%%
+for j = 1:length(data_list{1})
+    data_dir = data_list{1}{j};
+    brain_file = [data_dir, filesep, getAllFiles(data_dir, 'cam0_svd')];
+    [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
+    [~, mouse_id, ~] = fileparts(mouse_root_dir);
+    [expt_root_dir, ~, ~] = fileparts(mouse_root_dir);
+    snippets_dir = [data_dir, filesep, 'snippets'];
+    output_dir = [data_dir, filesep, 'outputs'];
+
+%     if ~isempty(getAllFiles(output_dir, '.png'))
+%         disp(['Tracks for ', data_dir, ' have been created already. Moving on...'])
+%         continue
+%     end
+
+    if ~isfolder(output_dir)
+        mkdir(output_dir)
+    end
+
+    snippets_dir = [data_dir filesep 'snippets'];
+    dlc_pos_file = [data_dir, filesep, getAllFiles(data_dir, '1030000.csv')];
+    
+    [b, anno] = parse_snippets(snippets_dir);
+
+
+    % load DLC tracks
+    disp('Loading DLC tracks')
+    dlc_pos = readmatrix(dlc_pos_file);
+    nose_x = median(dlc_pos(:,1));
+    nose_y = median(dlc_pos(:,2));
+    
+    flr_x = dlc_pos(:,4);
+    flr_y = dlc_pos(:,5);
+    
+    fll_x = dlc_pos(:,7);
+    fll_y = dlc_pos(:,8);
+
+
+    
+    
+    % figure, 
+    for jj = 1:length(b)
+    
+        bvids = getAllFiles(snippets_dir, anno(jj));
+        if isempty(bvids)
+            continue
+        end
+        if iscell(bvids)
+            bvids = bvids{end};
+        end
+        img = loadtiff([snippets_dir filesep bvids]);
+        img = img(:, :, round(size(img,3)/2));
+    
+        figure
+        imshow(imadjust(img, [], [], 0.5)), colormap gray, hold on, axis off, clim([500 4000])
+        
+        for i = 1:size(b{jj}, 1)
+            plot(flr_x(b{jj}(i,1):b{jj}(i,2)), flr_y(b{jj}(i,1):b{jj}(i,2)), 'Color', [1 0 1 0.4])
+            plot(fll_x(b{jj}(i,1):b{jj}(i,2)), fll_y(b{jj}(i,1):b{jj}(i,2)), 'Color', [0 1 1 0.4])
+        end
+        % center image on nose
+        axis([nose_x - 150 nose_x + 150 nose_y-100 nose_y+200])
+    
+    
+        fig = gcf;
+        fig.Renderer = 'Painters';
+        exportgraphics(gcf, [output_dir, filesep, char(anno(jj)),'.png'], 'Resolution', 300)
+        close all
+    
+    end
+
+end
+
+%%
 snippets_dir = [data_dir filesep 'snippets'];
 dlc_pos_file = [data_dir, filesep, getAllFiles(data_dir, '1030000.csv')];
 
