@@ -19,7 +19,7 @@ current_mouse = '';
 fs = 90;
 [b, a] = butter(2, 0.01/(fs/2), 'high');
 
-for j = 14:19%1:length(data_list{1})+1
+for j = 1:length(data_list{1})+1
      try
         data_dir = data_list{1}{j};
         disp(['Starting ' data_dir])
@@ -93,7 +93,7 @@ for j = 14:19%1:length(data_list{1})+1
             opts.folds = 10; %nr of folds for cross-validation
             
 %             regressor_mat = [audio_tone' water_drop' ipsi' contra' bilat' fll_move' flr_move']; % tone drop ipsi contra bilatInclusive forelimbInc
-            regressor_mat = [audio_tone drop_left drop_right left right elliptical large_left large_right large_bilateral lick fll_move flr_move]; % tone drop ipsi contra bilatInclusive forelimbInc
+            regressor_mat = [audio_tone drop_left drop_right elliptical large_left large_right large_bilateral left right lick fll_move flr_move]; % tone drop ipsi contra bilatInclusive forelimbInc
 
             % Full-Trial events:    new_trial
             % Post-Stimulus events: audio_tone, water_drop
@@ -102,15 +102,15 @@ for j = 14:19%1:length(data_list{1})+1
             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3], opts);
 %             regLabels = {'audio', 'drop', 'ipsi', 'contra', 'bilat', 'left_move', 'right_move'}; %some movement variables
             regLabels = {'Audio', 'DropLeft', 'DropRight', ...
-                'Left', 'Right', ...
                 'Elliptical', 'LargeLeft', 'LargeRight', 'LargeBilateral', ...
+                'Left', 'Right', ...
                 'Lick', 'LeftMove', 'RightMove'};
 
             fullR = [dMat];
 
             disp('Running ridge regression with 10-fold cross-validation')
             [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Vmaster, regLabels, regIdx, regLabels, opts.folds);
-            save([fPath 'cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
+            save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
             
             fullMat = modelCorr(Vmaster,Vfull,Umaster) .^2;
 
@@ -129,7 +129,7 @@ for j = 14:19%1:length(data_list{1})+1
                 reducedMat(:, i) = modelCorr(Vmaster, Vreduced{i}, Umaster) .^2; %compute explained variance
             end
 
-            save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
+            save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
 
             figure
             subplot(5, 3, 1)
@@ -153,29 +153,29 @@ for j = 14:19%1:length(data_list{1})+1
         
             savefig(gcf, [fPath 'summary.fig'])
 
-
             % all mice completed - break the loop
             if j == length(data_list{1})+1, break; end
         end        
         count = 1;
         disp('Loading master basis set')
         load([mouse_root_dir filesep 'Umaster.mat'])
-        clear Vmaster ipsi contra bilat fll_move flr_move audio_tone water_drop
+        clear Vmaster left right elliptical large_left large_right largebilateral lick fll_move flr_move audio_tone drop_left drop_right
         current_mouse = mouse_id;
+
+        fPath = [mouse_root_dir filesep 'outputs' filesep];
 
         %     %% draw mask - might be needed for memory management
         %     frame = loadtiff(frame_file);
         %     mask = draw_roi(frame, 4);
-    else
-        fPath = [mouse_root_dir filesep 'outputs' filesep];
+        
     end
 
     try
         brain_file = [data_dir, filesep, get_file_with_str(data_dir, 'cam0_svd')];
-%         beh_file = [data_dir, filesep, get_file_with_str(data_dir, [exp_date, '_svd'])];
+        beh_file = [data_dir, filesep, get_file_with_str(data_dir, [exp_date, '_svd'])];
 %         ME_file = [data_dir, filesep, get_file_with_str(data_dir, 'MEsvd')];
 %         frame_file = [data_dir, filesep, get_file_with_str(data_dir, 'singleFrame')];
-        grooming_file = [data_dir, filesep, 'grooming_events_roi_filtered.mat'];
+%         grooming_file = [data_dir, filesep, 'grooming_events_roi_filtered.mat'];
         dlc_speed_file = [data_dir, filesep, get_file_with_str(data_dir, 'speed.csv')];
         timestamp_file = [data_dir, filesep, get_file_with_str(data_dir, 'trim.txt')];
         snippets_dir = [data_dir, filesep, 'snippets'];
@@ -263,4 +263,9 @@ for j = 14:19%1:length(data_list{1})+1
 %     if j == 3, break; end
 %     master_SVD_file = [mouse_root_dir filesep 'masterSVD.mat'];
 %     if ~isfile(master_SVD_file)
+
+
+
+% %% load behavior video SVD
+
 end

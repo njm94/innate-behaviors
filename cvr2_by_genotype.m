@@ -49,3 +49,20 @@ ylabel('Explained Variance (Mean over cortex)')
 xticklabels({'Thy1', 'Ai94', 'CamKII'})
 
 
+
+
+%%
+
+%% check beta kernels
+% select variable of interest. Must be included in 'regLabels'.
+cVar = 'Elliptical';
+% cVar = 'rGrab';
+% cVar = 'whisk';
+
+% find beta weights for current variable
+cIdx = fullIdx == find(ismember(fullLabels,cVar));
+U = reshape(Umaster, [], size(Vfull,1)); 
+cBeta = U * fullBeta{2}(cIdx, :)';
+cBeta = reshape(cBeta,128, 128, []); 
+U = reshape(U, 128, 128, size(Vfull,1)); 
+compareMovie(cBeta)

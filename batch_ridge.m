@@ -4,6 +4,7 @@ clear, close all
 addpath('C:\Users\user\Documents\Nick\ridgeModel');
 addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
 addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
+addpath('C:\Users\user\Documents\Nick\grooming\utils')
 
 %%
 fileID = fopen('expt1_datalist.txt','r');
@@ -12,7 +13,7 @@ data_list = textscan(fileID, formatSpec);
 for j = length(data_list{1})
     data_dir = data_list{1}{j};
     disp(['Starting ' data_dir])
-    fPath = [data_dir filesep 'ridge_outputs_ipsi_contra_bilatInc_forelimbMovExc_audio_drop_lick_granular' filesep];
+    fPath = [data_dir filesep 'ridge_outputs' filesep];
     if ~isdir(fPath), mkdir(fPath); end
 %     if isfile([fPath, 'summary.fig'])
 %         disp([data_dir, ' already processed. Skipping...'])
@@ -25,23 +26,23 @@ for j = length(data_list{1})
     fs = 90;
 
     try
-        brain_file = [data_dir, filesep, get_file_with_str(data_dir, 'cam0_svd')];
-        beh_file = [data_dir, filesep, get_file_with_str(data_dir, [exp_date, '_svd'])];
+        brain_file = [data_dir, filesep, getAllFiles(data_dir, 'cam0_svd')];
+        beh_file = [data_dir, filesep, getAllFiles(data_dir, [exp_date, '_svd'])];
         ME_file = [data_dir, filesep, get_file_with_str(data_dir, 'MEsvd')];
-        frame_file = [data_dir, filesep, get_file_with_str(data_dir, 'singleFrame')];
-        grooming_file = [data_dir, filesep, 'grooming_events_roi_filtered.mat'];
-        dlc_speed_file = [data_dir, filesep, get_file_with_str(data_dir, 'speed.csv')];
-        timestamp_file = [data_dir, filesep, get_file_with_str(data_dir, 'trim.txt')];
+%         frame_file = [data_dir, filesep, get_file_with_str(data_dir, 'singleFrame')];
+%         grooming_file = [data_dir, filesep, 'grooming_events_roi_filtered.mat'];
+        dlc_speed_file = [data_dir, filesep, getAllFiles(data_dir, 'speed.csv')];
+        timestamp_file = [data_dir, filesep, getAllFiles(data_dir, 'trim.txt')];
         snippets_dir = [data_dir filesep 'snippets'];
     catch
         disp('Missing one or more of the required files. Skipping...')
         continue
     end
 
-    if any([~isfile(brain_file), ~isfile(dlc_speed_file), ~isfile(beh_file), ~isfile(ME_file), ~isfile(grooming_file)])
-        disp('Missing one or more of the required files. Skipping...')
-        continue
-    end
+%     if any([~isfile(brain_file), ~isfile(dlc_speed_file), ~isfile(beh_file), ~isfile(ME_file), ~isfile(grooming_file)])
+%         disp('Missing one or more of the required files. Skipping...')
+%         continue
+%     end
     
 %     %% draw mask
 %     frame = loadtiff(frame_file);
@@ -63,10 +64,9 @@ for j = length(data_list{1})
     
     
 %     %% load behavior svd components, multiply s into V
-%         % z-score
-%     load(beh_file)
-%     Ubeh = U;
-%     Vbeh = s*V;
+    load(beh_file)
+    Ubeh = U;
+    Vbeh = s*V;
 %     
 %     %% load motion svd components, multiply s into V
 %         % z-score
@@ -88,34 +88,6 @@ for j = length(data_list{1})
         end
     end
 
-    %% load grooming events
-    disp('Loading grooming events')
-    load(grooming_file)
-
-
-%     % don't treat bilateral as a separate event
-    ipsi = FL_R;
-    contra = FL_L;
-    
-    % separate ipsilateral, contralateral, and bilateral events
-%     ipsi = zeros(size(FL_L));
-%     contra = zeros(size(FL_L));
-%     bilat = zeros(size(FL_L));
-%     lick2 = zeros(size(FL_L));
-%     for i = 1:size(event_type, 1)
-%         if contains(event_type(i,:), 'ipsi')
-%             ipsi(all_events(i,1):all_events(i,2)) = 1;
-%         elseif contains(event_type(i,:), 'cont')
-%             contra(all_events(i,1):all_events(i,2)) = 1;
-%         elseif contains(event_type(i,:), 'bi')
-%             bilat(all_events(i,1):all_events(i,2)) = 1;
-%         elseif contains(event_type(i,:), 'lick')
-%             lick2(all_events(i,1):all_events(i,2)) = 1;
-%         else
-%             disp('wrong string in event type')
-%         end
-%     end
-
     %% load DLC tracks
     disp('Loading DLC tracks')
     dlc_speed = readmatrix(dlc_speed_file);
@@ -128,9 +100,6 @@ for j = length(data_list{1})
     fll_movement = movmax(fll_movement, 35);
     flr_movement = movmax(flr_movement, 35);
 
-%     % eliminate overlap of movement and grooming
-%     fll_movement_ex = fll_movement & ~(ipsi | contra | bilat)';
-%     flr_movement_ex = flr_movement & ~(ipsi | contra | bilat)';
 
     %% load stimulus info from timestamp file
     % 10kHz tone occurs for 1 second immediately at start of trial
@@ -176,13 +145,18 @@ for j = length(data_list{1})
 %     moveLabels = {'ipsi', 'contra', 'bilat', 'left_move', 'right_move'}; %some movement variables
 %     moveLabels = {'ipsi', 'contra'}; %some movement variables
 %     moveLabels = {'ipsi', 'contra', 'bilat'}; %some movement variables
-moveLabels = {'audio', 'drop', 'lick', 'elliptical', 'largeleft', 'largeright', 'largebilateral', 'right', 'left', 'leftmove', 'rightmove'};
+% moveLabels = {'audio', 'drop', 'lick', 'elliptical', 'largeleft', 'largeright', 'largebilateral', 'right', 'left', 'leftmove', 'rightmove'};
+
+moveLabels = {'Audio', 'Drop', 'Lick', ...
+                'Elliptical', 'LargeLeft', 'LargeRight', 'LargeBilateral', ...
+                'Right', 'Left', ...
+                'LeftMove', 'RightMove'};
 
     
     % fullR = [Vbeh' Vme'];
     % fullR = [Vme'];    
     fullR = [movMat];
-    % fullR = [fullR Vbeh'];    
+    fullR = [fullR Vbeh(:,1:size(fullR,1))'];    
     
 %     %% run ridge
 %     [ridgeVals, dimBeta] = ridgeMML(Vbrain', fullR, true); %get ridge penalties and beta weights.
@@ -196,8 +170,8 @@ moveLabels = {'audio', 'drop', 'lick', 'elliptical', 'largeleft', 'largeright', 
 %     c.FontSize =12;
     
     % % regIdx = [taskIdx; moveIdx + max(taskIdx); repmat(max(moveIdx)+max(taskIdx)+1, size(vidR,2), 1)]; %regressor index
-    regIdx = [movEventIdx2];%;  repmat(max(movEventIdx2)+1, size(Vme',2), 1)];
-    regLabels = [moveLabels];% {'video'}];
+    regIdx = [movEventIdx2;  repmat(max(movEventIdx2)+1, size(Vbeh',2), 1)];
+    regLabels = [moveLabels, {'video'}];
     % 
     % cVar = 'bilat';
     % 
@@ -214,7 +188,7 @@ moveLabels = {'audio', 'drop', 'lick', 'elliptical', 'largeleft', 'largeright', 
     %full model - this will take a moment
     disp('Running ridge regression with 10-fold cross-validation')
     [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Vbrain, regLabels, regIdx, regLabels, bopts.folds);
-    save([fPath 'cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
+    save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
     
     fullMat = modelCorr(Vbrain,Vfull,Ubrain) .^2; %compute explained variance
     
@@ -239,7 +213,7 @@ moveLabels = {'audio', 'drop', 'lick', 'elliptical', 'largeleft', 'largeright', 
             reducedMat(:, i) = modelCorr(Vbrain, Vreduced{i}, Ubrain) .^2; %compute explained variance
         end
     %     reducedMat = reshape(reducedMat, 128, 128, length(regLabels));
-        save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
+        save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
     end
 
     
@@ -255,7 +229,7 @@ moveLabels = {'audio', 'drop', 'lick', 'elliptical', 'largeleft', 'largeright', 
         c.Label.String = 'cvR^2';
         yticks([])
         for i = 1:length(regLabels)
-            subplot(4, (length(regLabels)+1)/4, i+1)
+            subplot(4, 3, i)
             imagesc(reshape(fullMat - reducedMat(:,i), [128 128])')
             c=colorbar;
             title(regLabels{i})
