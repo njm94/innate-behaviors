@@ -175,8 +175,8 @@ for j = 1:length(data_list{1})+1
     end
 
 
-    
-    clear trials timestamps 
+    disp('Clearing memory')
+    clear trials timestamps dFF
     count = count + 1;
 %     if j == 3, break; end
 %     master_SVD_file = [mouse_root_dir filesep 'masterSVD.mat'];
