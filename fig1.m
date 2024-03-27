@@ -4,7 +4,7 @@ addpath('C:\Users\user\Documents\Nick\ridgeModel');
 addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
 addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
 addpath('C:\Users\user\Documents\Nick\grooming\utils')
-
+addpath('C:\Users\user\Documents\Nick\grooming\utils\layoutCode')
 
 
 clc, clear
@@ -12,21 +12,24 @@ fileID = fopen('expt1_datalist.txt','r');
 
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
-current_mouse = '';
+current_mouse = ''; 
 
 fs = 90 ;
-[b, a] = butter(2, 0.01/(fs/2), 'high');
+% [b, a] = butter(2, 0.01/(fs/2), 'high');
 
 thy1_idx = 1:7;
 ai94_idx = 8:13;
 camk_idx = 14:25;
+
+left_idx = [6:7,13,19,25];
+right_idx = [3:6,10:12,16:18,22:24];
 
 spontaneous = [1,2,8,9,14,15,20,21];
 evoked = [3:7,10:13,16:19,22:25];
 
 states = ["Stop", "Elliptical", "Asymmetric", "Bilateral", "Unilateral"];
 
- 
+aggregation_sz = 3;
 
 %%
 N = length(data_list{1});
@@ -36,6 +39,8 @@ event_raster = zeros(N, trial_length);
 num_episodes = zeros(N, 1);
 
 tmat = zeros(numel(states), numel(states), N);
+
+binned_bmat = zeros(4, 20, N);
 
 for j = 1:N
     data_dir = data_list{1}{j};
@@ -66,20 +71,56 @@ for j = 1:N
             bmat(snippets{ii}(jj,1):min([snippets{ii}(jj,2), trial_length])) = ii;
         end
     end
-    [episodes, idx] = aggregate(bmat, 3);
+    [episodes, idx] = aggregate(bmat, aggregation_sz);
     num_episodes(j) = size(idx,1);
 
     event_raster(j,:) = episodes;
+    all_event_idx{j} = idx;
+
+    num_left(j) = size(snippets{matches(labels, 'left')},1);
+    num_right(j) = size(snippets{matches(labels, 'right')},1); 
+
+    num_largeleft(j) = size(snippets{matches(labels, 'largeleft')},1);
+    num_largeright(j) = size(snippets{matches(labels, 'largeright')},1);
+
+    % consolidate events to elliptical, asymmetric, bilateral, unilateral
+    bmat2 = zeros(4, size(bmat,2));
+    bmat2(1,:) = bmat == find(matches(labels, 'elliptical'));
+    bmat2(2,:) = bmat == find(matches(labels, 'largeleft')) |  bmat == find(matches(labels, 'largeright')) ;
+    bmat2(3,:) = bmat == find(matches(labels, 'largebilateral'));
+    bmat2(4,:) = bmat == find(matches(labels, 'left')) |  bmat == find(matches(labels, 'right')) ;
 
 
+    bmat2 = zeros(1, size(bmat,2));
+    bmat2(bmat == find(matches(labels, 'elliptical'))) = 1;
+    bmat2(bmat == find(matches(labels, 'largeleft')) |  bmat == find(matches(labels, 'largeright'))) = 2;
+    bmat2(bmat == find(matches(labels, 'largebilateral'))) = 3;
+    bmat2(bmat == find(matches(labels, 'left')) |  bmat == find(matches(labels, 'right'))) = 4;
 
-%     % consolidate unilateral events
-    bmat2 = bmat;
-    bmat2(bmat2==3)=2;
-    bmat2(bmat2==4)=3;
-    bmat2(bmat==5 | bmat==6) = 4;
-    bmat2(bmat==7) = 0;% 5;
+
+    
+
+%     bmat2 = bmat;
+%     bmat2(bmat2==3)=2;
+%     bmat2(bmat2==4)=3;
+%     bmat2(bmat==5 | bmat==6) = 4;
+%     bmat2(bmat==7) = 0;% 5;
     bmat2 = bmat2 + 1;
+
+    bmat3(:,j) = bmat2(1:trial_length);
+
+
+    % create bins of a minute long
+    % start at end of trial and work backwards, since start is baseline
+    w = 60;
+    bin_edges = fliplr(trial_length:-ceil(fs*w):1);
+    for ii = 1:length(bin_edges)-1
+        tmp = bmat2(bin_edges(ii):bin_edges(ii+1));
+        for jj = 2:5
+            binned_bmat(jj-1,ii,j) = length(find(tmp==jj));
+        end
+    end
+
 
     
     
@@ -87,22 +128,119 @@ for j = 1:N
     for ii = 1:size(idx,1)
         tmp = bmat2(idx(ii,1):idx(ii,2));
         event_idx = [1 tmp] > 1;
-        event_start = find(diff(event_idx) == 1);
-        for jj = 1:length(event_start)
-            if jj == 1
-                tmat(1, tmp(event_start(jj)), j) = tmat(1, tmp(event_start(jj)), j)+1;
-            else
-                tmat(last_event, tmp(event_start(jj)), j) = tmat(last_event, tmp(event_start(jj)), j) + 1;
+        if any(event_idx)
+            event_start = find(diff(event_idx) == 1);
+            for jj = 1:length(event_start)
+                if jj == 1
+                    tmat(1, tmp(event_start(jj)), j) = tmat(1, tmp(event_start(jj)), j)+1;
+                else
+                    tmat(last_event, tmp(event_start(jj)), j) = tmat(last_event, tmp(event_start(jj)), j) + 1;
+                end
+                last_event = tmp(event_start(jj));
             end
-            last_event = tmp(event_start(jj));
+            tmat(last_event, 1, j) = tmat(last_event, 1, j) + 1;
         end
-        tmat(last_event, 1, j) = tmat(last_event, 1, j) + 1;
     end
-    
-
-
 
 end
+
+%%
+figure
+subplot(2,2,1), hold on, 
+data2plot = [mean(num_right(left_idx)), mean(num_left(left_idx))];
+bar(data2plot, 0.4), 
+swarmchart(ones(size(left_idx))-0.45, num_right(left_idx), 'ko', 'XJitterWidth', 0.2)
+swarmchart(ones(size(left_idx))+1.45, num_left(left_idx), 'ko', 'XJitterWidth', 0.2)
+ylabel('# Unilateral Strokes')
+xticks([1, 2])
+xticklabels({'Right', 'Left'})
+
+[h,p] = ttest(num_right(left_idx), num_left(left_idx));
+ax = gca;
+ax.FontSize = 12;
+title(['p=', num2str(p)])
+
+
+
+
+
+
+subplot(2,2,2), hold on
+data2plot = [mean(num_right(right_idx)), mean(num_left(right_idx))];
+bar(data2plot, 0.4), 
+swarmchart(ones(size(right_idx))-0.45, num_right(right_idx), 'ko', 'XJitterWidth', 0.2)
+swarmchart(ones(size(right_idx))+1.45, num_left(right_idx), 'ko', 'XJitterWidth', 0.2)
+xticks([1, 2])
+xticklabels({'Right', 'Left'})
+
+[h,p] = ttest(num_right(right_idx), num_left(right_idx));
+ax = gca;
+ax.FontSize = 12;
+title(['p=', num2str(p)])
+
+
+
+
+subplot(2,2,3), hold on
+data2plot = [mean(num_largeright(left_idx)), mean(num_largeleft(left_idx))];
+bar(data2plot, 0.4), 
+swarmchart(ones(size(left_idx))-0.45, num_largeright(left_idx), 'ko', 'XJitterWidth', 0.2)
+swarmchart(ones(size(left_idx))+1.45, num_largeleft(left_idx), 'ko', 'XJitterWidth', 0.2)
+ylabel('# Asymmetric Bilateral Strokes')
+xticks([1, 2])
+xticklabels({'Right', 'Left'})
+
+[h,p] = ttest(num_largeright(left_idx), num_largeleft(left_idx));
+ax = gca;
+ax.FontSize = 12;
+title(['p=', num2str(p)])
+xlabel('Left Stimulus')
+
+
+subplot(2,2,4), hold on
+
+
+data2plot = [mean(num_largeright(right_idx)), mean(num_largeleft(right_idx))];
+bar(data2plot, 0.4), 
+swarmchart(ones(size(right_idx))-0.45, num_largeright(right_idx), 'ko', 'XJitterWidth', 0.2)
+swarmchart(ones(size(right_idx))+1.45, num_largeleft(right_idx), 'ko', 'XJitterWidth', 0.2)
+xticks([1, 2])
+xticklabels({'Right', 'Left'})
+
+[h,p] = ttest(num_largeright(right_idx), num_largeleft(right_idx));
+ax = gca;
+ax.FontSize = 12;
+title(['p=', num2str(p)])
+xlabel('Right Stimulus')
+
+
+%%
+
+pmat = tmat ./ sum(tmat,2);
+%%
+B = mean(pmat(:,:,evoked), 3, 'omitnan');
+
+%%
+[M,Q]=community_louvain(B);
+
+%%
+clc
+cols = zeros(length(M), 3);
+col1 = [0.9290 0.6940 0.1250];
+col2 = [0.3010 0.7450 0.9330];
+for i = 1:length(M)
+    if M(i) == 1
+        cols(i,:) = col1;
+    elseif M(i) == 2
+        cols(i,:) = col2;
+    end
+end
+pgraph = digraph(B);
+figure, plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*10, ...
+    'NodeColor', cols, 'NodeFontSize', 15, ...
+    'EdgeColor', 'k', 'ArrowSize', 15, 'NodeLabel', states, ...
+    'Layout', 'force', 'WeightEffect', 'inverse')
+
 
 %%
 
@@ -241,6 +379,105 @@ ax.FontSize = 12;
 
 %%
 
+summary_binned_bmat = 100*(sum(binned_bmat(:,:,evoked),3)./sum(binned_bmat(:,:,evoked), [3 1]))'; 
+
+sliding_bmat_for_area = squeeze(mean(sliding_bmat(:, evoked, :), 2, 'omitnan'));
+figure, 
+% area(summary_binned_bmat(:,[1 2 4 3]))
+area(t, sliding_bmat_for_area)
+% legend(circshift(["Elliptical", "Asymmetric", "Bilateral", "Unilateral"], 1))
+xlabel('Time (mins)')
+ylabel('Proportion of behavior')
+axis([1 t(end) 0 1])
+ax = gca;
+ax.FontSize = 12;
+
+%%
+sliding_bmat = zeros(trial_length, N, 4);
+
+w = 300;
+
+for i = 2:5
+    sliding_bmat(:,:,i-1) = movsum(bmat3==i,  round(w*fs), 1) ./ movsum(bmat3~=1, round(w*fs), 1);
+end
+avg_sliding_bmat_thy1 = squeeze(mean(sliding_bmat(:, thy1_idx(3:end), :), 2, 'omitnan'));
+avg_sliding_bmat_thy1 = 100 * (avg_sliding_bmat_thy1 - avg_sliding_bmat_thy1(1,:));
+avg_sliding_bmat_ai94 = squeeze(mean(sliding_bmat(:, ai94_idx(3:end), :), 2, 'omitnan'));
+avg_sliding_bmat_ai94 = 100 * (avg_sliding_bmat_ai94 - avg_sliding_bmat_ai94(1,:));
+avg_sliding_bmat_camk1 = squeeze(mean(sliding_bmat(:, camk_idx(3:6), :), 2, 'omitnan'));
+avg_sliding_bmat_camk1 = 100 * (avg_sliding_bmat_camk1 - avg_sliding_bmat_camk1(1,:));
+avg_sliding_bmat_camk2 = squeeze(mean(sliding_bmat(:, camk_idx(9:end), :), 2, 'omitnan'));
+avg_sliding_bmat_camk2 = 100 * (avg_sliding_bmat_camk2 - avg_sliding_bmat_camk2(1,:));
+
+
+avg_sliding_bmat = mean(cat(3, avg_sliding_bmat_thy1, avg_sliding_bmat_ai94, avg_sliding_bmat_camk1, avg_sliding_bmat_camk2), 3);
+sem_sliding_bmat = std(cat(3, avg_sliding_bmat_thy1, avg_sliding_bmat_ai94, avg_sliding_bmat_camk1, avg_sliding_bmat_camk2), [], 3) ./sqrt(4);
+
+% avg_sliding_bmat = squeeze(mean(sliding_bmat(:, evoked, :), 2, 'omitnan'));
+
+figure, hold on
+
+% plot(t, avg_sliding_bmat)
+cols = ["#0072BD", "#D95319", "#EDB120", "#7E2F8E"];
+for i = 1:4
+    s = shadedErrorBar(t, avg_sliding_bmat(:,i), sem_sliding_bmat(:,i), [], 1);
+    set(s.edge,'Color', cols(i))
+    s.mainLine.Color = cols(i);
+    s.mainLine.LineWidth = 2;
+    s.patch.FaceColor = cols(i);
+end
+
+% plot(t, 100*(avg_sliding_bmat_thy1(:,4) - avg_sliding_bmat_thy1(1,4)))
+% plot(t, 100*(avg_sliding_bmat_ai94(:,4) - avg_sliding_bmat_ai94(1,4)))
+% plot(t, 100*(avg_sliding_bmat_camk1(:,4) - avg_sliding_bmat_camk1(1,4)))
+% plot(t, 100*(avg_sliding_bmat_camk2(:,4) - avg_sliding_bmat_camk2(1,4)))
+
+ylabel('\Delta % from T_0')
+xlabel('Time (s)')
+title([num2str(w/60), ' min sliding window'])
+% legend(["thy1", "ai94", "hyl3", "ibl2"])
+legend(["", "", "", "Elliptical", "", "", "", "Asymmetric", "", "", "", "Bilateral", "", "", "", "Unilateral"], 'Location', 'Best')
+hline(0, 'k:')
+
+%%
+sx = [];
+sy = [];
+figure, hold on
+for i = 1:length(evoked)
+    idx = all_event_idx{evoked(i)};
+    sx = cat(1, sx, idx(:,1));
+    sy = cat(1, sy, diff(idx, 1, 2));
+    
+end
+
+sx = sx/fs;
+sy = sy/fs;
+
+scatter(sx, sy, 'filled')
+lsline
+
+%%
+
+binsx = 1:60:max(sx);
+for i = 1:length(binsx)-1
+    tmp = find(sx>binsx(i) & sx <= binsx(i+1));
+    avg_dur(i) = mean(sy(tmp));
+    num_episodes(i) = numel(tmp);
+end
+figure, 
+subplot(1,2,1),
+plot(avg_dur)
+ylabel('Average Duration of Grooming Episode')
+xlabel('Time (mins)')
+subplot(1,2,2)
+plot(num_episodes)
+ylabel('Number of grooming episodes')
+xlabel('Time (mins)')
+
+
+
+%%
+
 
 
 
@@ -286,7 +523,7 @@ bmat2 = movmin(bmat2, W);
 time_on = find(diff(bmat2)==1)+1;
 time_off = find(diff(bmat2)==-1)+1;
 
-% edge cases where grooming occurs at the beginning or end
+% edge cases where grooming occurs at the beginning or end of trial
 if bmat2(end), time_off = [time_off, length(bmat2)]; end
 if bmat2(1), time_on = [1, time_on]; end
 
