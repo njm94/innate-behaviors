@@ -1,10 +1,19 @@
 %% Make average responses
 
 %% average events
-addpath('C:\Users\user\Documents\Nick\ridgeModel');
-addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
-addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
-addpath('C:\Users\user\Documents\Nick\grooming\utils')
+
+
+if ~isunix
+    addpath('C:\Users\user\Documents\Nick\ridgeModel');
+    addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
+    addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
+    addpath('C:\Users\user\Documents\Nick\grooming\utils')
+else
+    addpath('/home/user/Documents/grooming/ridgeModel');
+    addpath('/home/user/Documents/grooming/ridgeModel\widefield')
+    addpath('/home/user/Documents/grooming/ridgeModel\smallStuff') 
+    addpath('/home/user/Documents/grooming/utils')
+end
 
 
 
@@ -46,13 +55,16 @@ for j = 1:length(data_list{1})+1
 
             figure
             for iii = 1:size(behavior_frames,2)
+                mean_image = mean(behavior_frames{iii},3)';
                 subplot(3,4,iii)
-                imagesc(mean(behavior_frames{iii}, 3))
+                imagesc(mean_image)
+                set(gca, 'clim', [-max(abs(mean_image(:))) max(abs(mean_image(:)))])
                 c=colorbar;
                 c.Label.String = '\DeltaF/F_0 (\sigma)';
                 title(bvars(iii))
                 xticks([])
                 yticks([])
+                colormap(fliplr(redblue([],[],'k')))
             end
                        
         

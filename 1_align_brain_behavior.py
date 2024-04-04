@@ -21,11 +21,11 @@ from skimage.transform import rescale, resize, downscale_local_mean
 
 
 # data_root = '/media/user/teamshare/nick/behavior/grooming/1p/'
-# data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'
-data_root = '/media/user/teamshare/pankaj/closedloop_rig5_data/'
+data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'
+# data_root = '/media/user/teamshare/pankaj/closedloop_rig5_data/'
 
 # data_root = '/mnt/njm/nick/behavior/grooming/1p/'
-data_list = expt3_data_list
+data_list = expt2_data_list
 data_list_idx = expt2_start_end_idx
 
 k = int(1000)
@@ -78,7 +78,7 @@ for ii, expt in enumerate(data_list):
                 print(beh_start, beh_stop)
 
             
-            
+            print("\nReading video\n")
             beh_stack =  open_cv_read_video(beh_vid_file)
             beh_log = pd.read_csv(beh_log_file, sep='\t', parse_dates=['time'])
 
@@ -89,6 +89,7 @@ for ii, expt in enumerate(data_list):
             beh_log_trim.to_csv(beh_log_trim_file, index=False, sep='\t')
             beh_stack_trim = beh_stack[beh_start:beh_stop]
             num_beh_frames = beh_stack_trim.shape[0]
+            print("\nWriting video\n")
             open_cv_write_video(beh_vid_file, beh_vid_trim_file, beh_start, beh_stop)
         
             # memory management
@@ -104,53 +105,54 @@ for ii, expt in enumerate(data_list):
         
         
         
+        # # # # Commented on 2024-03-27
+        # if not os.path.isfile(beh_svd_file):
+        #     if '2p' in data_root:
+        #         beh_stack_trim = open_cv_read_video(beh_vid_trim_file)
+        #         num_beh_frames = beh_stack_trim.shape[0]
+        #     print("Downsampling frames")
+        #     beh_stack_trim = np.array(beh_stack_trim[::5,:,:,0])
 
-        if not os.path.isfile(beh_svd_file):
-            if '2p' in data_root:
-                beh_stack_trim = open_cv_read_video(beh_vid_trim_file)
-                num_beh_frames = beh_stack_trim.shape[0]
-            print("Downsampling frames")
-            beh_stack_trim = np.array(beh_stack_trim[::5,:,:,0])
+        #     print("Doing local mean")
+        #     beh_stack_trim = downscale_local_mean(beh_stack_trim, (1, 3, 3)).astype('uint8')
+        #     beh_stack_for_svd = np.reshape(beh_stack_trim, newshape=(beh_stack_trim.shape[0], int(beh_stack_trim.shape[1]*int(beh_stack_trim.shape[2])))).T
+        #     print("Behavior video SVD")
+        #     U, s, V = movie_svd(beh_stack_for_svd, k)
+        #     if not "drinking" in mouse_id:
+        #         V_upsampled = signal.resample(V, num_beh_frames, axis=1)
+        #     else:
+        #         V_upsampled = np.copy(V)
+        #     mdic = {"U": U, "s": s, "V": V_upsampled}
+        #     savemat(beh_svd_file, mdic)
+        #     del U
+        #     del V_upsampled
+        #     del V
+        #     del s
+        #     del beh_stack_for_svd
 
-            print("Doing local mean")
-            beh_stack_trim = downscale_local_mean(beh_stack_trim, (1, 3, 3)).astype('uint8')
-            beh_stack_for_svd = np.reshape(beh_stack_trim, newshape=(beh_stack_trim.shape[0], int(beh_stack_trim.shape[1]*int(beh_stack_trim.shape[2])))).T
-            print("Behavior video SVD")
-            U, s, V = movie_svd(beh_stack_for_svd, k)
-            if not "drinking" in mouse_id:
-                V_upsampled = signal.resample(V, num_beh_frames, axis=1)
-            else:
-                V_upsampled = np.copy(V)
-            mdic = {"U": U, "s": s, "V": V_upsampled}
-            savemat(beh_svd_file, mdic)
-            del U
-            del V_upsampled
-            del V
-            del s
-            del beh_stack_for_svd
+        # if not "drinking" in mouse_id:
+        #     if not os.path.isfile(beh_motion_svd_file) or not os.path.isfile(beh_motion_file):
+        #         beh_stack_ME = calculate_ME(beh_stack_trim)
+        #         del beh_stack_trim
+        #         open_cv_write_video_from_arr(beh_motion_file, beh_stack_ME, fps=90)
 
-        if not "drinking" in mouse_id:
-            if not os.path.isfile(beh_motion_svd_file) or not os.path.isfile(beh_motion_file):
-                beh_stack_ME = calculate_ME(beh_stack_trim)
-                del beh_stack_trim
-                open_cv_write_video_from_arr(beh_motion_file, beh_stack_ME, fps=90)
-
-                beh_stack_ME = np.reshape(beh_stack_ME, newshape=(beh_stack_ME.shape[0], int(beh_stack_ME.shape[1]*int(beh_stack_ME.shape[2])))).T
-                print("Behavior video SVD")
-                U, s, V = movie_svd(beh_stack_ME, k)
-                V_upsampled = signal.resample(V, num_beh_frames, axis=1)
-                mdic = {"U": U, "s": s, "V": V_upsampled}
-                savemat(beh_motion_svd_file, mdic)
-                del U
-                del V_upsampled
-                del V
-                del s
-                del beh_stack_ME
+        #         beh_stack_ME = np.reshape(beh_stack_ME, newshape=(beh_stack_ME.shape[0], int(beh_stack_ME.shape[1]*int(beh_stack_ME.shape[2])))).T
+        #         print("Behavior video SVD")
+        #         U, s, V = movie_svd(beh_stack_ME, k)
+        #         V_upsampled = signal.resample(V, num_beh_frames, axis=1)
+        #         mdic = {"U": U, "s": s, "V": V_upsampled}
+        #         savemat(beh_motion_svd_file, mdic)
+        #         del U
+        #         del V_upsampled
+        #         del V
+        #         del s
+        #         del beh_stack_ME
             
-        #    U, V = movie_svd(beh_stack_ME, k)
-        #    V_upsampled = signal.resample(V, num_beh_frames, axis=1)
-        #    mdic = {"U": U, "s": s, "V": V_upsampled}
-        #    savemat(beh_motion_svd_file, mdic)
+        # #    U, V = movie_svd(beh_stack_ME, k)
+        # #    V_upsampled = signal.resample(V, num_beh_frames, axis=1)
+        # #    mdic = {"U": U, "s": s, "V": V_upsampled}
+        # #    savemat(beh_motion_svd_file, mdic)
+        # # # # Commented on 2024-03-27
 
         gc.collect()        
 
