@@ -1,4 +1,6 @@
 function [behaviors, annotations, vPaths] = parse_snippets(snippets_dir)
+% Usage:
+%   [behaviors, annotations, vPaths] = parse_snippets(snippets_dir)
 
 % annotations = ["Left", "Right", "Elliptical", "LargeLeft", "LargeRight", "LargeBilateral", "Lick"];
 annotations = ["elliptical", "largeleft", "largeright", "largebilateral", "left", "right", "lick"];

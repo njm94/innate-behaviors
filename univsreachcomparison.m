@@ -1,0 +1,127 @@
+% 
+
+clear, clc
+%%
+addpath('C:\Users\user\Documents\Nick\grooming\utils')
+data_path = 'Y:\pankaj\water_reaching_project\data\matlab_outputs';
+% reaching_files = {'HR1_2019_4_12data_compile.mat', 'HR2_2019_4_12data_compile.mat', ...
+%     'IJ2_2020_7_27data_compile.mat', 'IJ3_2020_7_27data_compile.mat', ...
+%     'IK1_2019_4_12data_compile.mat', 'IK2_2019_4_12data_compile.mat', ...
+%     'IO1_2020_7_27data_compile.mat', 'IQ1_2020_7_27data_compile.mat', ...
+%     'IQ2_2020_7_27data_compile.mat'};
+
+reaching_files = {'HR1_2019_4_12data_compile.mat', 'HR2_2019_4_12data_compile.mat', ...
+    'IK1_2019_4_12data_compile.mat', 'IK2_2019_4_12data_compile.mat'};
+
+fs=60;
+%%
+
+for j = 1%:length(reaching_files)
+    disp(['Running ', data_path, filesep, reaching_files{j}])
+    load([data_path, filesep, reaching_files{j}],  ...
+        'trialResult', 'paw', 'beh')
+end
+
+%%
+
+figure, imagesc(beh{1}(:,:,1)), hold on, colormap gray
+for i = 1:length(trialResult)/2
+    if strcmpi(trialResult{i}, 'Success')
+         plot(paw{i}(:,1), paw{i}(:,2)), hold on, plot(paw{i}(:,3), paw{i}(:,4))
+    end
+end
+
+%%
+clc
+for j = 1%:length(reaching_files)
+    disp(['Running ', data_path, filesep, reaching_files{j}])
+    load([data_path, filesep, reaching_files{j}], 'dFF', 'rewardTime', ...
+        'trialResult', 'lickTime', 'paw', 'beh')
+    N = length(rewardTime);
+    clear reach_response lick_response
+
+    figure, imshow(beh{1}(:,:,:,100)), hold on
+    roi_flag = true;
+    count = 1;
+    for i = 1:N
+        if (rewardTime(i) > 0) && strcmpi(trialResult{i}, 'Success')
+            tlen = size(dFF{i},3);
+
+            plot(paw{i}(:,1), paw{i}(:,2)), hold on, plot(paw{i}(:,3), paw{i}(:,4))
+            
+            x = paw{i}(1:tlen,1);
+            y = paw{i}(1:tlen,2);
+
+            for k = 1:length(x)
+                lick_idx(k) = lick_roi(y(k), x(k), 1);
+                reach_idx(k) = reach_roi(y(k), x(k), 1);
+            end
+
+            reach_response(:,:,count) = mean(dFF{i}(:,:,reach_idx), 3);
+            lick_response(:,:,count) = mean(dFF{i}(:, :, lick_idx), 3);
+            count = count +1;
+            
+
+%             disp(round(lickTime(i)*fs) - round(rewardTime(i)*fs))
+%             try
+%                 reach_response(:,:,count) = mean(dFF{i}(:,:,round(rewardTime(i)*fs):round(lickTime(i)*fs)),3);
+%                 lick_response(:,:,count) = mean(dFF{i}(:,:,round(lickTime(i)*fs):end), 3);
+%                 count = count + 1;
+%             catch
+%                 disp('')
+%                 continue
+%             end
+        end
+    end
+    avg_reaching_map(:,:,j) = mean(reach_response, 3);
+    avg_licking_map(:,:,j) = mean(lick_response, 3);
+end
+
+
+%%
+
+
+
+ count = 1;
+    for i = 1:N
+        if (rewardTime(i) > 0) && strcmpi(trialResult{i}, 'Success')
+            tlen = size(dFF{i},3);
+
+            plot(paw{i}(:,1), paw{i}(:,2)), hold on, plot(paw{i}(:,3), paw{i}(:,4))
+            
+            x = round(paw{i}(1:tlen,1));
+            y = round(paw{i}(1:tlen,2));
+
+            clear lick_idx reach_idx
+
+            for k = 1:length(x)
+                lick_idx(k) = lick_roi(y(k), x(k), 1);
+                reach_idx(k) = reach_roi(y(k), x(k), 1);
+            end
+
+            reach_response(:,:,count) = mean(dFF{i}(:,:, logical(reach_idx)), 3);
+            lick_response(:,:,count) = mean(dFF{i}(:, :, logical(lick_idx)), 3);
+            count = count +1;
+            
+        end
+    end
+
+
+
+%%
+
+
+mask = draw_roi(fluo_frame, 2);
+mask(mask==0) = nan;
+%%
+
+thresh = 80;
+% avg_reaching_map = mean(test(:,:,prewin+1:prewin+1+round(0.5*fs),:), [4 3]).*mask;
+avg_reaching_map = mean(reach_response,3) .* mask;
+avg_licking_map =mean(lick_response,3) .* mask;
+vr = prctile(avg_reaching_map(:), thresh);
+vl = prctile(avg_licking_map(:), thresh);
+figure, axis off, hold on
+contourf(flipud(avg_reaching_map), [vr vr], 'FaceAlpha', 0.25)
+contourf(flipud(avg_licking_map), [vl vl], 'FaceAlpha', 0.25)
+

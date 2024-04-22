@@ -30,8 +30,11 @@ fs = 90 ;
 thy1_idx = 1:7;
 ai94_idx = 8:13;
 camk_idx = 14:25;
+
+save_average_across_days = false;
+%%
  
-for j = 1:length(data_list{1})+1
+for j = 23:length(data_list{1})+1
      try
         data_dir = data_list{1}{j};
         disp(['Starting ' data_dir])
@@ -53,23 +56,25 @@ for j = 1:length(data_list{1})+1
             % if all the trials have completed for the previous mouse,
             % compile all behavior frames and take the average
 
-            figure
-            for iii = 1:size(behavior_frames,2)
-                mean_image = mean(behavior_frames{iii},3)';
-                subplot(3,4,iii)
-                imagesc(mean_image)
-                set(gca, 'clim', [-max(abs(mean_image(:))) max(abs(mean_image(:)))])
-                c=colorbar;
-                c.Label.String = '\DeltaF/F_0 (\sigma)';
-                title(bvars(iii))
-                xticks([])
-                yticks([])
-                colormap(fliplr(redblue([],[],'k')))
+            if save_average_across_days
+                figure
+                for iii = 1:size(behavior_frames,2)
+                    % transpose the mean image to get the brains in proper
+                    % orientation
+                    mean_image = mean(behavior_frames{iii},3)';
+                    subplot(3,4,iii)
+                    imagesc(mean_image)
+                    set(gca, 'clim', [-max(abs(mean_image(:))) max(abs(mean_image(:)))])
+                    c=colorbar;
+                    c.Label.String = '\DeltaF/F_0 (\sigma)';
+                    title(bvars(iii))
+                    xticks([])
+                    yticks([])
+                    colormap(fliplr(redblue([],[],'k')))
+                end
+                                       
+                savefig(gcf, [fPath,  char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_dFF.fig'])
             end
-                       
-        
-            savefig(gcf, [fPath,  char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_dFF.fig'])
-
             % all mice completed - break the loop
             if j == length(data_list{1})+1, break; end
         end        
@@ -181,14 +186,26 @@ for j = 1:length(data_list{1})+1
     bvars = ["elliptical", "largeleft", "largeright", "largebilateral", ...
         "left", "right", "lick", "fll_move", "flr_move", ...
         "audio_tone", "drop_left", "drop_right"];
-    
-    for ii = 1:size(behavior_frames,2)
+
+    figure,  
+    for ii = 1:length(bvars)
         behavior_frames{ii} = cat(3, behavior_frames{ii}, dFF(:,:,logical(eval(bvars(ii)))));
+        if any(logical(eval(bvars(ii))))
+            subplot(4, 3, ii)
+            % transpose the mean image to get the brains in proper
+            % orientation
+            imagesc(mean(dFF(:,:,logical(eval(bvars(ii)))), 3)');
+            title(bvars(ii)), colorbar, xticks([]), yticks([])
+        end
     end
+    savefig(gcf, [data_dir, filesep, 'outputs', filesep,  char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_dFF.fig'])
+    close(gcf)
 
-
-    disp('Clearing memory')
-    clear trials timestamps dFF
+    disp('Clearing variabls')
+    clear trials timestamps dFF largeright largeleft largebilateral lick left right fll_move flr_move
+%     if ~save_average_across_days
+%         clear behavior_frames
+%     end
     count = count + 1;
 %     if j == 3, break; end
 %     master_SVD_file = [mouse_root_dir filesep 'masterSVD.mat'];

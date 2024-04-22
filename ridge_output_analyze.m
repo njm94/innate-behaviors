@@ -1,110 +1,251 @@
 
 
-%%   do the same thing on ridge unique explained var
 
-clear, clc
+clear, close all, clc
+% cd('/media/user/teamshare/nick/behavior/grooming/code/')
+% addpath('/media/user/teamshare/nick/behavior/grooming/code/ridgeModel')
+% addpath('/media/user/teamshare/nick/behavior/grooming/code/ridgeModel/widefield')
+% addpath('/media/user/teamshare/nick/behavior/grooming/code/ridgeModel/smallStuff')
 
-data_root = 'Y:\nick\behavior\grooming\1p';
-mice = {'ECR2_thy1', 'GER2_ai94', 'HYL3_tTA', 'IBL2_tTA'};
-
-
-
-for j = 1:length(mice)
-    load([data_root, filesep, mice{j}, filesep, 'mask.mat'])
-    dff_path = [data_root, filesep, mice{j}, filesep, 'outputs'];
-    h = openfig([dff_path, filesep, getAllFiles(dff_path, 'ridge_summary.fig')]);
-    rightmove(:,:,j) = h.Children(2).Children.CData;
-    leftmove(:,:,j) = h.Children(4).Children.CData;
-    left(:,:,j) = h.Children(10).Children.CData;
-    right(:,:,j) = h.Children(8).Children.CData;
-    lick(:,:,j) = h.Children(6).Children.CData;
-    elliptical(:,:,j) = h.Children(18).Children.CData;
-    largeleft(:,:,j) = h.Children(16).Children.CData;
-    largeright(:,:,j) = h.Children(14).Children.CData;
-    bilateral(:,:,j) = h.Children(12).Children.CData;
-    close(h)
-end
-
-%% overlay contours from diff mice
-clc
-nanmask = zeros(128, 128, length(mice));
-
-for j = 1:length(mice)
-    load([data_root, filesep, mice{j}, filesep, 'mask.mat'])
-    nanmask(:,:,j) = mask;
-end
-nanmask(nanmask==0) = nan;
-
-
-
-
+addpath('C:\Users\user\Documents\Nick\ridgeModel');
+addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
+addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
 
 %%
-clc, clear a v
-tmp = [];
 
-thresh = 80;
-figure, axis off, hold on
-for j = 1:length(mice)
+fileID = fopen('expt1_datalist.txt','r');
+formatSpec = '%s';
+data_list = textscan(fileID, formatSpec);
+current_mouse = '';
 
-    vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "bilateral"];
-         
-    for i = 1:length(vars)    
-        test = eval(vars(i));
-        test = test .* nanmask;
-        test = test(:,:,j);
+fs = 90;
+% [b, a] = butter(2, 0.01/(fs/2), 'high');
+[b, a] = butter(1, [0.01 10]/(fs/2)); % bandpass
 
-        v = prctile(test(:), thresh);
-        a{i}(:,:,j) = test >= v;
-
-        subplot(1,length(vars), i), axis off, hold on
-            if v > 0
-                contourf(flipud(test), [v v], 'FaceAlpha', 0.25)
-    
-                title(vars(i));
-            end
-%         end
+for j = 4%1:length(data_list{1})%1:length(data_list{1})+1
+    % load experiment specific data into cell array
+    ridge_dir = [data_list{1}{j}, filesep, 'ridge_outputs_video'];
+    if ~isfolder(ridge_dir)
+        disp('Ridge on Videp not performed yet for current experiment date')
+        continue
     end
-%     legend(labs, 'Location', 'Best')
-end
+    
+    
+%     if any(contains(getAllFiles(ridge_dir), 'residuals'))
+%         disp('Residual figure alreay created. skipping')
+%         continue
+%     end
+    disp(['Starting ', data_list{1}{j}])
 
-%% compute pairwise dice
-for i = 1:length(vars)
-    count = 1;
-    for j = 1:length(mice)
-        for k = 1:length(mice)
-            if k > j
-                similarity(count, i) = dice(a{i}(:,:,j), a{i}(:,:,k));
-                count = count + 1;
+    disp('Loading ridge outputs')
+    load([ridge_dir, filesep, getAllFiles(ridge_dir, 'cvFull')])
+    data_dir = fileparts(data_list{1}{j});
+    load([data_list{1}{j} filesep 'tform.mat'])
+    load([data_dir filesep 'mask.mat'])
+    snippets_dir = [data_list{1}{j}, filesep, 'snippets'];
+    brain_file = [data_list{1}{j}, filesep, 'cam0_svd.mat'];
+    dlc_speed_file = [data_list{1}{j}, filesep, getAllFiles(data_list{1}{j}, 'speed.csv')];
+
+    
+    
+    disp('Loading brain data...')
+    load(brain_file);
+    % light-OFF signal may be captured in the brain data, resulting in a
+    % massive filter artifact - remove a few frames just in case
+    trial_length = size(V, 2) - 5; 
+    Vbrain = s*V(:, 1:trial_length);
+    
+    Vbrain = filtfilt(b, a, Vbrain')';
+
+    real_data = U*Vbrain;
+%     Vfull = filtfilt(b,a,double(Vfull'))'; % filter 2nd time
+    model_data = U*Vfull;
+    
+    disp('Calculating residuals')
+    residuals = zscore(real_data, [], 2) - zscore(model_data,[],2);
+    residuals = permute(reshape(residuals, 128, 128, []), [2 1 3]);
+    residuals = evaluate_tform(residuals, tformEstimate);
+
+
+    [behaviors, annotations, ~] = parse_snippets(snippets_dir);
+
+    disp('Creating figure')
+
+    nanmask = double(mask);
+    nanmask(mask==0) = nan;
+
+    disp('Loading DLC tracks')
+    dlc_speed = readmatrix(dlc_speed_file);
+    fll_speed = dlc_speed(1:trial_length,1);
+    flr_speed = dlc_speed(1:trial_length,2);
+    
+    % binarize movement speed
+    fll_speed = fll_speed > mean(fll_speed) + std(fll_speed);
+    flr_speed = flr_speed >  mean(flr_speed) + std(flr_speed);
+    
+%     fll_speed = aggregate(fll_speed, 3);
+%     flr_speed = aggregate(flr_speed, 3);
+    fl_move = aggregate((fll_speed | flr_speed) , 3);
+
+shgsh
+
+    figure
+    for i = 1:length(behaviors)
+        test = [];
+        if size(behaviors{1}, 1) > 0
+            for jj = 1:size(behaviors{i},1)
+                test = cat(3, test, residuals(:,:,behaviors{i}(jj,1):behaviors{i}(jj,2)));
             end
         end
+
+        if ~isempty(test)
+            subplot(3, 3, i)
+            imagesc(nanmask.*mean(test,3))
+            c=colorbar;
+            c.Label.String = 'Residuals';
+            title(annotations{i})
+            xticks([])
+            yticks([])
+        end
     end
+    
+    disp('Saving figure')
+    savefig(gcf, [ridge_dir, filesep, 'residuals',  char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '.fig'])
+
+    clear U s V Vbrain real_data model_data residuals behaviors test
+
 end
 
 
 
+%%
 
-[p,tbl,stats] = anova1(similarity);
-[c,m,h,gnames] = multcompare(stats);
+testgroom = [];
+for i = 1:size(behaviors{1},1)
+    testgroom = cat(3, testgroom, residuals(:,:,behaviors{1}(i,1):behaviors{1}(i,2)));
+end
 
-figure, boxplot(similarity, 'Colors', 'k'),
-xticklabels(vars)
-ylabel('Pairwise Dice Similarity Coefficient')
-ax = gca;
-ax.FontSize = 12;
+testreach = [];
+for i = 1:size(reach_idx,1)
+    testreach = cat(3, testreach, residuals(:,:,reach_idx(i,1):reach_idx(i,2)));
+end
 
-title(['One-Way ANOVA, p = ', num2str(p, 2)])
+testmove = [];
+for i = 1:size(move_idx,1)
+%     if move_idx(i,2)- move_idx(i,1) < 100
+        testmove = cat(3, testmove, residuals(:,:,move_idx(i,1):move_idx(i,2)));
+%     end
+end
+
+
+figure, imagesc([nanmask.*mean(testgroom,3), nanmask.*mean(testreach,3), nanmask.*mean(testmove,3)])
+colorbar
+caxis([-0.4 0.4])
+colormap(bluewhitered)
+
+%%
+
+figure, imagesc(mean(testgroom,3))
+[x,y] = ginput(1);
+
+bdur = diff(move_idx,1,2);
+[B, I] = sort(bdur);
+newB = move_idx(I,:);
+max_beh = max(bdur);
+test = nan(size(move_idx,1), max_beh);
+for i = 1:size(move_idx,1)
+    test(i, 1:B(i)+1) = getTimeseries(residuals(:,:,newB(i,1):newB(i,2)), [x y], 2)';
+end
+
+figure,
+imagesc(test), colorbar, caxis([-2 2]), 
+colormap(bluewhitered)
+
+
+%%
+
+
+behavior_idx = zeros(1, trial_length);
+for i = 1:length(behaviors)
+    if isempty(behaviors{i}), continue; end
+    for j = 1: size(behaviors{i},1)
+        behavior_idx(behaviors{i}(j,1):behaviors{i}(j,2)) = 1;
+    end
+end
+behavior_idx = aggregate(behavior_idx, 3);
+behavior_idx = arr2idx(behavior_idx);
+
+%%
+
+groom_idx = zeros(1, trial_length);
+for i = 1:4
+    if isempty(behaviors{i}), continue; end
+    for j = 1: size(behaviors{i},1)
+        groom_idx(behaviors{i}(j,1):behaviors{i}(j,2)) = 1;
+    end
+end
+groom_idx = aggregate(groom_idx, 3);
+groom_idx = arr2idx(groom_idx);
+%%
+
+reach_idx = zeros(1, trial_length);
+for i = 5:6
+    if isempty(behaviors{i}), continue; end
+    for j = 1: size(behaviors{i},1)
+        reach_idx(behaviors{i}(j,1):behaviors{i}(j,2)) = 1;
+    end
+end
+reach_idx = aggregate(reach_idx, 3);
+reach_idx = arr2idx(reach_idx);
+
+figure, plot(groom_idx)
+hold on, plot(reach_idx)
+%%
+% mres = mean(residuals);
+t = xt(mres, fs);
+mres = squeeze(residuals(y,x,:));
+figure, plot(t,mres, 'k')
+
+cols = {'y', 'y', 'y', 'y', 'g', 'g', 'm'};
+hold on
+% for i = 1:length(behaviors)
+%     patchplot(t(behaviors{i}), [min(mres) max(mres)], cols{i}, 0.25);
+% end
+i=7;
+patchplot(t(behaviors{i}), [min(mres) max(mres)], cols{i}, 0.25);
 
 
 %%
 
 
 
+[s, f, t] = spectrogram(test,1000,100,1024, fs,'yaxis');
 
 %%
 
-selpath = uigetdir('Y:\nick\behavior\grooming\1p');
 
+
+
+
+%%
+
+
+show_mov(residuals(:,:,100:200))
+
+
+%%
+
+rr = cell(1, length(behaviors));
+for j = 1:length(behaviors)
+    for i = 1:length(behaviors{j})
+        rr{j} = [rr{j}, mres(behaviors{j}(i,1):behaviors{j}(i,2))];
+    end
+end
+
+
+rrr = cellfun(@mean, rr)
+
+%%
 % load([selpath, filesep, 'outputs', filesep, 'cvFull.mat'])
 load([selpath, filesep, 'mask.mat'])
 % load([selpath, filesep, 'Umaster.mat'])

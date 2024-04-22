@@ -44,22 +44,20 @@ for j = length(data_list{1})
 %         continue
 %     end
     
-%     %% draw mask
-%     frame = loadtiff(frame_file);
-%     mask = draw_roi(frame, 4);
-%     
-%     %%
-%     nanidx = mask==0;
-%     
-%     
+
     %% load brain svd components, multiply s into V
         % highpass filter
-        % z-score
     disp('Loading brain data...')
     load(brain_file);
     Ubrain = U;
-    Vbrain = s*V;
-    [b, a] = butter(2, 0.01/(fs/2), 'high');
+
+    % light-OFF signal may be captured in the brain data, resulting in a
+    % massive filter artifact - remove a few frames just in case
+    trial_length = size(V, 2) - 5; 
+    Vbrain = s*V(:, 1:trial_length);
+
+%     [b, a] = butter(2, 0.01/(fs/2), 'high');
+    [b, a] = butter(1, [0.01 10]/(fs/2)); % bandpass
     Vbrain = filtfilt(b, a, Vbrain')';
     
     
@@ -69,10 +67,9 @@ for j = length(data_list{1})
     Vbeh = s*V;
 %     
 %     %% load motion svd components, multiply s into V
-%         % z-score
-%     load(ME_file)
-%     Ume = U;
-%     Vme = s*V;
+    load(ME_file)
+    Ume = U;
+    Vme = s*V;
     
     
     %%
