@@ -211,7 +211,7 @@ disp('Done')
 fs = 60;
 dur = 10;
 
-for i = 4%:numel(mouseID) % loop over mice   
+for i = 9%:13%:numel(mouseID) % loop over mice   
     
     
     % FROM EXPERIMENT INFO. IJ1 and IQ3 are placed in group2 because of
@@ -263,10 +263,7 @@ for i = 4%:numel(mouseID) % loop over mice
             
             % behavior video
             v = VideoReader([behPath{k}(1:end-4) 'avi']);
-            beh{k} = read(v, [1 Inf]);            
-            
-            
-            
+            beh{k} = read(v, [1 Inf]);                      
             
             if contains(brPath{k}, '/media/deeplabcut/data2/')
                 brPath{k} = strrep(brPath{k}, '/media/deeplabcut/data2', 'Y:\pankaj');
@@ -277,7 +274,6 @@ for i = 4%:numel(mouseID) % loop over mice
                 brPath{k} = strrep(brPath{k}, '/media/pankaj/teamshare', 'Y:');
                 brPath{k} = strrep(brPath{k}, '/', '\');
             end
-
             
             I = loadtiff(brPath{k});
             [fluo{k}, ref{k}] = splitstrobe(I);
@@ -295,7 +291,7 @@ for i = 4%:numel(mouseID) % loop over mice
             else
                 whisker_time{k} = false(size(beh{k},4),1);
             end
-            [led_behavior_time{k}, led_behavior_roi, led_behavior_signal{k}] = get_stimulus_time(beh{k}, 'LED stim', led_behavior_roi, 1,[230 270], 20);  
+%             [led_behavior_time{k}, led_behavior_roi, led_behavior_signal{k}] = get_stimulus_time(beh{k}, 'LED stim', led_behavior_roi, 1,[230 270], 20);  
             rois_defined = true;
             
 %           % find flash artifact in upper left corner of image
@@ -334,9 +330,9 @@ for i = 4%:numel(mouseID) % loop over mice
             min_size = min([size(dFF{k},3) size(beh{k},4)]);
             dFF{k} = dFF{k}(:,:,1:min_size);
             beh{k} = beh{k}(:,:,:,1:min_size);
-            led_behavior_time{k} = led_behavior_time{k}(1:min_size);
+%             led_behavior_time{k} = led_behavior_time{k}(1:min_size);
 %             led_brain_time{k} = led_brain_time{k}(1:min_size);
-            whisker_time{k} = whisker_time{k}(1:min_size);
+%             whisker_time{k} = whisker_time{k}(1:min_size);
             paw{k} = paw{k}(1:min_size,:);
          
         end
@@ -486,7 +482,7 @@ function paw = read_DLC_file(behPath)
     idx = strfind(behPath, '\');
     bpath = ['Y:', behPath(idx(1):idx(end))];
     bfiles = getAllFiles(bpath);
-    bfiles = bfiles(contains(bfiles, '.csv') & contains(bfiles, bfileID{:}));
+    bfiles = bfiles(contains(bfiles, '.csv') & contains(bfiles, bfileID{:}) & contains(bfiles, 'DeepCut'));
     tab = readtable([bpath, bfiles{:}]);
 
     l_paw_x = table2array(tab(1:end, 5));

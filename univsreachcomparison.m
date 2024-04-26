@@ -4,39 +4,90 @@ clear, clc
 %%
 addpath('C:\Users\user\Documents\Nick\grooming\utils')
 data_path = 'Y:\pankaj\water_reaching_project\data\matlab_outputs';
-% reaching_files = {'HR1_2019_4_12data_compile.mat', 'HR2_2019_4_12data_compile.mat', ...
-%     'IJ2_2020_7_27data_compile.mat', 'IJ3_2020_7_27data_compile.mat', ...
-%     'IK1_2019_4_12data_compile.mat', 'IK2_2019_4_12data_compile.mat', ...
-%     'IO1_2020_7_27data_compile.mat', 'IQ1_2020_7_27data_compile.mat', ...
-%     'IQ2_2020_7_27data_compile.mat'};
 
 reaching_files = {'HR1_2019_4_12data_compile.mat', 'HR2_2019_4_12data_compile.mat', ...
-    'IK1_2019_4_12data_compile.mat', 'IK2_2019_4_12data_compile.mat'};
+    'IJ2_2020_7_27data_compile.mat', 'IJ3_2020_7_27data_compile.mat', ...
+    'IK1_2019_4_12data_compile.mat', 'IK2_2019_4_12data_compile.mat', ...
+    'IO1_2020_7_27data_compile.mat', 'IQ1_2020_7_27data_compile.mat', ...
+    'IQ2_2020_7_27data_compile.mat'};
+
+% reaching_files = {'HR1_2019_4_12data_compile.mat', 'HR2_2019_4_12data_compile.mat', ...
+%     'IK1_2019_4_12data_compile.mat', 'IK2_2019_4_12data_compile.mat'};
 
 fs=60;
 %%
 
-for j = 1%:length(reaching_files)
+for j = 4%length(reaching_files)
     disp(['Running ', data_path, filesep, reaching_files{j}])
-    load([data_path, filesep, reaching_files{j}],  ...
-        'trialResult', 'paw', 'beh')
+    load([data_path, filesep, reaching_files{j}], 'dFF', 'rewardTime', ...
+        'trialResult', 'lickTime', 'paw', 'beh', 'whisker_time', 'fluo_frame')
+    N = length(rewardTime);
+
+    figure, imagesc(beh{1}(:,:,1)), hold on, colormap gray
+    for i = 1:length(trialResult)/2
+        if strcmpi(trialResult{i}, 'Success')
+             plot(paw{i}(:,1), paw{i}(:,2)), hold on, plot(paw{i}(:,3), paw{i}(:,4))
+        end
+    end
+    
+    r = drawpolygon(LineWidth=3,Color="y");
+    l = drawpolygon(LineWidth=3,Color='m');
+
+    mask = draw_roi(fluo_frame, 4);
+    mask = double(mask);
+    mask(mask==0) = nan;
+
+
+    figure, hold on
+    reach_response = [];
+    lick_response = [];
+    whisker_response = [];
+
+    for i = 1:N
+        if strcmpi(trialResult{i}, 'Success')
+
+            lick_idx = inROI(l, paw{i}(:,1), paw{i}(:,2));
+            reach_idx = inROI(r, paw{i}(:,1), paw{i}(:,2));
+
+            % remove any events before reward delivered
+            reach_idx(1:round(rewardTime(i)*fs)) = 0;
+            lick_idx(1:round(rewardTime(i)*fs)) = 0;
+
+            % smooth lick and reach indices with morphological opening
+            w = round(fs/3);
+            lick_idx = movmax(movmin(lick_idx, w), w);
+            reach_idx = movmax(movmin(reach_idx, w), w);
+            
+            % exclude overlapping period from both signals
+            overlap = lick_idx & reach_idx;
+            reach_idx(overlap) = 0;
+            lick_idx(overlap) = 0;
+            
+            plot(xt(reach_idx,fs), reach_idx-i, 'k')
+            plot(xt(lick_idx,fs), lick_idx-i, 'm')
+            plot(rewardTime(i), -i, 'o')
+            plot(xt(whisker_time{i}, fs), whisker_time{i}-i, 'k')
+
+            reach_response = cat(3, reach_response, dFF{i}(:,:,reach_idx(1:min([length(reach_idx), size(dFF{i},3)]))));
+            lick_response = cat(3, lick_response, dFF{i}(:,:,lick_idx(1:min([length(lick_idx), size(dFF{i},3)]))));
+            whisker_response = cat(3, whisker_response, dFF{i}(:,:,whisker_time{i}));            
+        end
+    end
+
+    save([data_path, filesep, reaching_files{j}(1:end-4), '_processed_', char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '.mat'], ...
+        'reach*', 'lick*', 'r', 'l', 'mask', 'whisker*')
 end
 
 %%
 
-figure, imagesc(beh{1}(:,:,1)), hold on, colormap gray
-for i = 1:length(trialResult)/2
-    if strcmpi(trialResult{i}, 'Success')
-         plot(paw{i}(:,1), paw{i}(:,2)), hold on, plot(paw{i}(:,3), paw{i}(:,4))
-    end
-end
+
 
 %%
 clc
 for j = 1%:length(reaching_files)
     disp(['Running ', data_path, filesep, reaching_files{j}])
     load([data_path, filesep, reaching_files{j}], 'dFF', 'rewardTime', ...
-        'trialResult', 'lickTime', 'paw', 'beh')
+        'trialResult', 'lickTime', 'paw', 'beh', 'fluo_frame')
     N = length(rewardTime);
     clear reach_response lick_response
 
