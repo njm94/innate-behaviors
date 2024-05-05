@@ -65,14 +65,14 @@ expt2_data_list.append(['ETR3_thy1', [
     # '20231109092652', # spontaneous
     # '20231111153211', # spontaneous
     # '20231113155903', # evoked
-    '20231115174148', # evoked
+    # '20231115174148', # evoked
     ]])
     
 expt2_data_list.append(['ETR2_thy1', [
-    # '20231109115418', # spontaneous
-    # '20231109115952', # spontaneous
-    # '20231109120816', # spontaneous
-    # '20231111165721', # spontaneous
+    '20231109115418', # spontaneous
+    '20231109115952', # spontaneous
+    '20231109120816', # spontaneous
+    '20231111165721', # spontaneous
     # '20231113143925', # evoked
     # '20231115153531', # evoked
     ]])
