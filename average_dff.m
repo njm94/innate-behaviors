@@ -34,7 +34,7 @@ camk_idx = 14:25;
 save_average_across_days = false;
 %%
  
-for j = 23:length(data_list{1})+1
+for j = thy1_idx(end) %23:length(data_list{1})+1
      try
         data_dir = data_list{1}{j};
         disp(['Starting ' data_dir])
@@ -81,16 +81,14 @@ for j = 23:length(data_list{1})+1
         count = 1;
         disp('Loading master basis set')
         load([mouse_root_dir filesep 'Umaster.mat'])
-        clear Vmaster left right elliptical large_left large_right largebilateral lick fll_move flr_move audio_tone drop_left drop_right
+        load([mouse_root_dir filesep 'mask.mat'])
+        clear Vmaster left right elliptical large_left large_right largebilateral lick LeftMove RightMove Audio drop_left drop_right
         current_mouse = mouse_id;
 
         fPath = [mouse_root_dir filesep 'outputs' filesep];
 
-        behavior_frames = cell(1, 12);
+        behavior_frames = cell(1, 17);
 
-        %     %% draw mask - might be needed for memory management
-        %     frame = loadtiff(frame_file);
-        %     mask = draw_roi(frame, 4);
         
     end
 
@@ -102,20 +100,36 @@ for j = 23:length(data_list{1})+1
 %         grooming_file = [data_dir, filesep, 'grooming_events_roi_filtered.mat'];
         dlc_speed_file = [data_dir, filesep, get_file_with_str(data_dir, 'speed.csv')];
         timestamp_file = [data_dir, filesep, get_file_with_str(data_dir, 'trim.txt')];
-        snippets_dir = [data_dir, filesep, 'snippets'];
+        % snippets_dir = [data_dir, filesep, 'snippets'];
+        boris_file = [data_dir, filesep, get_file_with_str(data_dir, 'events.tsv')];
     catch
         disp('Missing one or more of the required files. Skipping...')
         continue
     end
-    
+
+    %% load grooming events from BORIS file
+    events = read_boris(boris_file);
+
     % load experiment specific data into cell array
     load([data_dir filesep 'tform.mat'])
+
 
     disp('Loading brain data...')
     load(brain_file);
     U = permute(reshape(U, 128, 128, []), [2 1 3]);
     U = evaluate_tform(U, tformEstimate); % apply registration
     U = reshape(U, 128*128, []);
+
+    % Brain video may have been resampled to wrong number of frames due to
+    % inaccuracy in pre-processing step. Fix this by checking the length of
+    % brain data and comparing to manually labeled VideoEnd event from
+    % BORIS file. If there is a discrepancy, resample the brain data to the
+    % length of the BORIS file to fix the issue.
+    trial_length = find(events.("Video End"));
+    if size(V,2) > trial_length
+        V = resamplee(V', trial_length, size(V,2))';
+    end
+
     
     % light-OFF signal may be captured in the brain data, resulting in a
     % massive filter artifact - remove a few frames just in case
@@ -128,17 +142,17 @@ for j = 23:length(data_list{1})+1
     dFF = zscore((dataR-min(dataR(:))./mean(dataR - min(dataR(:)), 3))-1, [], 3);
     clear dataR Vbrain U s V
 
-    %% load grooming events
-    disp('Loading grooming events')
-    [behaviors, annotation_labels] = parse_snippets(snippets_dir);
-
-    left= idx2arr(behaviors{annotation_labels == "left"}, trial_length);
-    right= idx2arr(behaviors{annotation_labels == "right"}, trial_length);
-    elliptical= idx2arr(behaviors{annotation_labels == "elliptical"}, trial_length);
-    largeleft= idx2arr(behaviors{annotation_labels == "largeleft"}, trial_length);
-    largeright= idx2arr(behaviors{annotation_labels == "largeright"}, trial_length);
-    largebilateral= idx2arr(behaviors{annotation_labels == "largebilateral"}, trial_length);
-    lick = idx2arr(behaviors{annotation_labels == "lick"}, trial_length);
+    % %% load grooming events
+    % disp('Loading grooming events')
+    % [behaviors, annotation_labels] = parse_snippets(snippets_dir);
+    % 
+    % left= idx2arr(behaviors{annotation_labels == "left"}, trial_length);
+    % right= idx2arr(behaviors{annotation_labels == "right"}, trial_length);
+    % elliptical= idx2arr(behaviors{annotation_labels == "elliptical"}, trial_length);
+    % largeleft= idx2arr(behaviors{annotation_labels == "largeleft"}, trial_length);
+    % largeright= idx2arr(behaviors{annotation_labels == "largeright"}, trial_length);
+    % largebilateral= idx2arr(behaviors{annotation_labels == "largebilateral"}, trial_length);
+    % lick = idx2arr(behaviors{annotation_labels == "lick"}, trial_length);
 
 
     %% load DLC tracks
@@ -152,9 +166,8 @@ for j = 23:length(data_list{1})+1
     flr_speed = flr_speed >  mean(flr_speed) + std(flr_speed);
     
     k = 35; % smoothing kernel - this matches smoothing kernel in grooming detection but may need to change
-    fll_move= movmax(fll_speed, k);
-    flr_move= movmax(flr_speed, k);
-
+    LeftMove= movmax(fll_speed, k);
+    RightMove= movmax(flr_speed, k);
 
     clear dlc_speed fll_speed flr_speed
 
@@ -165,48 +178,81 @@ for j = 23:length(data_list{1})+1
     disp('Getting stimulus info from timestamp file');
     timestamps = readmatrix(timestamp_file);
     trials = unique(timestamps(:, 4));
-    audio_tone= zeros(size(fll_move));
-    drop_left = zeros(size(fll_move));
-    drop_right = zeros(size(fll_move));
+    Audio= zeros(size(LeftMove));
+    % drop_left = zeros(size(fll_move));
+    % drop_right = zeros(size(fll_move));
     for i = 1:length(trials)
         if trials(i) == 0, continue; end
         trial_start  = find(timestamps(:,4)==trials(i), 1); 
-        audio_tone(trial_start:trial_start+fs) = 1;
-        if count > 2 && count < 6
-            % first 2 trials for each mouse are spontaneous trials - no
-            % water drop. then on last trial for HYL3, drop goes on left
-            % side
-            drop_right(trial_start+ceil(2*fs): trial_start+ceil(3.5*fs))=1;
-        elseif count == 6
-            drop_left(trial_start+ceil(2*fs): trial_start+ceil(3.5*fs))=1;
-        end
+        Audio(trial_start:trial_start+fs) = 1;
+        % if count > 2 && count < 6
+        %     % first 2 trials for each mouse are spontaneous trials - no
+        %     % water drop. then on last trial for HYL3, drop goes on left
+        %     % side
+        %     drop_right(trial_start+ceil(2*fs): trial_start+ceil(3.5*fs))=1;
+        % elseif count == 6
+        %     drop_left(trial_start+ceil(2*fs): trial_start+ceil(3.5*fs))=1;
+        % end
     end
 
     % iterate through behaviors and store frames
-    bvars = ["elliptical", "largeleft", "largeright", "largebilateral", ...
-        "left", "right", "lick", "fll_move", "flr_move", ...
-        "audio_tone", "drop_left", "drop_right"];
+    % bvars = ["elliptical", "largeleft", "largeright", "largebilateral", ...
+    %     "left", "right", "lick", "fll_move", "flr_move", ...
+    %     "audio_tone", "drop_left", "drop_right"];
 
-    figure,  
-    for ii = 1:length(bvars)
-        behavior_frames{ii} = cat(3, behavior_frames{ii}, dFF(:,:,logical(eval(bvars(ii)))));
-        if any(logical(eval(bvars(ii))))
-            subplot(4, 3, ii)
-            % transpose the mean image to get the brains in proper
-            % orientation
-            imagesc(mean(dFF(:,:,logical(eval(bvars(ii)))), 3)');
-            title(bvars(ii)), colorbar, xticks([]), yticks([])
+    bvars = ["Drop Hits Left", "Drop Hits Right", "Drop Hits Center", "Audio", ...
+        "Lick Left", "Lick Right", "Lick Unknown", "Lick No Paws", ...
+        "Right", "Left", "Right Asymmetric", "Left Asymmetric" ...
+        "Elliptical", "Elliptical Asymmetric", "Large Bilateral", ...
+        "LeftMove", "RightMove"];
+
+    % Update drop variable to capture window surrounding each event
+    for ii = 1:3
+        if any(strcmp(events.Properties.VariableNames, bvars(ii)))
+            drop_event_idx = find(table2array(events(:,ii)));
+            for jj = 1:length(drop_event_idx)
+                events.(bvars(ii))(drop_event_idx(jj)-30:drop_event_idx(jj)+90) = 1;
+            end
         end
     end
+
+    figure
+    for ii = 1:length(bvars)
+        if any(strcmp(events.Properties.VariableNames, bvars(ii)))
+            b_idx = logical(table2array(events(:,strcmp(events.Properties.VariableNames, bvars(ii)))));
+        elseif exist(bvars(ii), 'var')
+            b_idx = logical(eval(bvars(ii)));
+        else
+            continue
+        end
+        behavior_frames{ii} = cat(3, behavior_frames{ii}, dFF(:,:,b_idx(1:end-5)));
+        subplot(5, 4, ii)
+        % transpose the mean image to get the brains in proper
+        % orientation
+        imagesc(mask.*mean(dFF(:,:,b_idx(1:end-5)),3)');
+        title(bvars(ii)), colorbar, xticks([]),  yticks([])
+    end
+
+    % figure,  
+    % for ii = 1:length(bvars)
+    %     behavior_frames{ii} = cat(3, behavior_frames{ii}, dFF(:,:,logical(eval(bvars(ii)))));
+    %     if any(logical(eval(bvars(ii))))
+    %         subplot(4, 3, ii)
+    %         % transpose the mean image to get the brains in proper
+    %         % orientation
+    %         imagesc(mean(dFF(:,:,logical(eval(bvars(ii)))), 3)');
+    %         title(bvars(ii)), colorbar, xticks([]), yticks([])
+    %     end
+    % end
     savefig(gcf, [data_dir, filesep, 'outputs', filesep,  char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_dFF.fig'])
     close(gcf)
 
     disp('Clearing variabls')
-    clear trials timestamps dFF largeright largeleft largebilateral lick left right fll_move flr_move
+    clear trials timestamps dFF largeright largeleft largebilateral lick left right LeftMove RightMove
 %     if ~save_average_across_days
 %         clear behavior_frames
 %     end
-    count = count + 1;
+    % count = count + 1;
 %     if j == 3, break; end
 %     master_SVD_file = [mouse_root_dir filesep 'masterSVD.mat'];
 %     if ~isfile(master_SVD_file)
