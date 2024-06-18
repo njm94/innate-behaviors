@@ -6,24 +6,30 @@
 
 clc, clear
 
-startpath = 'Y:\nick\2p';
+startpath = 'Y:\nick\behavior\grooming\2p';
 working_dir = uigetdir(startpath, 'Select experiment directory.');
 
 arm_array = get_folders(working_dir);
 
 for i = 1:length(arm_array)
-    roi_array{i} = get_folders(arm_array{i});
-    for j = 1:length(roi_array)
-        plane_array{j} = get_folders(roi_array{i});
+    if ~contains(arm_array{i}, 'arm')
+        arm_array{i} = [];
+        continue; 
     end
+    roi_array{i} = get_folders(arm_array{i});
+%     for j = 1:length(roi_array{i})
+%         plane_array{j} = get_folders(roi_array{i}{j});
+%     end
 end
 
+arm_array(cellfun(@isempty,arm_array))=[];
 
 roi_array = catcell(2, roi_array);
 template_path = get_template_path(working_dir);
 
+
 for i=1:length(roi_array)
-    for j = 1:length(plane_array)
+%     for j = 1:length(plane_array)
     data = load([roi_array{i}, '\bin2x2x1\suite2p\plane0\Fall.mat']);
    
     stat{i} = data.stat;
@@ -53,7 +59,7 @@ for i=1:length(roi_array)
     tforms{i}.roi_to_linear = roi_to_linear;
     tforms{i}.linear_to_wfield = linear_to_wfield;
     tforms{i}.wfield_to_atlas = wfield_to_atlas;
-    end
+%     end
     
 end
 
@@ -84,8 +90,9 @@ folders = strsplit(working_dir, '\');
 for i = length(folders):-1:1
     tmp = join(folders(1:i), '\');
     tmp = get_folders(tmp{:});
-    if any(contains(tmp, 'template'))
-        template_path = tmp{contains(tmp, 'template')};
+    disp(tmp)
+    if any(contains(tmp, 'dalsa'))
+        template_path = tmp{contains(tmp, 'dalsa')};
         break
     end
 

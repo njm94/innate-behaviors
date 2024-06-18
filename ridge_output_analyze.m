@@ -340,11 +340,12 @@ legend(labs, 'Location', 'Best')
 %%
 
 
-clc
-visual = false;
-cBetaRight = check_beta('Right', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, mask, visual);
-right = movmean(cBetaRight, 6, 3);
+% clc
+visual = true;
+cBetaRight = check_beta('Drop Hits Left', fullLabels, fullIdx, Ubrain, fullBeta{1}, Vfull, [], visual);
+% right = movmean(cBetaRight, 6, 3);
 
+%%
 cBetaLeft = check_beta('Left', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, mask, visual);
 left = movmean(cBetaLeft, 6, 3);
 
