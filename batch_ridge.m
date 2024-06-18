@@ -48,7 +48,8 @@ for j = 7%length(data_list{1})
 %         grooming_file = [data_dir, filesep, 'grooming_events_roi_filtered.mat'];
         dlc_speed_file = [data_dir, filesep, getAllFiles(data_dir, 'speed.csv')];
         timestamp_file = [data_dir, filesep, getAllFiles(data_dir, 'trim.txt')];
-        snippets_dir = [data_dir filesep 'snippets'];
+%         snippets_dir = [data_dir filesep 'snippets'];
+        boris_file = [data_dir, filesep, get_file_with_str(data_dir, 'events.tsv')];
     catch
         disp('Missing one or more of the required files. Skipping...')
         continue
@@ -59,6 +60,8 @@ for j = 7%length(data_list{1})
 %         continue
 %     end
     
+    %% load grooming events from BORIS file
+    events = read_boris(boris_file);
 
     %% load brain svd components, multiply s into V
         % highpass filter
@@ -66,25 +69,44 @@ for j = 7%length(data_list{1})
     load(brain_file);
     Ubrain = U;
 
+    [b, a] = butter(1, [0.01 10]/(fs/2)); % bandpass
+
+    % Brain video may have been resampled to wrong number of frames due to
+    % inaccuracy in pre-processing step. Fix this by checking the length of
+    % brain data and comparing to manually labeled VideoEnd event from
+    % BORIS file. If there is a discrepancy, resample the brain data to the
+    % length of the BORIS file to fix the issue.
+    trial_length = find(events.("Video End"));
+    if size(V,2) > trial_length
+        V = resamplee(V', trial_length, size(V,2))';
+    end
+
+    
     % light-OFF signal may be captured in the brain data, resulting in a
     % massive filter artifact - remove a few frames just in case
     trial_length = size(V, 2) - 5; 
-    Vbrain = s*V(:, 1:trial_length);
+    Vbrain = recastV(Umaster, U, s, V(:, 1:trial_length));
+    Vbrain = filtfilt(b, a, V(:,1:trial_length)')';
+
+%     % light-OFF signal may be captured in the brain data, resulting in a
+%     % massive filter artifact - remove a few frames just in case
+%     trial_length = size(V, 2) - 5; 
+%     Vbrain = s*V(:, 1:trial_length);
 
 %     [b, a] = butter(2, 0.01/(fs/2), 'high');
-    [b, a] = butter(1, [0.01 10]/(fs/2)); % bandpass
-    Vbrain = filtfilt(b, a, Vbrain')';
+
+%     Vbrain = filtfilt(b, a, Vbrain')';
     
     
-%     %% load behavior svd components, multiply s into V
-    % load(beh_file)
-    % Ubeh = U;
-    % Vbeh = s*V;
-%     
-%     %% load motion svd components, multiply s into V
-    % load(ME_file)
-    % Ume = U;
-    % Vme = s*V;
+% %     %% load behavior svd components, multiply s into V
+%     load(beh_file)
+%     Ubeh = U;
+%     Vbeh = s*V;
+% %     
+% %     %% load motion svd components, multiply s into V
+%     load(ME_file)
+%     Ume = U;
+%     Vme = s*V;
     
     
     %%
@@ -106,11 +128,11 @@ for j = 7%length(data_list{1})
     fll_speed = dlc_speed(:,1);
     flr_speed = dlc_speed(:,2);
 
-    fll_movement = fll_speed > mean(fll_speed) + std(fll_speed);
-    flr_movement = flr_speed >  mean(flr_speed) + std(flr_speed);
+    LeftMove = fll_speed > mean(fll_speed) + std(fll_speed);
+    RightMove = flr_speed >  mean(flr_speed) + std(flr_speed);
 
-    fll_movement = movmax(fll_movement, 35);
-    flr_movement = movmax(flr_movement, 35);
+    LeftMove = movmax(LeftMove, 35);
+    RightMove = movmax(RightMove, 35);
 
 
     %% load stimulus info from timestamp file
@@ -120,24 +142,52 @@ for j = 7%length(data_list{1})
     disp('Getting stimulus info from timestampfile');
     timestamps = readmatrix(timestamp_file);
     trials = unique(timestamps(:, 4));
-    audio_tone = zeros(size(fll_movement));
-    water_drop = zeros(size(fll_movement));
+    Audio = zeros(size(LeftMove));
+%     water_drop = zeros(size(LeftMove));
     for i = 1:length(trials)
         if trials(i) == 0, continue; end
         trial_start  = find(timestamps(:,4)==trials(i), 1); 
-        audio_tone(trial_start:trial_start+fs) = 1;
-        water_drop(trial_start+ceil(2*fs): trial_start+ceil(3.5*fs))=1;
+        Audio(trial_start:trial_start+fs) = 1;
+%         water_drop(trial_start+ceil(2*fs): trial_start+ceil(3.5*fs))=1;
     end
+
+    bvars = ["Drop Hits Left", "Drop Hits Right", "Drop Hits Center", "Audio", ...
+        "Lick Left", "Lick Right", "Lick Unknown", "Lick No Paws", ...
+        "Right", "Left", "Right Asymmetric", "Left Asymmetric" ...
+        "Elliptical", "Elliptical Asymmetric", "Large Bilateral", ...
+        "LeftMove", "RightMove"];
+
+
     
     %% build design matrix
     disp('Building design matrix')
     bopts.frameRate = fs;
-    bopts.sPostTime=round(fs*2);
+    bopts.sPostTime=round(fs*1);
     bopts.mPreTime = ceil(0.5 * fs);  % precede motor events to capture preparatory activity in frames (used for eventType 3)
     bopts.mPostTime = ceil(2 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
-    bopts.framesPerTrial = length(audio_tone); % nr. of frames per trial
+    bopts.framesPerTrial = trial_length; % nr. of frames per trial
     bopts.folds = 10; %nr of folds for cross-validation
 
+
+    bmat = table2array(events(:,~strcmp(events.Properties.VariableNames, 'Video End')));
+    bmat = [Audio(1:trial_length) bmat(1:trial_length, :)];
+
+    % specify the type of variable for making the design matrix
+    reg_type = [];
+    for ii = 1:size(events,2)
+        if contains(events.Properties.VariableNames{ii}, 'Drop')
+            reg_type = [reg_type 2];
+        elseif strcmp(events.Properties.VariableNames{ii}, 'Video End')
+            continue
+        else
+            reg_type = [reg_type 3];
+        end
+    end
+
+    % concatenate another STIMULUS variable type for the Audio tone
+    reg_type = [2 reg_type];
+
+    
 
 %     bmat = [FL_R' FL_L']; %ipsi contra
 %     bmat = [ipsi' contra' bilat']; % ipsi contra bilatExclusive
@@ -145,12 +195,12 @@ for j = 7%length(data_list{1})
 %     bmat = [ipsi' contra' fll_movement flr_movement];
 %     bmat = [FL_R' FL_L' bilat', fll_movement_ex, flr_movement_ex]; % ipsi contra bilatInclusive forelimbEx
 %     bmat = [audio_tone water_drop FL_R' FL_L' lick2' fll_movement flr_movement]; % tone drop ipsi contra bilatInclusive forelimbInc
-   bmat = [audio_tone(1:trial_length) water_drop(1:trial_length) bmat', fll_movement(1:trial_length), flr_movement(1:trial_length)];
+%    bmat = [Audio water_drop bmat', LeftMove, RightMove];
 
 %     [movMat, movEventIdx2] = makeDesignMatrix(bmat, [3, 3, 3, 3, 3], bopts);
 %     [movMat, movEventIdx2] = makeDesignMatrix(bmat, [3, 3], bopts);
 %     [movMat, movEventIdx2] = makeDesignMatrix(bmat, [3, 3, 3], bopts);
-    [movMat, movEventIdx2] = makeDesignMatrix(bmat, [2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3], bopts);
+    [movMat, regIdx] = makeDesignMatrix(bmat, reg_type, bopts);
 
 %     moveLabels = {'audio', 'drop', 'ipsi', 'contra', 'lick' 'left_move', 'right_move'}; %some movement variables
 %     moveLabels = {'ipsi', 'contra', 'left_move', 'right_move'}; %some movement variables    
@@ -159,18 +209,18 @@ for j = 7%length(data_list{1})
 %     moveLabels = {'ipsi', 'contra', 'bilat'}; %some movement variables
 % moveLabels = {'audio', 'drop', 'lick', 'elliptical', 'largeleft', 'largeright', 'largebilateral', 'right', 'left', 'leftmove', 'rightmove'};
 
-moveLabels = {'Audio', 'Drop', 'Lick', ...
-                'Elliptical', 'LargeLeft', 'LargeRight', 'LargeBilateral', ...
-                'Right', 'Left', ...
-                'LeftMove', 'RightMove'};
+% moveLabels = {'Audio', 'Drop', 'Lick', ...
+%                 'Elliptical', 'LargeLeft', 'LargeRight', 'LargeBilateral', ...
+%                 'Right', 'Left', ...
+%                 'LeftMove', 'RightMove'};
 
-    
+regLabels = events.Properties.VariableNames(~strcmp(events.Properties.VariableNames, 'Video End'));
+regLabels = ['Audio', regLabels];
+
     % fullR = [Vbeh' Vme'];
     % fullR = [Vme'];    
     fullR = [movMat];
-    % fullR = [fullR Vbeh(:,1:size(fullR,1))'];   
-    regIdx = movEventIdx2;
-    regLabels = moveLabels;
+%     fullR = [fullR Vbeh(:,1:size(fullR,1))'];    
     
 %     %% run ridge
 %     [ridgeVals, dimBeta] = ridgeMML(Vbrain', fullR, true); %get ridge penalties and beta weights.
@@ -184,8 +234,8 @@ moveLabels = {'Audio', 'Drop', 'Lick', ...
 %     c.FontSize =12;
     
     % % regIdx = [taskIdx; moveIdx + max(taskIdx); repmat(max(moveIdx)+max(taskIdx)+1, size(vidR,2), 1)]; %regressor index
-    % regIdx = [movEventIdx2;  repmat(max(movEventIdx2)+1, size(Vbeh',2), 1)];
-    % regLabels = [moveLabels, {'video'}];
+%     regIdx = [movEventIdx2;  repmat(max(movEventIdx2)+1, size(Vbeh',2), 1)];
+%     regLabels = [moveLabels, {'video'}];
     % 
     % cVar = 'bilat';
     % 
@@ -229,6 +279,31 @@ moveLabels = {'Audio', 'Drop', 'Lick', ...
     %     reducedMat = reshape(reducedMat, 128, 128, length(regLabels));
         save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
     end
+
+
+%     %% run reduced models for unique contribution
+%     if size(event_type,1) <= 1
+%         fig_flag = 0;
+%         disp('Not enough unique event types to run reduce models. Skipping...')
+%     else
+%         disp('Running reduced models')
+%         fig_flag = 1;
+%         reducedMat = [];
+%         for i = 1:length(regLabels)
+%             reduced = fullR;
+%             cIdx = regIdx == i;
+%             if ~any(cIdx)
+%                 disp(['No ', regLabels{i}, '  events found. Skipping...'])
+%                 continue
+%             end
+%             reduced(:, cIdx) = reduced(randperm(size(reduced, 1)), cIdx);
+%         
+%             [Vreduced{i}, reducedBeta{i}, reducedR, reducedIdx, reducedRidge, reducedLabels] = crossValModel(reduced, Vbrain, regLabels, regIdx, regLabels, bopts.folds);
+%             reducedMat(:, i) = modelCorr(Vbrain, Vreduced{i}, Ubrain) .^2; %compute explained variance
+%         end
+%     %     reducedMat = reshape(reducedMat, 128, 128, length(regLabels));
+%         save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
+%     end
 
     
     %%

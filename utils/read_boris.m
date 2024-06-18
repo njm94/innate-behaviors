@@ -1,4 +1,4 @@
-function events = read_boris(boris_tsv, len)
+function [events, t] = read_boris(boris_tsv, len)
 % Reads the annotated BORIS file to extract behaviors
 %
 % Input:
@@ -9,7 +9,12 @@ function events = read_boris(boris_tsv, len)
 %                       is listed in the data_list.py)
 %
 % Output:
-%       events          Binary table of size trial_length x num_behaviors
+%       events          (Binary table of size trial_length x num_behaviors)
+%       t               (Raw table)
+%
+% Usage: 
+%       [events, t] = read_boris(boris_tsv);
+%       [events, t] = read_boris(boris_tsv, len);
 
 warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 t = readtable(boris_tsv, "FileType","text",'Delimiter', '\t');

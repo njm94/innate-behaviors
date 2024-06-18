@@ -1,9 +1,9 @@
 clear, clc
 
-load('Y:\nick\2p\code\utils\atlas.mat')
-load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
+load('C:\Users\user\Documents\Nick\grooming\utils\atlas.mat')
+load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
 
-startpath = 'Y:\nick\2p';
+startpath = 'Y:\nick\behavior\grooming\2p';
 [r_tform, roipath] = uigetfile('*.mat','Select roi transformation.', startpath);
 roi_tform = load([roipath, r_tform]);
 

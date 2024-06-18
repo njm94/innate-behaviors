@@ -1,12 +1,23 @@
-
+clear, clc
 [wfi_file, wfi_path] = uigetfile('*.tif','Select widefield reference image.', 'Y:\nick\behavior\grooming\2p');
-
 data_wfi = loadtiff([wfi_path, wfi_file]);
-frame_wfi = uint16(imflatfield(mean(data_wfi, 3), 100));
+frame_wfi = imadjust(uint16(imflatfield(mean(data_wfi, 3), 100)));
 
 [comp_file, comp_path] = uigetfile('*.tif','Select sensory composite image.', 'Y:\nick\behavior\grooming\2p');
 data_comp = loadtiff([comp_path, comp_file]);
-frame_comp = uint16(mean(data_comp, 3));
+frame_comp = imadjust(uint16(data_comp(:,:,1)));
+%%
+
+[optimizer,metric] = imregconfig("monomodal");
+tform = imregtform(frame_wfi, frame_comp, 'rigid', optimizer, metric);
+
+movingReg = imwarp(frame_wfi, tform,"OutputView",imref2d(size(frame_comp)));
+
+%%
+
+save([wfi_path, 'template2composite_tform.mat'], 'tform', "frame_wfi", "frame_lin", "moving_registered");
+close all;
+
 
 %%
 load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');

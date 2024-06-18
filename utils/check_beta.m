@@ -20,7 +20,6 @@ cBeta = U * dimBeta(cIdx, :)';
 cBeta = reshape(cBeta, size(mask,1), size(mask,2), []); 
 
 cBeta = cBeta .* mask;
-
 if visual, compareMovie(cBeta); end
 
 end
