@@ -1,18 +1,33 @@
 % 
 
 clear, close all
-addpath('C:\Users\user\Documents\Nick\ridgeModel');
-addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
-addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
-addpath('C:\Users\user\Documents\Nick\grooming\utils')
+
+if ~isunix
+    addpath('C:\Users\user\Documents\Nick\ridgeModel');
+    addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
+    addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
+    addpath('C:\Users\user\Documents\Nick\grooming\utils')
+else
+    addpath('/home/user/Documents/grooming/ridgeModel');
+    addpath('/home/user/Documents/grooming/ridgeModel/widefield')
+    addpath('/home/user/Documents/grooming/ridgeModel/smallStuff') 
+    addpath('/home/user/Documents/grooming/utils')
+end
+
 
 %%
 fileID = fopen('expt1_datalist.txt','r');
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
-for j = length(data_list{1})
+for j = 7%length(data_list{1})
     data_dir = data_list{1}{j};
+       
+    if isunix
+        data_dir = strrep(data_dir, '\', '/');
+        data_dir = strrep(data_dir, 'Y:', '/media/user/teamshare');
+    end
     disp(['Starting ' data_dir])
+
     fPath = [data_dir filesep 'ridge_outputs' filesep];
     if ~isdir(fPath), mkdir(fPath); end
 %     if isfile([fPath, 'summary.fig'])
@@ -62,14 +77,14 @@ for j = length(data_list{1})
     
     
 %     %% load behavior svd components, multiply s into V
-    load(beh_file)
-    Ubeh = U;
-    Vbeh = s*V;
+    % load(beh_file)
+    % Ubeh = U;
+    % Vbeh = s*V;
 %     
 %     %% load motion svd components, multiply s into V
-    load(ME_file)
-    Ume = U;
-    Vme = s*V;
+    % load(ME_file)
+    % Ume = U;
+    % Vme = s*V;
     
     
     %%
@@ -130,7 +145,7 @@ for j = length(data_list{1})
 %     bmat = [ipsi' contra' fll_movement flr_movement];
 %     bmat = [FL_R' FL_L' bilat', fll_movement_ex, flr_movement_ex]; % ipsi contra bilatInclusive forelimbEx
 %     bmat = [audio_tone water_drop FL_R' FL_L' lick2' fll_movement flr_movement]; % tone drop ipsi contra bilatInclusive forelimbInc
-   bmat = [audio_tone water_drop bmat', fll_movement, flr_movement];
+   bmat = [audio_tone(1:trial_length) water_drop(1:trial_length) bmat', fll_movement(1:trial_length), flr_movement(1:trial_length)];
 
 %     [movMat, movEventIdx2] = makeDesignMatrix(bmat, [3, 3, 3, 3, 3], bopts);
 %     [movMat, movEventIdx2] = makeDesignMatrix(bmat, [3, 3], bopts);
@@ -153,7 +168,9 @@ moveLabels = {'Audio', 'Drop', 'Lick', ...
     % fullR = [Vbeh' Vme'];
     % fullR = [Vme'];    
     fullR = [movMat];
-    fullR = [fullR Vbeh(:,1:size(fullR,1))'];    
+    % fullR = [fullR Vbeh(:,1:size(fullR,1))'];   
+    regIdx = movEventIdx2;
+    regLabels = moveLabels;
     
 %     %% run ridge
 %     [ridgeVals, dimBeta] = ridgeMML(Vbrain', fullR, true); %get ridge penalties and beta weights.
@@ -167,8 +184,8 @@ moveLabels = {'Audio', 'Drop', 'Lick', ...
 %     c.FontSize =12;
     
     % % regIdx = [taskIdx; moveIdx + max(taskIdx); repmat(max(moveIdx)+max(taskIdx)+1, size(vidR,2), 1)]; %regressor index
-    regIdx = [movEventIdx2;  repmat(max(movEventIdx2)+1, size(Vbeh',2), 1)];
-    regLabels = [moveLabels, {'video'}];
+    % regIdx = [movEventIdx2;  repmat(max(movEventIdx2)+1, size(Vbeh',2), 1)];
+    % regLabels = [moveLabels, {'video'}];
     % 
     % cVar = 'bilat';
     % 
