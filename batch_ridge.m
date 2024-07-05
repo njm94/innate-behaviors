@@ -1,10 +1,19 @@
 % 
 
 clear, close all
-addpath('C:\Users\user\Documents\Nick\ridgeModel');
-addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
-addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
-addpath('C:\Users\user\Documents\Nick\grooming\utils')
+
+if ~isunix
+    addpath('C:\Users\user\Documents\Nick\ridgeModel');
+    addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
+    addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
+    addpath('C:\Users\user\Documents\Nick\grooming\utils')
+else
+    addpath('/home/user/Documents/grooming/ridgeModel');
+    addpath('/home/user/Documents/grooming/ridgeModel/widefield')
+    addpath('/home/user/Documents/grooming/ridgeModel/smallStuff') 
+    addpath('/home/user/Documents/grooming/utils')
+end
+
 
 %%
 fileID = fopen('expt1_datalist.txt','r');
@@ -12,7 +21,13 @@ formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 for j = 7%length(data_list{1})
     data_dir = data_list{1}{j};
+       
+    if isunix
+        data_dir = strrep(data_dir, '\', '/');
+        data_dir = strrep(data_dir, 'Y:', '/media/user/teamshare');
+    end
     disp(['Starting ' data_dir])
+
     fPath = [data_dir filesep 'ridge_outputs' filesep];
     if ~isdir(fPath), mkdir(fPath); end
 %     if isfile([fPath, 'summary.fig'])
@@ -49,6 +64,7 @@ for j = 7%length(data_list{1})
     events = read_boris(boris_file);
 
     %% load brain svd components, multiply s into V
+        % highpass filter
     disp('Loading brain data...')
     load(brain_file);
     Ubrain = U;
@@ -239,9 +255,29 @@ regLabels = ['Audio', regLabels];
     save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
     
     fullMat = modelCorr(Vbrain,Vfull,Ubrain) .^2; %compute explained variance
-    %%
-
-    for i = 1:size(events, 2)
+    
+    %% run reduced models for unique contribution
+    if size(event_type,1) <= 1
+        fig_flag = 0;
+        disp('Not enough unique event types to run reduce models. Skipping...')
+    else
+        disp('Running reduced models')
+        fig_flag = 1;
+        reducedMat = [];
+        for i = 1:length(regLabels)
+            reduced = fullR;
+            cIdx = regIdx == i;
+            if ~any(cIdx)
+                disp(['No ', regLabels{i}, '  events found. Skipping...'])
+                continue
+            end
+            reduced(:, cIdx) = reduced(randperm(size(reduced, 1)), cIdx);
+        
+            [Vreduced{i}, reducedBeta{i}, reducedR, reducedIdx, reducedRidge, reducedLabels] = crossValModel(reduced, Vbrain, regLabels, regIdx, regLabels, bopts.folds);
+            reducedMat(:, i) = modelCorr(Vbrain, Vreduced{i}, Ubrain) .^2; %compute explained variance
+        end
+    %     reducedMat = reshape(reducedMat, 128, 128, length(regLabels));
+        save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
     end
 
 
