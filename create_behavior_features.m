@@ -26,13 +26,13 @@
 
 clc, clear
 fileID = fopen('expt1_datalist.txt','r');
+addpath('C:\Users\user\Documents\Nick\grooming\utils')
 
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 current_mouse = '';
 
 fs = 90 ;
-[b, a] = butter(2, 0.01/(fs/2), 'high');
 
 thy1_idx = 1:7;
 ai94_idx = 8:13;
@@ -61,6 +61,11 @@ r_paw_max_y = [];
 lick_interspersed = [];
 fll_distance = [];
 flr_distance = [];
+imm_events = [];
+fll_max_speed = [];
+flr_max_speed = [];
+fll_avg_speed = [];
+flr_avg_speed = [];
 
 %%
 
@@ -173,8 +178,26 @@ for j = thy1_idx %23:length(data_list{1})+1
     for i = 1:length(stroke_types)
         idx = strcmpi(stroke_types{i}, boris.Behavior);
         behavior_frames = boris.ImageIndex(idx);
+
+        
         start_idx = behavior_frames(1:2:end);
         stop_idx = behavior_frames(2:2:end);
+
+        if length(start_idx) > 1
+            % flag events that occur immediately one after the other
+            frame_diff_between_events = start_idx(2:end)-stop_idx(1:end-1);
+            flag_events = frame_diff_between_events < 3;
+            if flag_events(end)
+                flag_events = [flag_events; 1];
+            else
+                flag_events = [flag_events; 0];
+            end
+        else
+            flag_events = 0;
+        end
+
+        imm_events = cat(1, imm_events, flag_events);
+
 
         l_paw_start_x = cat(1, l_paw_start_x, nose_x-fll_x(start_idx));
         l_paw_start_y = cat(1, l_paw_start_y, nose_y-fll_y(start_idx));
@@ -208,6 +231,13 @@ for j = thy1_idx %23:length(data_list{1})+1
 
             % time between events
 
+            % average speed
+            fll_avg_speed = cat(1, fll_avg_speed, mean(fll_speed(start_idx(j):stop_idx(j))));
+            flr_avg_speed = cat(1, flr_avg_speed, mean(flr_speed(start_idx(j):stop_idx(j))));
+
+            % max speed
+            fll_max_speed = cat(1, fll_max_speed, mean(fll_speed(start_idx(j):stop_idx(j))));
+            flr_max_speed = cat(1, flr_max_speed, mean(flr_speed(start_idx(j):stop_idx(j))));
 
             % ratio of distance traveled
             fll_distance = cat(1, fll_distance, sum(fll_speed(start_idx(j):stop_idx(j))));
@@ -228,7 +258,8 @@ y_diff = l_paw_max_y - r_paw_max_y;
 
 test = [behavior_duration, l_paw_xrange, l_paw_yrange, l_paw_start_y, ...
     l_paw_start_x, r_paw_xrange, r_paw_yrange, r_paw_start_y, ...
-    r_paw_start_x, y_diff, lick_interspersed, fll_distance, flr_distance];
+    r_paw_start_x, y_diff, lick_interspersed, fll_distance, flr_distance, ...
+    imm_events, fll_avg_speed, flr_avg_speed, fll_max_speed, flr_max_speed];
 
 [coeff,score,latent] = pca(test);
 [C, ia, ic] = unique(behavior_label);
@@ -243,6 +274,7 @@ for i = 1:size(behavior_label,1)
             c = 'k';
             mkr = 'o';
         case 'Elliptical Asymmetric'
+            continue
             c = 'k';
             mkr = 'd';
         case 'Large Bilateral'

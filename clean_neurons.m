@@ -1,8 +1,12 @@
 clear, clc
 
-% change these
-left_hem = 1:2;
-right_hem = 3:4;
+% CHANGE THESE FOR EACH IMAGING SESSION
+% Index depends on roi placement
+%
+% arm1 is always read first in the consolidation script, so indexing starts
+% from arm 1 [roi1:N] then goes to arm2 [roi1:N]
+left_hem = [3,4,];
+right_hem = [1,2];
 
 %% Don't change from here on out
 
@@ -13,6 +17,7 @@ disp('[+] Finished loading consolidated neuron data')
 [resampled_data, fs] = resample2maxFs(F, ops);
 % group left hemisphere
 %%
+clc
 [N_left, nloc_left] = nclean(resampled_data, iscell, n_loc, left_hem, false);
 [N_right, nloc_right] = nclean(resampled_data, iscell, n_loc, right_hem, true);
 %% Clean up stat array
@@ -50,9 +55,24 @@ function [N, nloc] = nclean(data, iscell, n_loc, hem_idx, is_right)
 %       loc       (Nx1) array of regions
 
 
-N = catcell(1, data(hem_idx));
+empty_idx = find(cellfun(@isempty, iscell));
+
 iscell = catcell(1, iscell(hem_idx));
 nloc = catcell(2, n_loc(hem_idx))';
+
+% In rare cases, no neurons are found in roi. This is to handle those cases
+% keeping track of which rois are empty, then decrementing the hemisphere
+% index appropriately, since the resampled neuron data is only of length N
+% where N is the number of ROIs that do contain neurons
+
+for i = 1:length(hem_idx)
+    hem_idx(i) = hem_idx(i) - sum(hem_idx(i)>=empty_idx);
+end
+
+hem_idx = hem_idx(hem_idx>0);
+disp(hem_idx)
+N = catcell(1, data(hem_idx));
+
 
 good_idx = iscell(:,1) == 1;
 

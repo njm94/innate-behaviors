@@ -2,6 +2,8 @@
 
 %% average events
 
+clc, clear
+
 
 if ~isunix
     addpath('C:\Users\user\Documents\Nick\ridgeModel');
@@ -17,7 +19,7 @@ end
 
 
 
-clc, clear
+
 fileID = fopen('expt1_datalist.txt','r');
 
 formatSpec = '%s';
@@ -32,9 +34,11 @@ ai94_idx = 8:13;
 camk_idx = 14:25;
 
 save_average_across_days = false;
+
+load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
 %%
  
-for j = thy1_idx(end) %23:length(data_list{1})+1
+for j = thy1_idx %23:length(data_list{1})+1
      try
         data_dir = data_list{1}{j};
         disp(['Starting ' data_dir])
@@ -82,6 +86,7 @@ for j = thy1_idx(end) %23:length(data_list{1})+1
         disp('Loading master basis set')
         load([mouse_root_dir filesep 'Umaster.mat'])
         load([mouse_root_dir filesep 'mask.mat'])
+        atlas_tform = load([mouse_root_dir filesep 'atlas_tform.mat']);
         clear Vmaster left right elliptical large_left large_right largebilateral lick LeftMove RightMove Audio drop_left drop_right
         current_mouse = mouse_id;
 
@@ -120,22 +125,28 @@ for j = thy1_idx(end) %23:length(data_list{1})+1
     U = evaluate_tform(U, tformEstimate); % apply registration
     U = reshape(U, 128*128, []);
 
+    % light-OFF signal may be captured in the brain data, resulting in a
+    % massive filter artifact - remove a few frames just in case
+    trial_length = size(V, 2) - 5; 
+    V = V(:,1:trial_length);
+
     % Brain video may have been resampled to wrong number of frames due to
     % inaccuracy in pre-processing step. Fix this by checking the length of
     % brain data and comparing to manually labeled VideoEnd event from
     % BORIS file. If there is a discrepancy, resample the brain data to the
     % length of the BORIS file to fix the issue.
     trial_length = find(events.("Video End"));
-    if size(V,2) > trial_length
+    if size(V,2) ~= trial_length
         V = resamplee(V', trial_length, size(V,2))';
     end
 
-    
-    % light-OFF signal may be captured in the brain data, resulting in a
-    % massive filter artifact - remove a few frames just in case
-    trial_length = size(V, 2) - 5; 
     Vbrain = recastV(Umaster, U, s, V(:, 1:trial_length));
     Vmaster = filtfilt(b, a, Vbrain')';
+
+    % transform one last time to get into coordinates of atlas
+%     U = permute(reshape(U, 128, 128, []), [2 1 3]);
+%     U = evaluate_tform(U, atlas_tform.tform); % apply registration
+%     U = reshape(U, 128*128, []);
     
     disp('Computing DF/F0')
     dataR = permute(reshape(Umaster*Vmaster, 128, 128, []), [2 1 3]);
@@ -200,11 +211,21 @@ for j = thy1_idx(end) %23:length(data_list{1})+1
     %     "left", "right", "lick", "fll_move", "flr_move", ...
     %     "audio_tone", "drop_left", "drop_right"];
 
+    % consolidate lick events into a single variable in the table
+    lick_idx = contains(events.Properties.VariableNames, 'Lick');
+    Lick = events(:,lick_idx);
+    events = removevars(events, lick_idx);
+    Lick = any(table2array(Lick),2); 
+    events = addvars(events, logical(Lick));
+
+
     bvars = ["Drop Hits Left", "Drop Hits Right", "Drop Hits Center", "Audio", ...
-        "Lick Left", "Lick Right", "Lick Unknown", "Lick No Paws", ...
+        "Lick", ...
         "Right", "Left", "Right Asymmetric", "Left Asymmetric" ...
         "Elliptical", "Elliptical Asymmetric", "Large Bilateral", ...
         "LeftMove", "RightMove"];
+
+    behavior_frames = cell(1, length(bvars));
 
     % Update drop variable to capture window surrounding each event
     for ii = 1:3
@@ -225,12 +246,20 @@ for j = thy1_idx(end) %23:length(data_list{1})+1
         else
             continue
         end
-        behavior_frames{ii} = cat(3, behavior_frames{ii}, dFF(:,:,b_idx(1:end-5)));
+        behavior_frames{ii} = dFF(:,:,b_idx(1:end));
         subplot(5, 4, ii)
+
         % transpose the mean image to get the brains in proper
-        % orientation
-        imagesc(mask.*mean(dFF(:,:,b_idx(1:end-5)),3)');
+        % orientation and % transform to get into coordinates of atlas
+        mean_image = mask.*mean(dFF(:,:,b_idx(1:end)),3)';
+        mean_image = imwarp(mean_image, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+        imagesc(mean_image);
         title(bvars(ii)), colorbar, xticks([]),  yticks([])
+        hold on;
+        for p = 1:length(dorsalMaps.edgeOutline)
+            plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'w');
+        end
+        set(gca, 'YDir', 'reverse');
     end
 
     % figure,  
@@ -247,7 +276,9 @@ for j = thy1_idx(end) %23:length(data_list{1})+1
     savefig(gcf, [data_dir, filesep, 'outputs', filesep,  char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_dFF.fig'])
     close(gcf)
 
-    disp('Clearing variabls')
+    save([data_dir, filesep, 'outputs', filesep, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_behavior_frames.mat'], 'bvars', 'behavior_frames', '-v7.3')
+
+    disp('Clearing variables')
     clear trials timestamps dFF largeright largeleft largebilateral lick left right LeftMove RightMove
 %     if ~save_average_across_days
 %         clear behavior_frames

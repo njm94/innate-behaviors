@@ -1,4 +1,4 @@
-function [events, t] = read_boris(boris_tsv, len)
+function [events, b_idx, t] = read_boris(boris_tsv, len)
 % Reads the annotated BORIS file to extract behaviors
 %
 % Input:
@@ -28,6 +28,7 @@ t.ImageIndex = t.ImageIndex + 1;
 % Initialize the binary event vector
 annotations = unique(t.Behavior);
 events = zeros(length(annotations), len);
+b_idx = cell(1,length(annotations));
 
 % Populate event vector
 for i = 1:length(annotations)
@@ -43,6 +44,7 @@ for i = 1:length(annotations)
 
             assert(length(start_idx) == length(stop_idx), ...
                 'UNEVEN NUMBER OF START/STOP EVENTS...')
+            b_idx{i} = [start_idx stop_idx];
             for j = 1:length(start_idx)
                 events(i, start_idx(j):stop_idx(j)) = 1;
             end

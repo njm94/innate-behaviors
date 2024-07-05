@@ -25,11 +25,13 @@ end
 arm_array(cellfun(@isempty,arm_array))=[];
 
 roi_array = catcell(2, roi_array);
+roi_array = roi_array(~contains(roi_array, 'ignore'));
 template_path = get_template_path(working_dir);
 
 
 for i=1:length(roi_array)
 %     for j = 1:length(plane_array)
+try
     data = load([roi_array{i}, '\bin2x2x1\suite2p\plane0\Fall.mat']);
    
     stat{i} = data.stat;
@@ -60,6 +62,9 @@ for i=1:length(roi_array)
     tforms{i}.linear_to_wfield = linear_to_wfield;
     tforms{i}.wfield_to_atlas = wfield_to_atlas;
 %     end
+catch
+    continue
+end
     
 end
 

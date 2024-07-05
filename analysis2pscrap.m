@@ -1,23 +1,40 @@
 clear, clc
-events = read_boris('Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925\ETR2_thy1_20231113143925_events.tsv', 109779);
+
+% addpath(genpath('C:\Users\user\Documents\Nick\grooming'));
+
+[event_file, event_path] = uigetfile('*.tsv','Select BORIS event labels.', 'Y:\nick\behavior\grooming\2p');
+events = read_boris([event_path, filesep, event_file]);
+
+[neuron_file, neuron_path] = uigetfile('*clean.mat','Select cleaned neuron data.', event_path);
+load([neuron_path, filesep, neuron_file]);
+
 
 %%
-load('Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925\Fclean.mat')
-
 Nresample = resample(N, size(events,1), size(N, 2), 'Dimension', 2);
 
-%%
-
-eventsarr = table2array(events)';
-
-combined_lick = eventsarr(7,:) | eventsarr(8,:) | eventsarr(9,:) | eventsarr(10,:);
-eventsarr(7,:) = combined_lick;
-eventsarr(8:10,:) = [];
-eventsarr(2,:) = [];
 
 %%
 
-figure, imagesc(imadjust([eventsarr; Nresample])),
+
+
+
+% consolidate lick events
+lick_idx = contains(events.Properties.VariableNames, 'Lick');
+lick_events = events(:,lick_idx);
+lick_events = any(table2array(lick_events),2);
+
+% remove lick and point events from event matrix
+idx = contains(events.Properties.VariableNames, 'Lick') | ...
+    contains(events.Properties.VariableNames, 'Drop') | ...
+    contains(events.Properties.VariableNames, 'Video');
+stroke_events = removevars(events, idx);
+%%
+
+eventsarr = table2array(stroke_events)';
+
+%%
+
+figure, imagesc(imadjust([eventsarr; lick_events'; Nresample])),
 colormap(flipud(colormap('gray')))
 
 
@@ -42,7 +59,7 @@ imagesc(r),
 colormap(redblue()), caxis([-0.3 0.3])
 c=colorbar;
 c.Label.String = 'Correlation';
-yticklabels(events.Properties.VariableNames([1,3:6,10:12]))
+yticklabels(stroke_events.Properties.VariableNames)
 xlabel('Neuron Number')
 
 %%
@@ -65,7 +82,9 @@ end
 %% plot location of highly correlated neurons onto the brain
 
 close all
-uiopen('Y:\nick\behavior\grooming\2p\ETR2_thy1\dalsa\atlas_aligned.fig',1)
+atlas_aligned_fig = fullfile(neuron_path, '..', 'dalsa', 'atlas_aligned.fig');
+
+uiopen(atlas_aligned_fig,1)
 hold on
 
 
@@ -82,7 +101,7 @@ for i = 1:size(N,1)
 end
 
 prev_I = [];
-tmp = r(7,:);
+tmp = r(6,:);
 for i = 1:20
     [rr, I] = max(tmp);
     if rr<0.2, continue; end
@@ -102,7 +121,7 @@ for i = 1:20
 end
 
 
-tmp = r(2,:);
+tmp = r(1,:);
 for i = 1:20
     [rr, I] = max(tmp);
     if rr<0.2, continue; end
@@ -140,7 +159,7 @@ clc
 % num_cells = 20l
 nlabel = cell(1,10);
 figure, subplot(1,2,1), hold on
-tmp = r(2,:);
+tmp = r(1,:);
 for i = 1:10
     [~, I] = max(tmp);
     plot(t, Nresample(I,:)-10*i, 'k') % "Elliptical" correlated neuron
@@ -152,16 +171,16 @@ axis tight
 yticklabels(fliplr(nlabel));
 title('Elliptical')
 
-vline(t(find(eventsarr(1,:))), 'r:')
+vline(t(find(table2array(events(:,3)))), 'r:')
 
-patchplot(t(arr2idx(aggregate(eventsarr(2,:), 3))), ylim, 'c', 0.5)
-patchplot(t(arr2idx(aggregate(eventsarr(7,:),3))), ylim, 'm', 0.5)
+patchplot(t(arr2idx(aggregate(eventsarr(1,:)', 3))), ylim, 'c', 0.5)
+patchplot(t(arr2idx(aggregate(eventsarr(6,:)',3))), ylim, 'm', 0.5)
 xlabel('Time (s)')
 
 
 nlabel = cell(1,10);
 subplot(1,2,2), hold on
-tmp = r(7,:);
+tmp = r(6,:);
 for i = 1:10
     [~, I] = max(tmp);
     plot(t, Nresample(I,:)-10*i, 'k') % "right" correlated neuron
@@ -172,10 +191,10 @@ axis([0 t(end) -105 0])
 
 yticklabels(fliplr(nlabel));
 title('Right')
-vline(t(find(eventsarr(1,:))), 'r:')
+vline(t(find(table2array(events(:,3)))), 'r:')
 
-patchplot(t(arr2idx(aggregate(eventsarr(2,:), 3))), ylim, 'c', 0.5)
-patchplot(t(arr2idx(aggregate(eventsarr(7,:),3))), ylim, 'm', 0.5)
+patchplot(t(arr2idx(aggregate(eventsarr(1,:)', 3))), ylim, 'c', 0.5)
+patchplot(t(arr2idx(aggregate(eventsarr(6,:)',3))), ylim, 'm', 0.5)
 xlabel('Time (s)')
 
 %%

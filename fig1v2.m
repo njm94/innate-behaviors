@@ -1,5 +1,5 @@
 
-%% average events
+%% 
 addpath('C:\Users\user\Documents\Nick\ridgeModel');
 addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
 addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
@@ -14,12 +14,21 @@ formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 current_mouse = ''; 
 
+
+mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'};
+
+data_list{1} = [data_list{1}; mp_list];
+
 fs = 90 ;
 % [b, a] = butter(2, 0.01/(fs/2), 'high');
 
 thy1_idx = 1:7;
 ai94_idx = 8:13;
 camk_idx = 14:25;
+mp_idx = 26:28;
+
 
 left_idx = [6:7,13,19,25];
 right_idx = [3:6,10:12,16:18,22:24];
@@ -27,24 +36,24 @@ right_idx = [3:6,10:12,16:18,22:24];
 spontaneous = [1,2,8,9,14,15,20,21];
 evoked = [3:7,10:13,16:19,22:25];
 
-states = ["Stop", "Elliptical", "Asymmetric", "Bilateral", "Unilateral"];
+states = ["Stationary", "Elliptical", "Asymmetric", ...
+    "Elliptical Asymmetric", "Bilateral", "Unilateral"];
 
 aggregation_sz = 3;
 
 %%
 N = length(data_list{1});
-trial_length = get_min_trial_length_from_expt_list(data_list{1});
+% trial_length = get_min_trial_length_from_expt_list(data_list{1});
 
-event_raster = zeros(N, trial_length);
+% event_raster = zeros(N, trial_length);
 num_episodes = zeros(N, 1);
 num_left = zeros(N,1);
 num_right = zeros(N,1);
 
-% tmat = zeros(numel(states), numel(states), N);
+tmat = zeros(numel(states), numel(states), N);
 
-binned_bmat = zeros(4, 20, N);
 
-for j = 1%thy1_idx%1:N
+for j = [thy1_idx, camk_idx(1), mp_idx]%1:N
     data_dir = data_list{1}{j};
     timestamp_file = [data_dir, filesep, getAllFiles(data_dir, '_trim.txt')];
     [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
@@ -55,7 +64,7 @@ for j = 1%thy1_idx%1:N
 
     if ~isempty(getAllFiles(data_dir, '.tsv'))
         boris_file = [data_dir, filesep, getAllFiles(data_dir, '.tsv')];
-        [events, b_table] = read_boris(boris_file);
+        [events, snippets, b_table] = read_boris(boris_file);
 
 
         % consolidate lick events
@@ -66,89 +75,43 @@ for j = 1%thy1_idx%1:N
         % remove lick and point events from event matrix
         idx = contains(events.Properties.VariableNames, 'Lick') | ...
             contains(events.Properties.VariableNames, 'Drop') | ...
-            contains(events.Properties.VariableNames, 'Video');
+            contains(events.Properties.VariableNames, 'Video') | ...
+            contains(events.Properties.VariableNames, 'Flail') ;
         stroke_events = removevars(events, idx);
+        snippets(idx) = [];
+        clear labels
         for ii = 1:size(stroke_events,2)
             labels{ii} = stroke_events.Properties.VariableNames{ii};
-            snippets{ii} = arr2idx(stroke_events.(labels{ii}));
         end
+        bmat = any(table2array(stroke_events),2);
     else 
         % the snippets are a soon-to-be deprecated analysis method. Remove 
         % this when fully transitioned to the BORIS labels
         [snippets, labels] = parse_snippets(snippets_dir);
     end
 
-%     output_dir = [data_dir, filesep, 'outputs'];
-
-%     if isfile([output_dir, filesep, 'average_dFF.pdf'])
-%         disp('Average dFF already exists. Moving on...')
-%         continue
-%     end
-% 
-%     if ~isfolder(output_dir)
-%         mkdir(output_dir)
-%     end
-
 
 %     num_events(j) = cellfun(@(data) size(data, 1), snippets);
 
-    bmat = zeros(1, trial_length);
-    for ii = 1:length(snippets)
-        for jj = 1:size(snippets{ii},1)
-            if snippets{ii}(jj,1) >= trial_length, continue; end
-            bmat(snippets{ii}(jj,1):min([snippets{ii}(jj,2), trial_length])) = ii;
-        end
-    end
+%     bmat = zeros(1, trial_length);
+%     for ii = 1:length(snippets)
+%         for jj = 1:size(snippets{ii},1)
+%             if snippets{ii}(jj,1) >= trial_length, continue; end
+%             bmat(snippets{ii}(jj,1):min([snippets{ii}(jj,2), trial_length])) = ii;
+%         end
+%     end
     [episodes, idx] = aggregate(bmat, aggregation_sz);
     num_episodes(j) = size(idx,1);
 
-    event_raster(j,:) = episodes;
-    all_event_idx{j} = idx;
-
-%     num_left(j) = size(snippets{matches(labels, 'left')},1);
-%     num_right(j) = size(snippets{matches(labels, 'right')},1); 
-% 
-%     num_largeleft(j) = size(snippets{matches(labels, 'largeleft')},1);
-%     num_largeright(j) = size(snippets{matches(labels, 'largeright')},1);
-
-    % consolidate events to elliptical, asymmetric, bilateral, unilateral
-%     bmat2 = zeros(4, size(bmat,2));
-%     bmat2(1,:) = bmat == find(matches(labels, 'elliptical'));
-%     bmat2(2,:) = bmat == find(matches(labels, 'largeleft')) |  bmat == find(matches(labels, 'largeright')) ;
-%     bmat2(3,:) = bmat == find(matches(labels, 'largebilateral'));
-%     bmat2(4,:) = bmat == find(matches(labels, 'left')) |  bmat == find(matches(labels, 'right')) ;
-
-    % snippets
-%     bmat2 = zeros(1, size(bmat,2));
-%     bmat2(bmat == find(matches(labels, 'elliptical'))) = 1;
-%     bmat2(bmat == find(matches(labels, 'largeleft')) |  bmat == find(matches(labels, 'largeright'))) = 2;
-%     bmat2(bmat == find(matches(labels, 'largebilateral'))) = 3;
-%     bmat2(bmat == find(matches(labels, 'left')) |  bmat == find(matches(labels, 'right'))) = 4;
-
-    % BORIS labels
-%     bmat2 = zeros(1, size(bmat,2));
-%     bmat2(bmat == find(matches(labels, 'Elliptical'))) = 1;
-%     bmat2(bmat == find(matches(labels, 'Elliptical Asymmetric'))) = 2;
-%     bmat2(bmat == find(matches(labels, 'Right Asymmetric')) |  bmat == find(matches(labels, 'Left Asymmetric'))) = 3;
-%     bmat2(bmat == find(matches(labels, 'Bilateral'))) = 4;
-%     bmat2(bmat == find(matches(labels, 'Left')) |  bmat == find(matches(labels, 'Right'))) = 5;
-
-%     bmat2 = bmat;
-%     bmat2(bmat2==3)=2;
-%     bmat2(bmat2==4)=3;
-%     bmat2(bmat==5 | bmat==6) = 4;
-%     bmat2(bmat==7) = 0;% 5;
-%     bmat2 = bmat2 + 1;
-
-%     bmat3(:,j) = bmat2(1:trial_length);
-
+%     event_raster(j,:) = episodes;
+%     all_event_idx{j} = idx;
 
     % create transition matrix (refer to BORIS table)
-    all_labels = ["Stationary", "Elliptical", "Elliptical Asymmetric", ...
-        "Right Asymmetric", "Left Asymmetric", "Bilateral", ...
-        "Right", "Left"];
+%     all_labels = ["Stationary", "Elliptical", "Elliptical Asymmetric", ...
+%         "Right Asymmetric", "Left Asymmetric", "Bilateral", ...
+%         "Right", "Left"];
 
-    tmat = zeros(length(all_labels));
+%     tmat = zeros(length(all_labels));
     % concatenate all snippets into one array
     tmp_snippets = catcell(1, snippets);
     
@@ -173,10 +136,9 @@ for j = 1%thy1_idx%1:N
             [~, tmp_idx] = min(abs(tmp_snippets(:,1)-last_event_idx));       
             current_event = tmp_labels{tmp_idx};
 
-            y = find(matches(all_labels, last_event));
-            x = find(matches(all_labels, current_event));
+            [y,x] = set_xy_states(last_event, current_event);
 
-            tmat(y,x) = tmat(y,x) + 1;
+            tmat(y,x,j) = tmat(y,x,j) + 1;
             disp([last_event, '   ', current_event]);
 
             last_event = current_event;
@@ -188,32 +150,15 @@ for j = 1%thy1_idx%1:N
             counter = counter + 1;
 %             disp(size(tmp_snippets));
         end
-        
-        y = find(matches(all_labels, last_event));
-        x = find(matches(all_labels, 'Stationary'));
-        tmat(y,x) = tmat(y,x) + 1;
+        current_event = 'Stationary';
+        [y,x] = set_xy_states(last_event, current_event);
+        tmat(y,x,j) = tmat(y,x,j) + 1;
 
         disp([num2str(counter), ' events found'])
        
     end
 
-%     % create transition matrix
-%     for ii = 1:size(idx,1)
-%         tmp = bmat2(idx(ii,1):idx(ii,2));
-%         event_idx = [1 tmp] > 1;
-%         if any(event_idx)
-%             event_start = find(diff(event_idx) == 1);
-%             for jj = 1:length(event_start)
-%                 if jj == 1
-%                     tmat(1, tmp(event_start(jj)), j) = tmat(1, tmp(event_start(jj)), j)+1;
-%                 else
-%                     tmat(last_event, tmp(event_start(jj)), j) = tmat(last_event, tmp(event_start(jj)), j) + 1;
-%                 end
-%                 last_event = tmp(event_start(jj));
-%             end
-%             tmat(last_event, 1, j) = tmat(last_event, 1, j) + 1;
-%         end
-%     end
+
 
 end
 
@@ -290,28 +235,40 @@ xlabel('Right Stimulus')
 %%
 
 pmat = tmat ./ sum(tmat,2);
-%%
-B = mean(pmat(:,:,evoked), 3, 'omitnan');
+
+B = mean(pmat, 3, 'omitnan');
+figure, imagesc(B)
+colormap(flipud(colormap('gray'))), colorbar
+xticklabels(states)
+yticklabels(states)
 
 %%
-[M,Q]=community_louvain(B);
+% ignore large bilateral events since they are so rare
+
+[M,Q]=community_louvain(B([1:4,6], [1:4,6]));
 
 %%
 clc
 cols = zeros(length(M), 3);
-col1 = [0.9290 0.6940 0.1250];
-col2 = [0.3010 0.7450 0.9330];
+col1 = [0 0.4470 0.7410];
+col2 = [0.8500 0.3250 0.0980];
+col3 = [0.9290 0.6940 0.1250];
+col4 = [0.4940 0.1840 0.5560];
 for i = 1:length(M)
     if M(i) == 1
         cols(i,:) = col1;
     elseif M(i) == 2
         cols(i,:) = col2;
+    elseif M(i) == 3
+        cols(i,:) = col3;
+    else
+        cols(i,:) = col4;
     end
 end
-pgraph = digraph(B);
+pgraph = digraph(B([1:4,6], [1:4, 6]));
 figure, plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*10, ...
     'NodeColor', cols, 'NodeFontSize', 15, ...
-    'EdgeColor', 'k', 'ArrowSize', 15, 'NodeLabel', states, ...
+    'EdgeColor', 'k', 'ArrowSize', 15, 'NodeLabel', states([1:4, 6]), ...
     'Layout', 'force', 'WeightEffect', 'inverse')
 
 
@@ -575,6 +532,45 @@ function min_trial_length = get_min_trial_length_from_expt_list(expt_list)
     min_trial_length = min(trial_length);
 end
 
+function [y,x] = set_xy_states(last_state, current_state)
+            switch last_state
+                case 'Stationary'
+                    y = 1;
+                case 'Elliptical'
+                    y = 2;
+                case 'Right Asymmetric' 
+                    y = 3;
+                case 'Left Asymmetric'
+                    y = 3;
+                case 'Elliptical Asymmetric'
+                    y = 4;
+                case 'Large Bilateral'
+                    y = 5;
+                case 'Right' 
+                    y = 6;
+                case 'Left'
+                    y = 6;
+            end
 
+
+            switch current_state
+                case 'Stationary'
+                    x = 1;
+                case 'Elliptical'
+                    x = 2;
+                case 'Right Asymmetric' 
+                    x = 3;
+                case 'Left Asymmetric'
+                    x = 3;
+                case 'Elliptical Asymmetric'
+                    x = 4;
+                case 'Large Bilateral'
+                    x = 5;
+                case 'Right' 
+                    x = 6;
+                case'Left'
+                    x = 6;
+            end
+end
 
 

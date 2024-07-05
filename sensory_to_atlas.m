@@ -10,12 +10,12 @@ frame_wfi = uint16(data_comp(:,:,1));
 
 sensory_maps = double(data_comp(:,:,2:end));
 
-% get max location for reference
-for i = 1:size(sensory_maps, 3)
-    tmp = imgaussfilt(sensory_maps(:,:,i), 10);
-    bw_sensory(:,:,i) = regiongrowing(tmp);
-    bw_centroids(i,:) = round(regionprops(bw_sensory(:,:,i)).Centroid);
-end
+% % get max location for reference
+% for i = 1:size(sensory_maps, 3)
+%     tmp = imgaussfilt(sensory_maps(:,:,i), 10);
+%     bw_sensory(:,:,i) = regiongrowing(tmp);
+%     bw_centroids(i,:) = round(regionprops(bw_sensory(:,:,i)).Centroid);
+% end
 
 
 %%
@@ -35,7 +35,7 @@ imagesc(double(bw_sensory(:,:,1)) .* double(max(frame_wfi(:))))
 
 %% Do registration and transformation on atlas
 
-tform = align_recording_to_allen_v2(frame_wfi, {}, 1, sensory_maps); % align <-- input any function of data here
+tform = align_recording_to_allen_v2(frame_wfi, {'R SSp-ll', 'R SSp-ul'}, 1, sensory_maps); % align <-- input any function of data here
 invT=pinv(tform.T); % invert the transformation matrix
 invT(1,3)=0; invT(2,3)=0; invT(3,3)=1; % set 3rd dimension of rotation artificially to 0
 invtform=tform; invtform.T=invT; % create the transformation with invtform as the transformation matrix

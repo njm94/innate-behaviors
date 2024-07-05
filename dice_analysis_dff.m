@@ -1,5 +1,5 @@
 clear, clc
-
+addpath('C:\Users\user\Documents\Nick\grooming\utils')
 data_root = 'Y:\nick\behavior\grooming\1p';
 mice = {'ECR2_thy1', 'GER2_ai94', 'HYL3_tTA', 'IBL2_tTA'};
 
@@ -20,6 +20,20 @@ for j = 1:length(mice)
     close(h)
 end
 
+
+%%
+
+figure
+for i = 1:4
+subplot(3,4,i)
+imagesc(leftlick(:,:,i))
+colorbar
+subplot(3,4,i+4), imagesc(lick(:,:,i));
+colorbar
+subplot(3,4,i+8), imagesc(left(:,:,i));
+colorbar
+end
+
 %% overlay contours from diff mice
 clc
 nanmask = zeros(128, 128, length(mice));
@@ -37,10 +51,12 @@ nanmask(nanmask==0) = nan;
 %%
 clc, clear a v
 tmp = [];
+load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
 
-thresh = 80;
+thresh = 90;
 figure, axis off, hold on
 for j = 1:length(mice)
+    atlas_tform = load([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']);
 
     vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "bilateral"];
          
@@ -48,18 +64,28 @@ for j = 1:length(mice)
         test = eval(vars(i));
         test = test .* nanmask;
         test = test(:,:,j);
+        test = imwarp(test, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+
 
         v = prctile(test(:), thresh);
         tmp = [tmp v];
-        disp(v)
+%         disp(v)
         a{i}(:,:,j) = test >= v;
 
         subplot(1,length(vars), i), axis off, hold on
+% subplot(1,1,1)
+        for p = 1:length(dorsalMaps.edgeOutline)
+            plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k');
+        end
             if v > 0
-                contourf(flipud(test), [v v], 'FaceAlpha', 0.25)
+                contourf(test, [v v], 'FaceAlpha', 0.25)
     
                 title(vars(i));
+            else
+                disp('v is not greater than 0')
+                disp(vars(i))
             end
+            set(gca, 'YDir', 'reverse');
 %         end
     end
 %     legend(labs, 'Location', 'Best')
@@ -181,7 +207,7 @@ mousecount = mousecount(2:end);
 combined_bstack = cat(3, lick, left, right, elliptical, largeleft, largeright, largebilateral);
 for i = 1:size(combined_bstack, 3)
     tmp = combined_bstack(:,:,i);
-    thresh = prctile(tmp(:), 80);
+    thresh = prctile(tmp(:), 90);
     combined_bstack(:,:,i) = tmp > thresh;
 end
 
