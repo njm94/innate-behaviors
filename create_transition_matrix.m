@@ -44,7 +44,7 @@ N = length(data_list{1});
 
 tmat = zeros(numel(states), numel(states), N);
 
-for j = [thy1_idx, camk_idx(1), mp_idx]%1:N
+for j = [thy1_idx, camk_idx(1:5), mp_idx]%1:N
     data_dir = data_list{1}{j};
     timestamp_file = [data_dir, filesep, getAllFiles(data_dir, '_trim.txt')];
     [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
@@ -139,12 +139,49 @@ xticklabels(states)
 yticklabels(states)
 
 %%
+
+
+p1 = nanmean(pmat(:,:,thy1_idx), 3);
+p2 = nanmean(pmat(:,:,camk_idx(1:5)), 3);
+p3 = nanmean(pmat(:,:,mp_idx), 3);
+
+figure
+subplot(1,3,1)
+imagesc(p1), caxis([0 0.6])
+colormap(flipud(colormap('gray'))), colorbar
+xticks(1:6)
+xticklabels(states)
+yticklabels(states)
+
+subplot(1,3,2)
+imagesc(p2), caxis([0 0.6])
+colormap(flipud(colormap('gray'))), colorbar
+xticks(1:6)
+xticklabels(states)
+yticklabels(states)
+
+subplot(1,3,3)
+imagesc(p3), caxis([0 0.6])
+colormap(flipud(colormap('gray'))), colorbar
+xticks(1:6)
+xticklabels(states)
+yticklabels(states)
+%%
 % ignore large bilateral events since they are so rare
 
-[M,Q]=community_louvain(B([1:4,6], [1:4,6]));
+test_gamma = 0.1:0.1:3;
+for i = 1:length(test_gamma)
+    [M,Q(i)]=community_louvain(B(2:6, 2:6), test_gamma(i));
+    num_uniq(i) = numel(unique(M));
+end
 
+figure, plot(test_gamma, Q);
+hold on
+plot(test_gamma, num_uniq)
+% [M,Q]=community_louvain(B(2:6, 2:6), 0.7);
+% [M,Q]=community_louvain(btest);
 %%
-clc
+% clc
 cols = zeros(length(M), 3);
 col1 = [0 0.4470 0.7410];
 col2 = [0.8500 0.3250 0.0980];
@@ -161,10 +198,14 @@ for i = 1:length(M)
         cols(i,:) = col4;
     end
 end
-pgraph = digraph(B([1:4,6], [1:4, 6]));
+% pgraph = digraph(B([2:4,6], [2:4,6]));
+pgraph = digraph(B(2:6, 2:6));
+% pgraph = digraph(B);
+% pgraph = digraph(btest);
 figure, plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*10, ...
     'NodeColor', cols, 'NodeFontSize', 15, ...
-    'EdgeColor', 'k', 'ArrowSize', 15, 'NodeLabel', states([1:4, 6]), ...
+    'EdgeColor', 'k', 'ArrowSize', 15, ...
+    'NodeLabel', states(2:6), ...states([2:4,6]),...states(2:6), ... states,
     'Layout', 'force', 'WeightEffect', 'inverse')
 
 

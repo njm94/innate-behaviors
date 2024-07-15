@@ -30,6 +30,11 @@ addpath('C:\Users\user\Documents\Nick\grooming\utils')
 
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
+mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'};
+
+data_list{1} = [data_list{1}; mp_list];
 current_mouse = '';
 
 fs = 90 ;
@@ -37,6 +42,7 @@ fs = 90 ;
 thy1_idx = 1:7;
 ai94_idx = 8:13;
 camk_idx = 14:25;
+mp_idx = 26:28;
 
 
 %% 
@@ -70,7 +76,7 @@ flr_avg_speed = [];
 %%
 
 
-for j = thy1_idx %23:length(data_list{1})+1
+for j =[thy1_idx, camk_idx([1:5])] %23:length(data_list{1})+1
      try
         data_dir = data_list{1}{j};
         disp(['Starting ' data_dir])
@@ -110,7 +116,7 @@ for j = thy1_idx %23:length(data_list{1})+1
     end
 
     % load grooming events from BORIS file
-    [events, boris] = read_boris(boris_file);
+    [events, b_idx, boris] = read_boris(boris_file);
 
     % consolidate lick events
     lick_events = events(:,contains(events.Properties.VariableNames, 'Lick'));
@@ -149,7 +155,7 @@ for j = thy1_idx %23:length(data_list{1})+1
     figure
     for i = 1:size(stroke_events,2)
         tmp = logical(table2array(stroke_events(:,i)));
-        subplot(1,6,i), hold on
+        subplot(1,7,i), hold on
         plot(flr_x(tmp), -flr_y(tmp))
         plot(fll_x(tmp), -fll_y(tmp))
         axis([200 450 -250 0])
@@ -271,29 +277,34 @@ figure, hold on
 for i = 1:size(behavior_label,1)
     switch behavior_label{i}
         case 'Elliptical'
-            c = 'k';
-            mkr = 'o';
-        case 'Elliptical Asymmetric'
-            continue
-            c = 'k';
-            mkr = 'd';
-        case 'Large Bilateral'
             c = 'y';
             mkr = 'o';
+        case 'Elliptical Asymmetric'
+%             continue
+            c = 'k';
+            mkr = 'o';
+        case 'Large Bilateral'
+%             continue
+            c = 'g';
+            mkr = 'o';
         case 'Left'
+%             continue
             c = 'c';
             mkr = 'o';
         case 'Right'
+%             continue
             c = 'm';
             mkr = 'o';
         case 'Left Asymmetric'
+%             continue
             c = 'c';
             mkr = 'd';
         case 'Right Asymmetric'
+%             continue
             c = 'm';
             mkr = 'd';
     end
-    scatter3(score(i,1), score(i,2), score(i,3), c, mkr)
+    scatter3(score(i,1), score(i,2), score(i,3), c, mkr, 'filled', 'MarkerFaceAlpha', 0.25);
 end
 
 
