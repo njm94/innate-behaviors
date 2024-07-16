@@ -9,12 +9,13 @@ function [events, b_idx, t] = read_boris(boris_tsv, len)
 %                       is listed in the data_list.py)
 %
 % Output:
-%       events          (Binary table of size trial_length x num_behaviors)
+%       events          (Binary table [trial_length x num_behaviors])
+%       b_idx           (Cell array of event indices [trial_length x 1])
 %       t               (Raw table)
 %
 % Usage: 
-%       [events, t] = read_boris(boris_tsv);
-%       [events, t] = read_boris(boris_tsv, len);
+%       [events, b_idx, t] = read_boris(boris_tsv);
+%       [events, b_idx, t] = read_boris(boris_tsv, len);
 
 warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 t = readtable(boris_tsv, "FileType","text",'Delimiter', '\t');
