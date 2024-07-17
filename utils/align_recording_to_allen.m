@@ -1,4 +1,4 @@
-function tform = align_recording_to_allen(image,alignareas,affine,additional_points)
+function tform = align_recording_to_allen(image,alignareas,affine)
 %% Align recording to Allen CCF given an image 
 % INPUTS
 % image - this could be Kmeans map, or a mean of the gcamp activity
@@ -121,16 +121,16 @@ plot(Bregpoint(:,1),Bregpoint(:,2),'xk','linewidth',2,'markersize',3);
 % plot(HLpoints(:,1),HLpoints(:,2),'-xk','linewidth',2,'markersize',3);
 % 
 % 
-subplot(221);
-plot(FLrefs(:,1),FLrefs(:,2),'-xr','linewidth',2,'markersize',3);
-delete(htext);
-htext=text(50,600,'Center of L HL, Center of L HL','color','w','fontsize',12);
-title('Click on the corresponding points on your image from up to down, then press enter','fontsize',12);
-
-handle=subplot(222);
-[x,y] = getline(handle);
-FLpoints=[x y];
-plot(FLpoints(:,1),FLpoints(:,2),'-xk','linewidth',2,'markersize',3);
+% subplot(221);
+% plot(FLrefs(:,1),FLrefs(:,2),'-xr','linewidth',2,'markersize',3);
+% delete(htext);
+% htext=text(50,600,'Center of L HL, Center of L HL','color','w','fontsize',12);
+% title('Click on the corresponding points on your image from up to down, then press enter','fontsize',12);
+% 
+% handle=subplot(222);
+% [x,y] = getline(handle);
+% FLpoints=[x y];
+% plot(FLpoints(:,1),FLpoints(:,2),'-xk','linewidth',2,'markersize',3);
 
 % - NM
 
@@ -152,9 +152,9 @@ end
 subplot(221); title('All Done');
 
 refpoints=[OBrefs;OBRSrefs;Bregref;mean_points_refs];
-refpoints=[OBrefs;OBRSrefs;Bregref;FLrefs]; % NM
+% refpoints=[OBrefs;OBRSrefs;Bregref;FLrefs]; % NM
 points=[OBpoints;OBRSpoints;Bregpoint;mean_points];
-points=[OBpoints;OBRSpoints;Bregpoint;FLpoints]; % NM
+% points=[OBpoints;OBRSpoints;Bregpoint;FLpoints]; % NM
 
 if affine, affinestr='affine'; else, affinestr='nonreflectivesimilarity'; end
 tform = fitgeotrans(points,refpoints,affinestr);

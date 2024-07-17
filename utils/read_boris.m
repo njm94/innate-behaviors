@@ -1,4 +1,4 @@
-function [events, t] = read_boris(boris_tsv, len)
+function [events, b_idx, t] = read_boris(boris_tsv, len)
 % Reads the annotated BORIS file to extract behaviors
 %
 % Input:
@@ -9,12 +9,13 @@ function [events, t] = read_boris(boris_tsv, len)
 %                       is listed in the data_list.py)
 %
 % Output:
-%       events          (Binary table of size trial_length x num_behaviors)
+%       events          (Binary table [trial_length x num_behaviors])
+%       b_idx           (Cell array of event indices [trial_length x 1])
 %       t               (Raw table)
 %
 % Usage: 
-%       [events, t] = read_boris(boris_tsv);
-%       [events, t] = read_boris(boris_tsv, len);
+%       [events, b_idx, t] = read_boris(boris_tsv);
+%       [events, b_idx, t] = read_boris(boris_tsv, len);
 
 warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 t = readtable(boris_tsv, "FileType","text",'Delimiter', '\t');
@@ -28,6 +29,7 @@ t.ImageIndex = t.ImageIndex + 1;
 % Initialize the binary event vector
 annotations = unique(t.Behavior);
 events = zeros(length(annotations), len);
+b_idx = cell(1,length(annotations));
 
 % Populate event vector
 for i = 1:length(annotations)
@@ -43,6 +45,7 @@ for i = 1:length(annotations)
 
             assert(length(start_idx) == length(stop_idx), ...
                 'UNEVEN NUMBER OF START/STOP EVENTS...')
+            b_idx{i} = [start_idx stop_idx];
             for j = 1:length(start_idx)
                 events(i, start_idx(j):stop_idx(j)) = 1;
             end
