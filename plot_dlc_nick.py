@@ -32,15 +32,16 @@ from configparser import ConfigParser
 os.environ[ 'NUMBA_CACHE_DIR' ] = '/tmp/numba_cache/'
 import dlc2kinematics
 # from pygifsicle import optimize
-from get_list_data import expt1_data_list, expt2_data_list
+from get_list_data import expt1_data_list, expt2_data_list, expt3_data_list
 from helper import *
 
 
 # data_root = '/media/user/teamshare/nick/behavior/grooming/1p/'    
 # data_list = expt1_data_list
 
-data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'    
-data_list = expt2_data_list
+# data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'    
+data_root = '/media/user/teamshare/pankaj/closedloop_rig5_data/'
+data_list = expt3_data_list
 
 # %%
 
