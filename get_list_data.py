@@ -55,17 +55,17 @@ expt1_data_list.append(['ECR2_thy1', [
 expt2_data_list = [] # 2p grooming
 
 expt2_data_list.append(['ETL3_thy1', [
-    # '20231109110512', # spontaneous
-    # '20231111193330', # spontaneous
-    # '20231113134311', # evoked
-    # '20231115163212', # evoked
+    '20231109110512', # spontaneous
+    '20231111193330', # spontaneous
+    '20231113134311', # evoked
+    '20231115163212', # evoked
     ]])
    
 expt2_data_list.append(['ETR3_thy1', [
-    # '20231109092652', # spontaneous
-    # '20231111153211', # spontaneous
-    # '20231113155903', # evoked
-    # '20231115174148', # evoked
+    '20231109092652', # spontaneous
+    '20231111153211', # spontaneous
+    '20231113155903', # evoked
+    '20231115174148', # evoked
     ]])
     
 expt2_data_list.append(['ETR2_thy1', [
@@ -73,8 +73,8 @@ expt2_data_list.append(['ETR2_thy1', [
     '20231109115952', # spontaneous
     '20231109120816', # spontaneous
     '20231111165721', # spontaneous
-    # '20231113143925', # evoked
-    # '20231115153531', # evoked
+    '20231113143925', # evoked
+    '20231115153531', # evoked
     ]])
     
 expt2_start_end_idx = []
