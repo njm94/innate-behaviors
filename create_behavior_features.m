@@ -76,7 +76,7 @@ flr_avg_speed = [];
 %%
 
 
-for j =[thy1_idx, camk_idx([1:5])] %23:length(data_list{1})+1
+for j = mp_idx %23:length(data_list{1})+1
      try
         data_dir = data_list{1}{j};
         disp(['Starting ' data_dir])

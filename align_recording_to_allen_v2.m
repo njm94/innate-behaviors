@@ -1,4 +1,4 @@
-function tform = align_recording_to_allen_v2(image,alignareas,affine, sensory_maps)
+function tform = align_recording_to_allen_v2(image,alignareas,affine, region_coords)
 %% Align recording to Allen CCF given an image 
 % INPUTS
 % image - this could be Kmeans map, or a mean of the gcamp activity
@@ -24,8 +24,8 @@ load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
 %         396.2620  101.4249];     % Base of R OB
 
 % -- NM --
-HLrefs = [195.7678  295.6018;   % Base of L HL
-          392.0648  296.5689];  % Base of R HL
+% HLrefs = [195.7678  295.6018;   % Base of L HL
+%           392.0648  296.5689];  % Base of R HL
 % % 
 % FLrefs = [156.9122  275.9880;   % Base of L FL
 %           431.1195  276.4050];  % Base of R FL
@@ -43,12 +43,12 @@ mean_points_refs=zeros(length(alignareas),2);
 for i=1:length(alignareas)
     sidestr=alignareas{i}(1);
     try
-        areaid=dorsalMaps.labelTable{strcmp(dorsalMaps.labelTable.abbreviation,alignareas{i}(3:end)),'id'};
+        areaid=dorsalMaps.labelTable{strcmp(dorsalMaps.labelTable.abbreviation,alignareas{i}(3:end)),'id'}+1;
     catch
         error('Please name additional areas in the form L/R area, with a space between L/R and area name');
     end
-    dimsmap=size(dorsalMaps.dorsalMapScaled);
-    [x,y]=find(dorsalMaps.dorsalMapScaled==areaid);
+    dimsmap=size(dorsalMaps.dorsalMap);
+    [x,y]=find(dorsalMaps.dorsalMap==areaid);
     if strcmp(sidestr,'R')
         x=x(y>=dimsmap(2)/2); y=y(y>=dimsmap(2)/2);
     elseif strcmp(sidestr,'L')
@@ -59,7 +59,7 @@ end
 
 figure; %suptitle('Alignment to Allen CCF');
 subplot(221);
-imagesc(dorsalMaps.dorsalMapScaled);
+imagesc(dorsalMaps.dorsalMap);
 axis equal off;
 hold on;
 for p = 1:length(dorsalMaps.edgeOutline)
@@ -71,8 +71,8 @@ set(gca, 'YDir', 'reverse');
 % title('Click on the corresponding points on your image from left to right, then press enter','fontsize',12);
 
 handle=subplot(222);
-% imagesc(image); axis equal off;hold on; colormap gray
-imshowpair(image, sensory_maps); axis equal off; hold on; % -- NM -- 
+imagesc(image); axis equal off;hold on; colormap gray
+% imshowpair(image, sensory_maps); axis equal off; hold on; % -- NM -- 
 
 % [x,y] = getline(handle);
 % OBpoints=[x y];
@@ -103,16 +103,16 @@ plot(Bregpoint(:,1),Bregpoint(:,2),'xk','linewidth',2,'markersize',3);
 % - NM
 
 
-subplot(221);
-plot(HLrefs(:,1),HLrefs(:,2),'-xr','linewidth',2,'markersize',3);
-delete(htext);
-htext=text(50,600,'Center of L HL, Center of R HL','color','w','fontsize',12);
-title('Click on the corresponding points on your image from up to down, then press enter','fontsize',12);
-
-handle=subplot(222);
-[x,y] = getline(handle);
-HLpoints=[x y];
-plot(HLpoints(:,1),HLpoints(:,2),'-xk','linewidth',2,'markersize',3);
+% subplot(221);
+% plot(HLrefs(:,1),HLrefs(:,2),'-xr','linewidth',2,'markersize',3);
+% delete(htext);
+% htext=text(50,600,'Center of L HL, Center of R HL','color','w','fontsize',12);
+% title('Click on the corresponding points on your image from up to down, then press enter','fontsize',12);
+% 
+% handle=subplot(222);
+% [x,y] = getline(handle);
+% HLpoints=[x y];
+% plot(HLpoints(:,1),HLpoints(:,2),'-xk','linewidth',2,'markersize',3);
 % 
 % 
 % subplot(221);
