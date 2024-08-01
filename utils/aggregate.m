@@ -1,6 +1,19 @@
 function [bmat2, idx] = aggregate(bmat, W, fs)
-% aggregate grooming events by merging all events that occur within W
-% seconds of each other. Then return list of start and stop indexes
+% Aggregate binary events by merging all events that occur within W
+% seconds of each other. Then return list of start and stop indices.
+%
+% Inputs:
+%   bmat    (matrix, binary behavior matrix, [Time x Behavior])
+%   W       (scalar, aggregation window size, in seconds)  
+%   fs      (scalar, sampling rate of data)
+%
+% Outputs:
+%   bmat2   (matrix, aggregated behavior matrix)
+%   idx     (cell array, each cell is Nx2 array of start and stop index)
+%
+% Usage: 
+%   [bmat2, idx] = aggregate(bmat, W, fs) 
+%
 
 % assume time along 1st dimension
 if size(bmat,2) > size(bmat,1)
