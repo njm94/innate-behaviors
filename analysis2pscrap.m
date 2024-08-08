@@ -47,7 +47,7 @@ clear r
 tic
 for j = 1:size(eventsarr,1)
     for i = 1:size(Nresample,1)
-        r(j,i) = corr(eventsarr(j,:)', Ndenoise(i,:)');
+        r(j,i) = corr(eventsarr(j,:)', Nresample(i,:)');
     end
 end
 toc
@@ -56,8 +56,9 @@ toc
 
 figure,
 imagesc(r), 
-colormap(redblue()), caxis([-0.3 0.3])
+caxis([-0.3 0.3])
 c=colorbar;
+colormap(bluewhitered())
 c.Label.String = 'Correlation';
 yticklabels(stroke_events.Properties.VariableNames)
 xlabel('Neuron Number')
@@ -67,12 +68,14 @@ figure
 for i = 1:size(r,1)
     for j = 1
         [rtmp, I] = max(r(i,:));
-        if rtmp > 0.2
+        if rtmp > 0.1
             idx = arr2idx(aggregate(eventsarr(i,:),3,fs));
             for k = 1:size(idx,1)
                 subplot(1, size(r,1), i)
-                plot(Ndenoise(I, idx(k,1)-450:idx(k,1)+450)), hold on
+                plot(xt(1:901, fs)-5, Nresample(I, idx(k,1)-450:idx(k,1)+450), 'color', [0 0 0 0.5]), hold on
+                title(stroke_events.Properties.VariableNames(i))
             end
+            vline(0, 'r')
         end
     end
 
@@ -97,14 +100,14 @@ for i = 1:size(N,1)
         tforms{cstat{i}.use_tform}.linear_to_wfield, ...
         tforms{cstat{i}.use_tform}.wfield_to_atlas);
 
-    plot(x, y, 'k.', 'MarkerSize', 10)
+    plot(x, y, 'k.', 'MarkerSize', 5)
 end
 
 prev_I = [];
 tmp = r(6,:);
 for i = 1:20
     [rr, I] = max(tmp);
-    if rr<0.2, continue; end
+    if rr<0.1, continue; end
 %     plot(t, Nresample(I,:)-10*i, 'k') % "Elliptical" correlated neuron
     prev_I = cat(1, prev_I, I);
     tmp(I) = nan;
@@ -124,7 +127,7 @@ end
 tmp = r(1,:);
 for i = 1:20
     [rr, I] = max(tmp);
-    if rr<0.2, continue; end
+    if rr<0.1, continue; end
 %     plot(t, Nresample(I,:)-10*i, 'k') % "Elliptical" correlated neuron
     tmp(I) = nan;
     x0 = double(cstat{I}.med(2));
@@ -159,7 +162,7 @@ clc
 % num_cells = 20l
 nlabel = cell(1,10);
 figure, subplot(1,2,1), hold on
-tmp = r(1,:);
+tmp = r(3,:);
 for i = 1:10
     [~, I] = max(tmp);
     plot(t, Nresample(I,:)-10*i, 'k') % "Elliptical" correlated neuron
@@ -171,16 +174,16 @@ axis tight
 yticklabels(fliplr(nlabel));
 title('Elliptical')
 
-vline(t(find(table2array(events(:,3)))), 'r:')
+vline(t(find(table2array(events(:,1)))), 'r:')
 
-patchplot(t(arr2idx(aggregate(eventsarr(1,:)', 3))), ylim, 'c', 0.5)
-patchplot(t(arr2idx(aggregate(eventsarr(6,:)',3))), ylim, 'm', 0.5)
+patchplot(t(arr2idx(aggregate(eventsarr(3,:)', 3))), ylim, 'c', 0.5)
+patchplot(t(arr2idx(aggregate(eventsarr(5,:)',3))), ylim, 'm', 0.5)
 xlabel('Time (s)')
 
 
 nlabel = cell(1,10);
 subplot(1,2,2), hold on
-tmp = r(6,:);
+tmp = r(5,:);
 for i = 1:10
     [~, I] = max(tmp);
     plot(t, Nresample(I,:)-10*i, 'k') % "right" correlated neuron
@@ -191,10 +194,10 @@ axis([0 t(end) -105 0])
 
 yticklabels(fliplr(nlabel));
 title('Right')
-vline(t(find(table2array(events(:,3)))), 'r:')
+vline(t(find(table2array(events(:,1)))), 'r:')
 
 patchplot(t(arr2idx(aggregate(eventsarr(1,:)', 3))), ylim, 'c', 0.5)
-patchplot(t(arr2idx(aggregate(eventsarr(6,:)',3))), ylim, 'm', 0.5)
+patchplot(t(arr2idx(aggregate(eventsarr(5,:)',3))), ylim, 'm', 0.5)
 xlabel('Time (s)')
 
 %%

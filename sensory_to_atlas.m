@@ -1,5 +1,5 @@
 % sensory_to_atlas
-
+clear, clc
 [comp_file, comp_path] = uigetfile('*.tif','Select sensory composite image.', 'Y:\nick\behavior\grooming\2p');
 data_comp = loadtiff([comp_path, comp_file]);
 load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
@@ -74,7 +74,7 @@ end
 
 %% Do registration and transformation on atlas
 
-tform = align_recording_to_allen_v2(frame_wfi, regions, 1, region_coords); % align <-- input any function of data here
+% tform = align_recording_to_allen_v2(frame_wfi, regions, 1, region_coords); % align <-- input any function of data here
 invT=pinv(tform.T); % invert the transformation matrix
 invT(1,3)=0; invT(2,3)=0; invT(3,3)=1; % set 3rd dimension of rotation artificially to 0
 invtform=tform; invtform.T=invT; % create the transformation with invtform as the transformation matrix
@@ -111,7 +111,7 @@ subplot(1,2,2); imagesc(atlas); axis off, grid on
 % saveas(gcf, [wfi_path, 'atlas_warped.fig'])
 
 % Save the warped atlas
-save([wfi_path, 'atlas_tform.mat'],'areanames','tform', 'invtform');
+save([comp_path, 'atlas_tform.mat'],'areanames','tform', 'invtform');
 % close all;
 
 

@@ -5,8 +5,8 @@ clear, clc
 %
 % arm1 is always read first in the consolidation script, so indexing starts
 % from arm 1 [roi1:N] then goes to arm2 [roi1:N]
-left_hem = [3,4,];
-right_hem = [1,2];
+left_hem = [1,2];
+right_hem = [];
 
 %% Don't change from here on out
 
@@ -18,8 +18,11 @@ disp('[+] Finished loading consolidated neuron data')
 % group left hemisphere
 %%
 clc
+
 [N_left, nloc_left] = nclean(resampled_data, iscell, n_loc, left_hem, false);
+
 [N_right, nloc_right] = nclean(resampled_data, iscell, n_loc, right_hem, true);
+
 %% Clean up stat array
 
 for i = 1:length(stat)
@@ -56,6 +59,12 @@ function [N, nloc] = nclean(data, iscell, n_loc, hem_idx, is_right)
 
 
 empty_idx = find(cellfun(@isempty, iscell));
+
+if isempty(hem_idx)
+    N = [];
+    nloc = [];
+    return
+end
 
 iscell = catcell(1, iscell(hem_idx));
 nloc = catcell(2, n_loc(hem_idx))';
