@@ -30,6 +30,12 @@ list = {'R SSp-ul','L SSp-ul', ...
     'R SSp-ll', 'L SSp-ll', ...
     'R SSp-bfd', 'L SSp-bfd'};
 
+% use spatial referencing information
+% xWorldLimits = [];
+% yWorldLimits = [];
+% PixelExtentInWorldX = pixelsize;
+% PixelExtentInWorldY = dorsalMaps.desiredPixelSize;
+% RA = imref2d(size(image), PixelExtentInWorldX, PixelExtentInWorldY);
 
 
 % apply scaling tform
@@ -43,14 +49,30 @@ S = [scalingFactor 0 0;
 Stform = affine2d(S);
 
 % Perform the scaling transformation
-sImage = imwarp(image, Stform);
-sSens = imwarp(sens, Stform);
+% sImage = imwarp(image, Stform);
+% sSens = imwarp(sens, Stform);
 
 
-% sImage = imwarp(image, Stform, 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
-% for p = 1:size(sens,3)
-%     sSens(:,:,p) = imwarp(sens(:,:,p), Stform, 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
-% end
+% pad images to match size of dorsalMap
+% y_pad = size(dorsalMaps.dorsalMapScaled,1) - size(sImage, 1);
+% y_pad_pre = floor(y_pad/2);
+% y_pad_post = ceil(y_pad/2);
+% 
+% x_pad = size(dorsalMaps.dorsalMapScaled,2) - size(sImage, 2);
+% x_pad_pre = floor(x_pad/2);
+% x_pad_post = ceil(x_pad/2);
+% 
+% sImage = padarray(sImage, [y_pad_pre, x_pad_pre], 'pre');
+% sImage = padarray(sImage, [y_pad_post, x_pad_post], 'post');
+% 
+% sSens = padarray(sSens, [y_pad_pre, x_pad_pre], 'pre');
+% sSens = padarray(sSens, [y_pad_post, x_pad_post], 'post');
+
+% get image in coordinate size from the start
+sImage = imwarp(image, Stform, 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+for p = 1:size(sens,3)
+    sSens(:,:,p) = imwarp(sens(:,:,p), Stform, 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+end
 
 
 if use_midline
@@ -59,14 +81,18 @@ if use_midline
     title('Click on points along midline from top to bottom, then press enter','fontsize',12);
     [x,y] = getline(handle);
 
-    ang = atan((x(2)-x(1))./abs(y(2)-y(1)));
+    ang = -atan((x(2)-x(1))./abs(y(2)-y(1)));
     
     % Create the 2D rotation matrix
     R = [cos(ang) -sin(ang) 0;
          sin(ang)  cos(ang) 0;
          0 0 1];
-    rsImage = imrotate(sImage, rad2deg(-ang));
-    rsSens = imrotate(sSens, rad2deg(-ang));
+    Rtform = affine2d(R);
+    
+    rsImage = imwarp(sImage, Rtform, 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+    rsSens = imwarp(sSens, Rtform, 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+%     rsImage = imrotate(sImage, rad2deg(-ang));
+%     rsSens = imrotate(sSens, rad2deg(-ang));
 
     % Rotate the midline coordinates to get the vertical line bregma is on
     rMidline = R(1:2, 1:2) * [x, y]';
@@ -111,29 +137,6 @@ for i=1:length(alignareas)
     points_refs(i,:)=[mean(y) mean(x)];
 end
 
-% figure; %suptitle('Alignment to Allen CCF');
-% subplot(221);
-% imagesc(dorsalMaps.dorsalMapScaled);
-% axis equal off;
-% hold on;
-% for p = 1:length(dorsalMaps.edgeOutline)
-%     plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1));
-% end
-% set(gca, 'YDir', 'reverse');
-
-
-
-% 
-% 
-% tform = fitgeotform2d(points,points_refs,tform_type);
-% 
-% tform = estgeotform2d(rpoints, points_refs, 'rigid')
-% 
-% 
-% points2 = transformPointsForward(basic_tform, points);
-
-
-
 if use_midline
 %     xShift = mean([mean(points_refs(:,1) - points(:,1)), bregref_x - bregma_x]);
 %     xShift = mean([points_refs(:,1) - points(:,1); bregref_x - bregma_x]);
@@ -142,25 +145,17 @@ if use_midline
     yShift = mean(points_refs(:,2) - points(:,2));
 
 
-    figure, imagesc(imtranslate(rsImage, [xShift, yShift]))
-    hold on, colormap gray
-    for p = 1:length(dorsalMaps.edgeOutline)
-        plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'w', 'LineWidth', 2);
-    end
-
-
-
-    figure, imagesc(rsImage), colormap gray
-    axis equal off; hold on;
-    hold on
-
-    for p = 1:length(dorsalMaps.edgeOutline)
-        plot(dorsalMaps.edgeOutline{p}(:, 2)-xShift, dorsalMaps.edgeOutline{p}(:, 1)-yShift, 'w', 'LineWidth', 2);
-    end
-
-    for p = 1:size(points,1)
-        plot(points(p, 1), points(p,2), 'rx')
-    end
+%     figure, imagesc(rsImage), colormap gray
+%     axis equal off; hold on;
+%     hold on
+% 
+%     for p = 1:length(dorsalMaps.edgeOutline)
+%         plot(dorsalMaps.edgeOutline{p}(:, 2)-xShift, dorsalMaps.edgeOutline{p}(:, 1)-yShift, 'w', 'LineWidth', 2);
+%     end
+% 
+%     for p = 1:size(points,1)
+%         plot(points(p, 1), points(p,2), 'rx')
+%     end
 
     % create translation matrix
     T = [1 0 xShift;
@@ -169,17 +164,16 @@ if use_midline
 
     % combine all the transformation matrices into a composite affine
     % transformation matrix
+
+    % change the direction of rotation since imwarp rotates in the
+    % opposite direction for some reason    
+    R(2,1) = -R(2,1);
+    R(1,2) = -R(1,2);
     TRS = T*R*S;
     tform = affinetform2d(TRS);
 end
 
-
-imagereg = imwarp(image,tform,'OutputView',imref2d(size(dorsalMaps.dorsalMapScaled)));
-
-% subplot(223);
-% plot(points_refs(:,1),points_refs(:,2),'xr',points(:,1),points(:,2),'xk',rotpoints(:,1),rotpoints(:,2),'ob','linewidth',2); 
-% set(gca, 'YDir', 'reverse','fontsize',12); title('Control points','fontsize',16);
-% legend('Allen Control Points','Unaligned Points','Points post-alignment')
+imagereg = imwarp(image, tform, 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
 
 figure
 imagesc(imagereg); colormap gray, hold on

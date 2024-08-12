@@ -5,7 +5,7 @@
 
 
 clc, clear
-
+addpath('C:\Users\user\Documents\Nick\grooming\utils')
 startpath = 'Y:\nick\behavior\grooming\2p';
 working_dir = uigetdir(startpath, 'Select experiment directory.');
 
@@ -24,7 +24,7 @@ end
 
 arm_array(cellfun(@isempty,arm_array))=[];
 
-roi_array = catcell(2, roi_array);
+roi_array = catcell(2, roi_array(:));
 roi_array = roi_array(~contains(roi_array, 'ignore'));
 template_path = get_template_path(working_dir);
 
