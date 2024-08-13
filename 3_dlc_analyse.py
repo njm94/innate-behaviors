@@ -23,7 +23,7 @@ for expt in data_list:
     mouse_id, list_rec_dir = expt
 
     for rec_dir in tqdm(list_rec_dir):
-        beh_vid_file = data_root + os.sep + mouse_id + os.sep + rec_dir + os.sep + mouse_id + '_' + rec_dir + '.mp4'
+        beh_vid_file = data_root + os.sep + mouse_id + os.sep + rec_dir + os.sep + mouse_id + '_' + rec_dir + '_trim.mp4'
         print(beh_vid_file)
         if os.path.isfile(beh_vid_file):
             print(glob.glob(data_root + os.sep + mouse_id + os.sep + rec_dir + os.sep + mouse_id + '_' + rec_dir + '*1030000.h5'))
