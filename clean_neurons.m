@@ -5,8 +5,8 @@ clear, clc
 %
 % arm1 is always read first in the consolidation script, so indexing starts
 % from arm 1 [roi1:N] then goes to arm2 [roi1:N]
-left_hem = [1,2];
-right_hem = [];
+left_hem = [];
+right_hem = [1, 2, 3];
 
 %% Don't change from here on out
 

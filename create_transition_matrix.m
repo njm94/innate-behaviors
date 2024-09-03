@@ -18,8 +18,12 @@ current_mouse = '';
 mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'};
+mp_list = {'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802'};
 
 data_list{1} = [data_list{1}; mp_list];
+data_list{1} = mp_list;
 
 fs = 90 ;
 
@@ -44,7 +48,7 @@ N = length(data_list{1});
 
 tmat = zeros(numel(states), numel(states), N);
 
-for j = [thy1_idx, camk_idx(1:5), mp_idx]%1:N
+for j = 1:N
     data_dir = data_list{1}{j};
     timestamp_file = [data_dir, filesep, getAllFiles(data_dir, '_trim.txt')];
     [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
@@ -73,6 +77,7 @@ for j = [thy1_idx, camk_idx(1:5), mp_idx]%1:N
 
         bmat = any(table2array(stroke_events),2);
     else 
+        continue
         % the snippets are a soon-to-be deprecated analysis method. Remove 
         % this when fully transitioned to the BORIS labels
         [snippets, labels] = parse_snippets(snippets_dir);
@@ -145,6 +150,8 @@ p1 = nanmean(pmat(:,:,thy1_idx), 3);
 p2 = nanmean(pmat(:,:,camk_idx(1:5)), 3);
 p3 = nanmean(pmat(:,:,mp_idx), 3);
 
+
+
 figure
 subplot(1,3,1)
 imagesc(p1), caxis([0 0.6])
@@ -198,14 +205,14 @@ for i = 1:length(M)
         cols(i,:) = col4;
     end
 end
-% pgraph = digraph(B([2:4,6], [2:4,6]));
-pgraph = digraph(B(2:6, 2:6));
+pgraph = digraph(B([2:4,6], [2:4,6]));
+% pgraph = digraph(B(2:6, 2:6));
 % pgraph = digraph(B);
 % pgraph = digraph(btest);
 figure, plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*10, ...
     'NodeColor', cols, 'NodeFontSize', 15, ...
     'EdgeColor', 'k', 'ArrowSize', 15, ...
-    'NodeLabel', states(2:6), ...states([2:4,6]),...states(2:6), ... states,
+    'NodeLabel',states([2:4,6]),...states(2:6), ... states,
     'Layout', 'force', 'WeightEffect', 'inverse')
 
 

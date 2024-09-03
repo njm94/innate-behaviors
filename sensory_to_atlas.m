@@ -1,5 +1,5 @@
 % sensory_to_atlas
-clear, clc
+clear, clc, close all
 [comp_file, comp_path] = uigetfile('*.tif','Select sensory composite image.', 'Y:\nick\behavior\grooming\2p');
 data_comp = loadtiff([comp_path, comp_file]);
 load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
@@ -11,7 +11,7 @@ load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
 frame_wfi = data_comp(:,:,1);
 sensory_maps = data_comp(:,:,2:end);
 
-FOV = 8.4; % mm
+FOV = 8.2; % mm
 scaling = 1000 .* FOV/size(frame_wfi,1);
 use_midline = true;
 
@@ -93,24 +93,21 @@ sensoryreg = imwarp(sensory_maps, tform, 'interp', 'nearest', 'OutputView', imre
 figure
 % imagesc(imflatfield(imagereg, 100)); colormap gray
 % imagesc(imagereg); colormap gray
-imshowpair(imagereg, sensoryreg)
-axis equal off; hold on;
-for p = 1:length(dorsalMaps.edgeOutline)
-    plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'w', 'LineWidt', 2);
+for i = 1:size(sensory_maps,3)
+    subplot(1, size(sensoryreg,3), i)
+    imshowpair(imagereg, sensoryreg(:,:,i))
+    axis equal off; hold on;
+    for p = 1:length(dorsalMaps.edgeOutline)
+        plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'w', 'LineWidt', 2);
+    end
+    set(gca, 'YDir', 'reverse');
 end
-set(gca, 'YDir', 'reverse');
 %%
-saveas(gcf, [wfi_path, 'atlas_aligned.fig'])
+saveas(gcf, [comp_path, 'atlas_aligned.fig'])
 
 %%
 
-
-% Warped atlas image
-figure; subplot(1,2,1); imagesc(imflatfield(frame_wfi,100)); axis off, grid on, colormap jet
-subplot(1,2,2); imagesc(atlas); axis off, grid on
-% saveas(gcf, [wfi_path, 'atlas_warped.fig'])
-
-% Save the warped atlas
+% 
 save([comp_path, 'atlas_tform.mat'],'areanames','tform', 'invtform');
 % close all;
 

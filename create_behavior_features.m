@@ -32,9 +32,13 @@ formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
-    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'};
-
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
+    };
+mp_list = {'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802'};
 data_list{1} = [data_list{1}; mp_list];
+data_list{1} = mp_list;
 current_mouse = '';
 
 fs = 90 ;
@@ -76,7 +80,7 @@ flr_avg_speed = [];
 %%
 
 
-for j = mp_idx %23:length(data_list{1})+1
+for j = 1:length(data_list{1})%mp_idx %23:length(data_list{1})+1
      try
         data_dir = data_list{1}{j};
         disp(['Starting ' data_dir])
@@ -267,7 +271,7 @@ test = [behavior_duration, l_paw_xrange, l_paw_yrange, l_paw_start_y, ...
     r_paw_start_x, y_diff, lick_interspersed, fll_distance, flr_distance, ...
     imm_events, fll_avg_speed, flr_avg_speed, fll_max_speed, flr_max_speed];
 
-[coeff,score,latent] = pca(test);
+[coeff, score, latent] = pca(test-mean(test));
 [C, ia, ic] = unique(behavior_label);
 
 %%
@@ -284,7 +288,7 @@ for i = 1:size(behavior_label,1)
             c = 'k';
             mkr = 'o';
         case 'Large Bilateral'
-%             continue
+            continue
             c = 'g';
             mkr = 'o';
         case 'Left'

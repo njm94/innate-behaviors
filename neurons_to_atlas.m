@@ -26,6 +26,7 @@ imreg = imwarp(frame_wfi, wfi_tform.tform,'interp','nearest','OutputView',imref2
 
  
 %%
+auditory_areas = [100, 114, 107];
 
 show_figs = true;
 if show_figs
@@ -53,15 +54,22 @@ for i = 1:size(F,1)
         [x2, y2] = transformPointsForward(lscan_tform.tform, x1, y1);        
         [x3, y3] = transformPointsForward(wfi_tform.tform, x2, y2);
 
-        % some issue with transformation not being applied properly to
-        % dorsalMaps variable. As a workaround, translate the dorsalMaps
-        % with the final translation and check those area names
-%         dMap = dorsalMaps.dorsalMapScaled;
-% 
-%         xShift = wfi_tform.tform.A(1,3);
-%         yShift = wfi_tform.tform.A(2,3);
-%         dMap = imtranslate(dMap, [-xShift, -yShift], 'nearest');
-        n_loc(i) = area_names(area_values==dorsalMaps.dorsalMapScaled(round(y3), round(x3)));
+        if x3 > round(size(dorsalMaps.dorsalMapScaled,2)/2)
+            hemisphere_flag = -1;
+        else
+            hemisphere_flag = 1;
+        end
+        
+        % There is only a field in areanames for AUD (not any of the
+        % auditory cortex sub regions). If any of the neurons are in these
+        % sub regions, just lump them into the AUD. 
+        if any(dorsalMaps.dorsalMapScaled(round(y3), round(x3)) == auditory_areas)
+            n_loc(i) = area_names(area_values == hemisphere_flag*98);
+        else
+            n_loc(i) = area_names(area_values==hemisphere_flag*dorsalMaps.dorsalMapScaled(round(y3), round(x3)));
+        end
+
+        
     
 
         if show_figs

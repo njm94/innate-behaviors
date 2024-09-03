@@ -11,18 +11,25 @@ formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 data_list = data_list{1};
 
+ger2_idx = 1:11;
 hyl3_idx = 52:56;
 ecr2_idx = 57:59;
 
+
 %%
 clc
-for i = [hyl3_idx(3)]
-    fpath = data_list{i};
+
+expts_to_analyze = [ger2_idx(1:6), hyl3_idx, ecr2_idx];
+for i = 14%1:length(expts_to_analyze)
+    fpath = data_list{expts_to_analyze(i)};
     [events, b_idx, b_tab] = read_boris([fpath, filesep, getAllFiles(fpath, 'events.tsv')]);
     load([fpath, filesep, getAllFiles(fpath, 'cam0_svd.mat')])
     dlc_speed = readmatrix([fpath, filesep, getAllFiles(fpath, '_speed.csv')]);
     ini = ini2struct([fpath, filesep, getAllFiles(fpath, '.ini')]);
-    ini = ini.sentech_give_rewards;
+    try ini = ini.sentech_give_rewards;
+    catch 
+        ini = ini.sentech_dlc_live;
+    end
     fs = str2double(ini.framerate);
 
 end
