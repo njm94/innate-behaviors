@@ -12,7 +12,7 @@ import pandas as pd
 from scipy import signal
 from pathlib import Path
 from tqdm import tqdm
-from get_list_data import expt1_data_list, expt2_data_list, expt2_start_end_idx, expt3_data_list
+from get_list_data import expt1_data_list, expt2_data_list
 from helper import *
 import gc
 import numpy as np
@@ -26,7 +26,7 @@ data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'
 
 # data_root = '/mnt/njm/nick/behavior/grooming/1p/'
 data_list = expt2_data_list
-data_list_idx = expt2_start_end_idx
+# data_list_idx = expt2_start_end_idx
 
 k = int(1000)
 
@@ -71,16 +71,23 @@ for ii, expt in enumerate(data_list):
         #     continue
 
         if not os.path.isfile(beh_vid_trim_file):
-            if '1p' in data_root or 'closedloop' in data_root:
-                beh_start, beh_stop = get_dark_frames(beh_stack)
-            elif '2p' in data_root: # issues with TTL to scanimage cause inconsistent event timings: use manually selected indices
-                beh_start, beh_stop = data_list_idx[ii][1][jj]
-                print(beh_start, beh_stop)
+            # if '1p' in data_root or 'closedloop' in data_root:
+            #     beh_start, beh_stop = get_dark_frames(beh_stack)
+            # elif '2p' in data_root: 
+            #     # in first cohort experiments, issues with TTL to scanimage cause inconsistent event timings: use manually selected indices
+            #     # beh_start, beh_stop = data_list_idx[ii][1][jj]
+
+            #     # try original method
+            #     beh_start, beh_stop = get_dark_frames(beh_stack)
+            #     print(beh_start, beh_stop)
 
             
             print("\nReading video\n")
             beh_stack =  open_cv_read_video(beh_vid_file)
             beh_log = pd.read_csv(beh_log_file, sep='\t', parse_dates=['time'])
+
+            beh_start, beh_stop = get_dark_frames(beh_stack)
+            print(beh_start, beh_stop)
 
             
                 

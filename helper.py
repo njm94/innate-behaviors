@@ -203,8 +203,11 @@ def open_cv_read_video(video_path):
 
     buf = np.empty((frameCount, frameHeight, frameWidth, 3), np.dtype('uint8'))
     for i in tqdm(range(frameCount)):
-        ret, buf[i] = cap.read()
-        if not ret:
+        try:
+            ret, buf[i] = cap.read()
+            if not ret:
+                break
+        except:
             break
 
     cap.release()
