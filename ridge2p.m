@@ -50,28 +50,54 @@ for i = 1:size(b_idx,2)
     if strcmp(events.Properties.VariableNames{i}, 'Video End')
         continue
     elseif contains(events.Properties.VariableNames{i}, 'Drop')
-        bmat(:,i) = table2array(events(:,i));
+        continue
+        bmat(:,i) = table2array(events(:,i));        
     else
         bmat(b_idx{i}(:,1),i) = 1;
     end
 end
 
+
+
+
+% consolidate Asymmetric, Bilateral, and Elliptical movements since those
+% appear similar in the behavior clustering (louvain) and large bilateral events
+% tend to be extremely rare, so this makes it easier for cross-validation
+bilat_vars = {'Elliptical', 'Right Asymmetric', 'Left Asymmetric', 'Bilateral'};
+bilat_idx = [];
+for i = 1 :length(bilat_vars)
+    bilat_idx = [bilat_idx, find(strcmp(events.Properties.VariableNames, bilat_vars{i}))];
+end
+bilat = any(bmat(:, bilat_idx),2);
+bmat(:, bilat_idx) = [];
+bmat = [bmat, bilat];
+
+
+% get rid of drop
+bmat(:,1) = [];
+
+%%
 % bmat = table2array(events(:, 3:end-1));
 
 % specify the type of variable for making the design matrix
+regLabels = {};
 reg_type = [];
 for ii = 1:size(events,2)
     if contains(events.Properties.VariableNames{ii}, 'Drop')
-%         continue
+        continue
         reg_type = [reg_type 2];
     elseif strcmp(events.Properties.VariableNames{ii}, 'Video End')
+        continue
+    elseif any(strcmp(bilat_vars, events.Properties.VariableNames{ii}))
         continue
     else
         reg_type = [reg_type 3];
     end
+    regLabels = [regLabels, events.Properties.VariableNames{ii}];
 end
 
-regLabels = events.Properties.VariableNames(~strcmp(events.Properties.VariableNames, 'Video End'));
+reg_type = [reg_type, 3]; % add another motor term for the consolidated bilateral movements
+regLabels = [regLabels, {'Bilateral'}];
 
 %% load audio and valve open information
 
@@ -88,7 +114,7 @@ valve = get_on_time(valve);
 flrthresh = get_on_time(flrthresh);
 flllthresh = get_on_time(fllthresh);
 
-
+%%
 % concatenate 2 STIMULUS variable types for audio tone and valve opening
 bmat = [audio valve bmat(1:vid_end, :)];
 reg_type = [2 2 reg_type];
@@ -147,7 +173,7 @@ figure
 pos_mod = cell(length(regLabels));
 ned_mod = cell(length(regLabels));
 
-for j = 1:length(regLabels)
+for j =1:length(regLabels)
     cVar = regLabels(j);%{'Right Asymmetric'};
     clear cIdx
     for i = 1:length(cVar)
@@ -161,18 +187,19 @@ for j = 1:length(regLabels)
     subplot(4, 4, j)
     imagesc(test(I,:))
     colorbar
-    caxis([-2 4])
+    caxis([-1 1])
     colormap(bluewhitered())
     try if reg_type(j) == 3 
             vline(0.5*fs, 'k-')
             
-            baseline = test(I,1:0.5*fs);
+            baseline = test(:,1:0.5*fs);
             mu0 = mean(baseline,2);
             std0 = std(baseline,[],2);
 
-            mux = mean(test(I,0.5*fs+1:end),2);
+%             mux = mean(test(I,0.5*fs+1:end),2);
+            response_snr = max(test(:,0.5*fs+1:end), [], 2) ./ mu0;
 
-            t = (mux-mu0)./std0;
+%             t = (mux-mu0)./std0;
 
 
         end
@@ -181,13 +208,22 @@ for j = 1:length(regLabels)
     title(regLabels{j})
 end
 
+%%
+
+pos_mod = response_snr>mean(response_snr) + 2*std(response_snr);
+
+%%
+
+figure, plot(test(I(pos_mod),:))
+
+
 
 %%
 
 
 
 figure
-for j = 8%1:length(regLabels)
+for j = 4%1:length(regLabels)
 %     cVar = {'Right'};
     cVar = regLabels(j);
     clear cIdx
@@ -202,7 +238,7 @@ for j = 8%1:length(regLabels)
     subplot(4, 4, j)
     imagesc(test(I,:))
     colorbar
-    caxis([-2 4])
+%     caxis([-2 4])
     colormap(bluewhitered())
     try if reg_type(j) == 3, vline(0.5*fs, 'k-'), end
     catch
@@ -215,27 +251,25 @@ end
 
 figure, 
 subplot(1,2,1), 
-plot(xt(test,fs,2), test(I(end-100:end),:)', 'color', [0 0 0 0.25])
+plot(xt(test,fs,2)-0.5, test(I(end-100:end),:)', 'color', [0 0 0 0.25])
 hold on
-plot(xt(test,fs,2), mean(test(I(end-100:end),:)), 'color', 'k', 'LineWidth', 2)
-axis([0 3 -1 5])
+plot(xt(test,fs,2)-0.5, mean(test(I(end-100:end),:)), 'color', 'k', 'LineWidth', 2)
+axis([-0.5 2.5 -1 5])
 vline(0, 'r-')
 
 subplot(1,2,2), 
-plot(xt(test,fs,2), test(I(1:100),:)', 'color', [0 0 0 0.25]),
+plot(xt(test,fs,2)-0.5, test(I(1:100),:)', 'color', [0 0 0 0.25]),
 hold on
-plot(xt(test,fs,2), mean(test(I(1:100),:)), 'color', 'k', 'LineWidth', 2)
+plot(xt(test,fs,2)-0.5, mean(test(I(1:100),:)), 'color', 'k', 'LineWidth', 2)
 % axis tight
-axis([0 3 -1 5])
+axis([-0.5 2 -1 5])
 vline(0, 'r-')
 %%
 
 
 %reconstruct imaging data and compute R^2
 vv = (fullR(:, cIdx) * dimBeta(cIdx, :))';
-%%
-figure,
-plot(vv(2,:))
+
 %%
 
 figure, hold on
@@ -326,7 +360,7 @@ fullMat = modelCorr(Vbrain,Vfull,Ubrain) .^2; %compute explained variance
 
 cVar = {'Right'};
 
-for j = %1:length(regLabels)
+for j = 1:length(regLabels)
     cVar = regLabels(j);
     clear cIdx
     for i = 1:length(cVar)
@@ -359,37 +393,6 @@ figure, imagesc(meanBetas)
 
 
 
-
-%%
-clc
-bmov = regress(flrv, Nresample');
-
-
-%%
-
-
-
-[coeff, score, latent] = pca(Nresample);
-
-%% correlate top PCs with behaviors
-
-r = [];
-for i = 1:size(bmat,2)
-    for j = 1:size(bmat,2)
-        r(i,j) = corr(coeff(:,i), bmat(:,j));        
-    end
-end
-
-figure, imagesc(r), 
-c=colorbar;
-c.Label.String = 'Correlation'
-caxis([-0.2 0.2]);
-colormap(bluewhitered())
-
-ylabel('Neural PCs')
-yticks(1:size(bmat,2))
-xticks(1:size(bmat,2))
-xticklabels(regLabels)
 
 
 function new_dat = get_on_time(data)

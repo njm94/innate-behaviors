@@ -634,5 +634,28 @@ figure, plot(leng(aa), m(aa))
 
 
 
+%%
+
+%% correlate top PCs with behaviors
+
+r = [];
+for i = 1:size(bmat,2)
+    for j = 1:size(bmat,2)
+        r(i,j) = corr(coeff(:,i), bmat(:,j));        
+    end
+end
+
+figure, imagesc(r), 
+c=colorbar;
+c.Label.String = 'Correlation'
+caxis([-0.2 0.2]);
+colormap(bluewhitered())
+
+ylabel('Neural PCs')
+yticks(1:size(bmat,2))
+xticks(1:size(bmat,2))
+xticklabels(regLabels)
+
+
 
 

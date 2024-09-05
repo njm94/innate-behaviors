@@ -61,7 +61,7 @@ for j = 7%length(data_list{1})
 %     end
     
     %% load grooming events from BORIS file
-    events = read_boris(boris_file);
+    [events, b_idx, t] = read_boris(boris_file);
 
     %% load brain svd components, multiply s into V
         % highpass filter
@@ -85,8 +85,9 @@ for j = 7%length(data_list{1})
     % light-OFF signal may be captured in the brain data, resulting in a
     % massive filter artifact - remove a few frames just in case
     trial_length = size(V, 2) - 5; 
-    Vbrain = recastV(Umaster, U, s, V(:, 1:trial_length));
-    Vbrain = filtfilt(b, a, V(:,1:trial_length)')';
+%     Vbrain = recastV(Umaster, U, s, V(:, 1:trial_length));
+    Vbrain = s*V;
+    Vbrain = filtfilt(b, a, Vbrain(:,1:trial_length)')';
 
 %     % light-OFF signal may be captured in the brain data, resulting in a
 %     % massive filter artifact - remove a few frames just in case
@@ -168,23 +169,48 @@ for j = 7%length(data_list{1})
     bopts.framesPerTrial = trial_length; % nr. of frames per trial
     bopts.folds = 10; %nr of folds for cross-validation
 
+    % consolidate lick events
+    lick_idx = find(contains(events.Properties.VariableNames, 'Lick'));
+    lick_events = zeros(trial_length, 1);
+    for pp = 1:length(lick_idx)
+        lick_events(b_idx{lick_idx(pp)}(:,1)) = 1;
+    end
 
-    bmat = table2array(events(:,~strcmp(events.Properties.VariableNames, 'Video End')));
-    bmat = [Audio(1:trial_length) bmat(1:trial_length, :)];
+
+    
+    % remove lick and point events from event matrix
+    idx = contains(events.Properties.VariableNames, 'Lick') | ...
+        contains(events.Properties.VariableNames, 'Video');
+    stroke_events = removevars(events, idx);
+
+
+    b_idx2 = b_idx(~idx);
+
+
+%     bmat = table2array(events(:,~strcmp(events.Properties.VariableNames, 'Video End')));
+%     bmat = [Audio(1:trial_length) bmat(1:trial_length, :)];
+
+    bmat = zeros(size(stroke_events));
 
     % specify the type of variable for making the design matrix
     reg_type = [];
-    for ii = 1:size(events,2)
+    for ii = 1:size(stroke_events,2)
         if contains(events.Properties.VariableNames{ii}, 'Drop')
             reg_type = [reg_type 2];
-        elseif strcmp(events.Properties.VariableNames{ii}, 'Video End')
-            continue
+            bmat(:,ii) = table2array(stroke_events(:,ii));
         else
             reg_type = [reg_type 3];
+            bmat(b_idx2{ii}(:,1), ii) = 1;
         end
     end
 
+    % concatenate motor variable type for lick
+    bmat = [bmat(1:trial_length,:), lick_events];
+    reg_type = [reg_type, 3];
+
+
     % concatenate another STIMULUS variable type for the Audio tone
+    bmat = [Audio(1:trial_length) bmat(1:trial_length, :)];
     reg_type = [2 reg_type];
 
     
@@ -214,12 +240,14 @@ for j = 7%length(data_list{1})
 %                 'Right', 'Left', ...
 %                 'LeftMove', 'RightMove'};
 
-regLabels = events.Properties.VariableNames(~strcmp(events.Properties.VariableNames, 'Video End'));
-regLabels = ['Audio', regLabels];
+regLabels = stroke_events.Properties.VariableNames;
+regLabels = ['Audio', regLabels, 'Lick'];
 
     % fullR = [Vbeh' Vme'];
     % fullR = [Vme'];    
-    fullR = [movMat];
+    fullR = [movMat fll_speed(1:trial_length), flr_speed(1:trial_length)];
+    regIdx = [regIdx; max(regIdx)+1; max(regIdx)+2];
+    regLabels = [regLabels, 'FLL', 'FLR'];
 %     fullR = [fullR Vbeh(:,1:size(fullR,1))'];    
     
 %     %% run ridge
@@ -237,18 +265,23 @@ regLabels = ['Audio', regLabels];
 %     regIdx = [movEventIdx2;  repmat(max(movEventIdx2)+1, size(Vbeh',2), 1)];
 %     regLabels = [moveLabels, {'video'}];
     % 
-    % cVar = 'bilat';
-    % 
-    % % find beta weights for current variable
-    % cIdx = regIdx == find(ismember(regLabels,cVar));
-    % U = reshape(Ubrain, [], size(Vbrain,1)); 
-    % cBeta = U * dimBeta(cIdx, :)';
-    % cBeta = permute(reshape(cBeta, size(mask,1), size(mask,2), []), [2, 1, 3]); 
-    % U = reshape(U, size(mask,1), size(mask,2), size(Vbrain,1)); 
+    %%
+    cVar = 'Lick';
+    
+    % find beta weights for current variable
+    cIdx = regIdx == find(ismember(regLabels,cVar));
+    U = reshape(Ubrain, [], size(Vbrain,1)); 
+    cBeta = U * fullBeta{1}(cIdx, :)';
+    cBeta = permute(reshape(cBeta, 128, 128, []), [2, 1, 3]); 
+    U = reshape(U, 128, 128, size(Vbrain,1)); 
+    show_mov(cBeta)
     % compareMovie(cBeta.*mask)
     
     
     %% run cross-validation
+    
+    bopts.folds = 1;
+
     %full model - this will take a moment
     disp('Running ridge regression with 10-fold cross-validation')
     [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Vbrain, regLabels, regIdx, regLabels, bopts.folds);
@@ -257,10 +290,10 @@ regLabels = ['Audio', regLabels];
     fullMat = modelCorr(Vbrain,Vfull,Ubrain) .^2; %compute explained variance
     
     %% run reduced models for unique contribution
-    if size(event_type,1) <= 1
-        fig_flag = 0;
-        disp('Not enough unique event types to run reduce models. Skipping...')
-    else
+%     if size(event_type,1) <= 1
+%         fig_flag = 0;
+%         disp('Not enough unique event types to run reduce models. Skipping...')
+%     else
         disp('Running reduced models')
         fig_flag = 1;
         reducedMat = [];
@@ -278,7 +311,7 @@ regLabels = ['Audio', regLabels];
         end
     %     reducedMat = reshape(reducedMat, 128, 128, length(regLabels));
         save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
-    end
+%     end
 
 
 %     %% run reduced models for unique contribution
@@ -335,8 +368,9 @@ regLabels = ['Audio', regLabels];
         c.Label.String = 'cvR^2';
         yticks([])
     end
-
+%%
     savefig(gcf, [fPath 'summary.fig'])
+    %%
 end
   %%
 

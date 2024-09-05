@@ -15,15 +15,18 @@ data_list = textscan(fileID, formatSpec);
 current_mouse = ''; 
 
 
-mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
-    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
-    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'};
+% mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
+%     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
+%     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'};
 mp_list = {'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
-    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802'};
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802';
+    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240731';
+    'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
+    'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
-data_list{1} = [data_list{1}; mp_list];
-data_list{1} = mp_list;
+
+% data_list{1} = mp_list;
 
 fs = 90 ;
 
@@ -43,12 +46,15 @@ states = ["Stationary", "Elliptical", "Asymmetric", ...
 
 aggregation_sz = 3;
 
+% data_list{1} = [data_list{1}(evoked); mp_list];
+data_list{1} = mp_list;
+
 %%
 N = length(data_list{1});
 
 tmat = zeros(numel(states), numel(states), N);
 
-for j = 1:N
+for j = 1%:N
     data_dir = data_list{1}{j};
     timestamp_file = [data_dir, filesep, getAllFiles(data_dir, '_trim.txt')];
     [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
@@ -135,13 +141,42 @@ end
 
 %% Create conditional probability matrix from transition matrix
 
-pmat = tmat ./ sum(tmat,2);
+figure,
 
-B = mean(pmat, 3, 'omitnan');
-figure, imagesc(B)
-colormap(flipud(colormap('gray'))), colorbar
+subplot(1,2,1), imagesc(mean(tmat,3))
+colormap(flipud(colormap('gray'))), 
+c=colorbar;
+c.Label.String = '# Transitions';
+xticks(1:length(states))
+yticks(1:length(states))
 xticklabels(states)
 yticklabels(states)
+
+
+pmat = tmat ./ sum(tmat,2);
+
+B = median(pmat, 3, 'omitnan');
+subplot(1,2,2), imagesc(B)
+colormap(flipud(colormap('gray'))), 
+c=colorbar;
+c.Label.String = 'Transition probability';
+xticks(1:length(states))
+yticks(1:length(states))
+xticklabels(states)
+yticklabels(states)
+
+%% For Louvain Clustering, eliminate stationary from group by introducing recursive connection instead
+new_tmat = tmat(2:end, 2:end, :);
+for i = 1:size(tmat,3)
+    for j = 1:size(new_tmat,2)
+        num_stationary_to_event_j = tmat(1,j+1,i);
+        num_event_j_to_stationary = tmat(j+1, 1, i);
+        new_tmat(j,j,i) = new_tmat(j,j,i) + num_stationary_to_event_j + num_event_j_to_stationary;
+
+    end
+end
+
+
 
 %%
 
@@ -178,17 +213,19 @@ yticklabels(states)
 
 test_gamma = 0.1:0.1:3;
 for i = 1:length(test_gamma)
-    [M,Q(i)]=community_louvain(B(2:6, 2:6), test_gamma(i));
+    [M,Q(i)]=community_louvain(B, test_gamma(i));
     num_uniq(i) = numel(unique(M));
 end
 
 figure, plot(test_gamma, Q);
 hold on
 plot(test_gamma, num_uniq)
-% [M,Q]=community_louvain(B(2:6, 2:6), 0.7);
-% [M,Q]=community_louvain(btest);
 %%
-% clc
+dat = B(2:6, 2:6, 1);
+
+[M,Q]=community_louvain(dat, 1);
+% [M,Q]=community_louvain(btest);
+
 cols = zeros(length(M), 3);
 col1 = [0 0.4470 0.7410];
 col2 = [0.8500 0.3250 0.0980];
@@ -205,15 +242,37 @@ for i = 1:length(M)
         cols(i,:) = col4;
     end
 end
-pgraph = digraph(B([2:4,6], [2:4,6]));
+pgraph = digraph(dat);
 % pgraph = digraph(B(2:6, 2:6));
 % pgraph = digraph(B);
 % pgraph = digraph(btest);
 figure, plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*10, ...
     'NodeColor', cols, 'NodeFontSize', 15, ...
     'EdgeColor', 'k', 'ArrowSize', 15, ...
-    'NodeLabel',states([2:4,6]),...states(2:6), ... states,
+    'NodeLabel',states(2:6),...states(2:6), ... states,
     'Layout', 'force', 'WeightEffect', 'inverse')
+
+
+%%
+dat = pmat;
+num_behaviors = length(unique(pgraph.Edges.EndNodes));
+weights = zeros(num_behaviors, num_behaviors-1, size(dat,3));
+for i = 1:num_behaviors
+    for j = 1:size(pgraph.Edges.EndNodes, 1)
+    end
+end
+
+
+%%
+dat = B(2:end, 2:end);
+clear tmp
+for i = 1:size(dat,1)
+    test = dat(i,:);
+    test(i) = [];
+
+    tmp(:,i) = test;
+end
+
 
 
 %% 
