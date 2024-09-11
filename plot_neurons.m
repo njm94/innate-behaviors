@@ -4,9 +4,9 @@ load('atlas.mat')
 load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
 [consolidated_file, experiment_path] = uigetfile('*.mat','Select consolidated neuron file.', 'Y:\nick\2p');
 load([experiment_path, consolidated_file]);
-disp('[+] Finished loading consolidated neuron data')
-load([experiment_path, 'BN1_32puff_01_15fps_proc.mat']);
-disp('[+] Finished loading facemap data')
+% disp('[+] Finished loading consolidated neuron data')
+% load([experiment_path, 'BN1_32puff_01_15fps_proc.mat']);
+% disp('[+] Finished loading facemap data')
 
 
 %%

@@ -19,23 +19,18 @@ function tform = sensory2atlas(image, pixelsize, sens, use_midline, tform_type)
 
 % Author: Shreya Saxena (2018)
 %%
-if nargin<2 || isempty(pixelsize), pixelsize=1000*8.4/1024; end
+if nargin<2 || isempty(pixelsize), pixelsize=1000*8.2/1024; end
 % if nargin<3 || isempty(sens), ; end
 if nargin<4 || isempty(use_midline), use_midline = true; end
 if nargin<5 || isempty(tform_type), tform_type = 'similarity'; end
 
 load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
+load('C:\Users\user\Documents\Nick\grooming\utils\atlas.mat')
          
 list = {'R SSp-ul','L SSp-ul', ...
     'R SSp-ll', 'L SSp-ll', ...
-    'R SSp-bfd', 'L SSp-bfd'};
-
-% use spatial referencing information
-% xWorldLimits = [];
-% yWorldLimits = [];
-% PixelExtentInWorldX = pixelsize;
-% PixelExtentInWorldY = dorsalMaps.desiredPixelSize;
-% RA = imref2d(size(image), PixelExtentInWorldX, PixelExtentInWorldY);
+    'R SSp-bfd', 'L SSp-bfd', ...
+    'R AUD', 'L AUD'};
 
 
 % apply scaling tform
@@ -47,26 +42,6 @@ S = [scalingFactor 0 0;
      0 0 1];
 
 Stform = affine2d(S);
-
-% Perform the scaling transformation
-% sImage = imwarp(image, Stform);
-% sSens = imwarp(sens, Stform);
-
-
-% pad images to match size of dorsalMap
-% y_pad = size(dorsalMaps.dorsalMapScaled,1) - size(sImage, 1);
-% y_pad_pre = floor(y_pad/2);
-% y_pad_post = ceil(y_pad/2);
-% 
-% x_pad = size(dorsalMaps.dorsalMapScaled,2) - size(sImage, 2);
-% x_pad_pre = floor(x_pad/2);
-% x_pad_post = ceil(x_pad/2);
-% 
-% sImage = padarray(sImage, [y_pad_pre, x_pad_pre], 'pre');
-% sImage = padarray(sImage, [y_pad_post, x_pad_post], 'post');
-% 
-% sSens = padarray(sSens, [y_pad_pre, x_pad_pre], 'pre');
-% sSens = padarray(sSens, [y_pad_post, x_pad_post], 'post');
 
 % get image in coordinate size from the start
 sImage = imwarp(image, Stform, 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
@@ -124,17 +99,42 @@ for i=1:length(alignareas)
     sidestr=alignareas{i}(1);
     try
         areaid=dorsalMaps.labelTable{strcmp(dorsalMaps.labelTable.abbreviation,alignareas{i}(3:end)),'id'}+1;
+
     catch
         error('Please name additional areas in the form L/R area, with a space between L/R and area name');
     end
     dimsmap=size(dorsalMaps.dorsalMap);
-    [x,y]=find(dorsalMaps.dorsalMapScaled==areaid);
+    if areaid == 99
+        % If areaid is equal to 99, then this is auditory cortex. Combine
+        % auditory subregions for this one
+        auditory_areas = [100, 114, 107];
+        x = [];
+        y = [];
+        for jj = 1:length(auditory_areas)
+            [xt,yt]= find(dorsalMaps.dorsalMapScaled==auditory_areas(jj));
+            x = [x; xt];
+            y = [y; yt];
+        end
+    else
+        [x,y]=find(dorsalMaps.dorsalMapScaled==areaid);
+    end
+    
     if strcmp(sidestr,'R')
         x=x(y>=dimsmap(2)/2); y=y(y>=dimsmap(2)/2);
     elseif strcmp(sidestr,'L')
         x=x(y<dimsmap(2)/2); y=y(y<dimsmap(2)/2);
     end
-    points_refs(i,:)=[mean(y) mean(x)];
+
+    if areaid == 99
+        % If auditory cortex is the reference, use the most medial points
+        if strcmp(sidestr,'R')
+            points_refs(i,:)=[mean(y), min(x)];
+        elseif strcmp(sidestr,'L')
+            points_refs(i,:) = [mean(y), max(x)];
+        end
+    else
+        points_refs(i,:)=[mean(y) mean(x)];
+    end
 end
 
 if use_midline

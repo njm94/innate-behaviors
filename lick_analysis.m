@@ -19,8 +19,8 @@ ecr2_idx = 57:59;
 %%
 clc
 
-expts_to_analyze = [ger2_idx(1:6), hyl3_idx, ecr2_idx];
-for i = 14%1:length(expts_to_analyze)
+expts_to_analyze = [ger2_idx(1:6)];
+for i = 11:length(expts_to_analyze)
     fpath = data_list{expts_to_analyze(i)};
     [events, b_idx, b_tab] = read_boris([fpath, filesep, getAllFiles(fpath, 'events.tsv')]);
     load([fpath, filesep, getAllFiles(fpath, 'cam0_svd.mat')])
@@ -32,6 +32,37 @@ for i = 14%1:length(expts_to_analyze)
     end
     fs = str2double(ini.framerate);
 
+    % consolidate limb speeds from all angles
+    fl_l = sqrt(dlc_speed(:,1).^2 + dlc_speed(:,2).^2);
+    fl_r = sqrt(dlc_speed(:,3).^2 + dlc_speed(:,4).^2);
+    hl_l = dlc_speed(:,5);
+    hl_r = dlc_speed(:,6);
+    snout = sqrt(dlc_speed(:,7).^2 + dlc_speed(:,8).^2 + dlc_speed(:,9).^2);
+    tailbase = sqrt(dlc_speed(:,10).^2 + dlc_speed(:,11).^2);
+    
+    all_movement = sqrt(fl_l.^2 + fl_r.^2 + hl_l.^2 + hl_r.^2 + snout.^2 + tailbase.^2);
+    mvt = resample(all_movement, size(V,2), length(all_movement));
+
+
+    % filter brain data
+    [b, a] = butter(1, [0.01 10]/(fs/2));
+    Vbrain = s*V;
+    Vbrain = filtfilt(b,a, Vbrain')';
+
+
+    disp('Building design matrix')
+    bopts.frameRate = fs;
+    bopts.sPostTime=round(fs*1);
+    bopts.mPreTime = ceil(0.5 * fs);  % precede motor events to capture preparatory activity in frames (used for eventType 3)
+    bopts.mPostTime = ceil(2 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
+    bopts.framesPerTrial = size(Vbrain,2); % nr. of frames per trial
+    bopts.folds = 1;
+    
+    
+    
+    mvtOn = get_on_time(mvt>(mean(mvt)+std(mvt)));
+    lick_start = zeros(size(mvt));
+    lick_start(b_idx{1}(:,1)) = 1;
 end
 
 
@@ -130,10 +161,7 @@ Vbrain = filtfilt(b,a, Vbrain')';
 
 % segment brain data based on behavior - create binary lick data
 ll = zeros(1,size(V,2));
-for i = 1:size(b_idx{1},1)
-    ll(b_idx{1}(i,1):b_idx{1}(i,2)) = 1;
-end
-ll = aggregate(ll, W, fs);
+ll(b_idx{1}) = 1;
 
 
 % Vbrain_licking = Vbrain(:,logical(ll));
@@ -148,23 +176,24 @@ disp('Building design matrix')
 bopts.frameRate = fs;
 bopts.sPostTime=round(fs*1);
 bopts.mPreTime = ceil(0.5 * fs);  % precede motor events to capture preparatory activity in frames (used for eventType 3)
-bopts.mPostTime = ceil(20 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
+bopts.mPostTime = ceil(2 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
 bopts.framesPerTrial = size(Vbrain,2); % nr. of frames per trial
-bopts.folds = 10;
+bopts.folds = 1;
 
 
-mvt = mvt>mean(mvt);
+
+mvtOn = get_on_time(mvt>(mean(mvt)+std(mvt)));
 lick_start = zeros(size(mvt));
 lick_start(b_idx{1}(:,1)) = 1;
-cont_mvt = ll(1:length(mvt));
+% cont_mvt = ll(1:length(mvt));
 
-[movMat, regIdx] = makeDesignMatrix([mvt, lick_start, cont_mvt], [3 3 3], bopts);
+[movMat, regIdx] = makeDesignMatrix([mvtOn, lick_start], [3 3], bopts);
 fullR = [movMat];
 
 % fullR = mvt_licking;
 % regIdx = 1;
 
-regLabels = {'Movement', 'Lick', 'Continuous movement'};
+regLabels = {'Movement', 'Lick'};
 disp('Running ridge regression with 10-fold cross-validation')
 [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Vbrain, regLabels, regIdx, regLabels, bopts.folds);
 % save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
@@ -186,3 +215,15 @@ fullMat = modelCorr(Vbrain,Vfull,U) .^2;
 visual = true;
 cBetaRight = check_beta('Movement', fullLabels, fullIdx, U, fullBeta{1}, Vfull, [], visual);
 % right = movmean(cBetaRight, 6, 3);
+
+
+
+
+function new_dat = get_on_time(data)
+new_dat = zeros(size(data));
+d = diff(data);
+t_on = find(d>0)+ 1;
+
+new_dat(t_on) = 1;
+
+end

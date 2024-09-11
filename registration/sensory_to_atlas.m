@@ -1,15 +1,46 @@
 % sensory_to_atlas
 clear, clc, close all
-[comp_file, comp_path] = uigetfile('*.tif','Select sensory composite image.', 'Y:\nick\behavior\grooming\2p');
-data_comp = loadtiff([comp_path, comp_file]);
+
+
 load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
 
 
-%%
+%% 1-photon
+data_root = 'Y:\nick\behavior\grooming\1p';
+mice = {'ECR2_thy1', 'GER2_ai94', 'HYL3_tTA', 'IBL2_tTA'};
 
+m = 1;
 
+load([data_root, filesep, mice{m}, filesep, 'mask.mat'])
+dff_path = [data_root, filesep, mice{m}, filesep, 'outputs'];
+h = openfig([dff_path, filesep, getAllFiles(dff_path, '_dFF.fig')]);
+audio = h.Children(6).Children.CData;
+rightmove = h.Children(8).Children.CData;
+leftmove = h.Children(10).Children.CData;
+left = h.Children(16).Children.CData;
+right = h.Children(14).Children.CData;
+lick = h.Children(12).Children.CData;
+elliptical = h.Children(24).Children.CData;
+largeleft = h.Children(22).Children.CData;
+bilateral = h.Children(18).Children.CData;
+
+%% 1-photon 
+% Decide which maps to use for sensory composite
+comp_path = [data_root, filesep, mice{m}, filesep];
+frame_wfi = double(loadtiff([data_root, filesep, mice{m}, filesep, 'template.tif']));
+sensory_maps = cat(3, bilateral, bilateral);
+% sensory_maps = audio;
+
+%% 2-photon 
+[comp_file, comp_path] = uigetfile('*.tif','Select sensory composite image.', 'Y:\nick\behavior\grooming\2p');
+data_comp = loadtiff([comp_path, comp_file]);
+
+%% 2-photon
 frame_wfi = data_comp(:,:,1);
 sensory_maps = data_comp(:,:,2:end);
+
+%%
+close all
 
 FOV = 8.2; % mm
 scaling = 1000 .* FOV/size(frame_wfi,1);
@@ -24,7 +55,8 @@ tform = sensory2atlas(frame_wfi, scaling, sensory_maps, use_midline);
 
 list = {'R SSp-ul','L SSp-ul', ...
     'R SSp-ll', 'L SSp-ll', ...
-    'R SSp-bfd', 'L SSp-bfd'};
+    'R SSp-bfd', 'L SSp-bfd', ...
+    'R Aud', 'L Aud'};
 
 
 

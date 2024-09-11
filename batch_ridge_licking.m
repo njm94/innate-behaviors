@@ -1,27 +1,27 @@
-
-clear, close all
-% cd('/media/user/teamshare/nick/behavior/grooming/code/')
-% addpath('/media/user/teamshare/nick/behavior/grooming/code/ridgeModel')
-% addpath('/media/user/teamshare/nick/behavior/grooming/code/ridgeModel/widefield')
-% addpath('/media/user/teamshare/nick/behavior/grooming/code/ridgeModel/smallStuff')
+clc, clear, %close all
+fileID = fopen('expt3_datalist.txt','r');
+addpath('C:\Users\user\Documents\Nick\grooming\utils')
 
 addpath('C:\Users\user\Documents\Nick\ridgeModel');
 addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
 addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
+addpath('C:\Users\user\Documents\Nick\grooming\utils')
 
-%%
-clc
-fileID = fopen('expt3_datalist.txt','r');
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
+data_list = data_list{1};
+
+ger2_idx = 1:11;
+hyl3_idx = 52:56;
+ecr2_idx = 57:59;
+
+
 current_mouse = '';
 
-fs = 30;
-[b, a] = butter(2, 0.01/(fs/2), 'high');
-
-for j = 1:length(data_list{1})+1
+%%
+for j = ger2_idx
      try
-        data_dir = data_list{1}{j};
+        data_dir = data_list{j};
         disp(['Starting ' data_dir])
 
         if isunix % working on linux computer - modify paths
@@ -47,14 +47,12 @@ for j = 1:length(data_list{1})+1
             num_trials = length(Vmaster);
             for i = 1:num_trials
                 Vmaster{i} = Vmaster{i}(:,1:min_trial_length);
-                fll_move{i} = fll_move{i}(1:min_trial_length);
-                flr_move{i} = flr_move{i}(1:min_trial_length);
-                water_drop{i} = water_drop{i}(1:min_trial_length);
+                mvtOn{i} = mvtOn{i}(1:min_trial_length);
+                lick_start{i} = lick_start{i}(1:min_trial_length);
             end
             Vmaster = catcell(2, Vmaster);
-            fll_move = catcell(1, fll_move)';
-            flr_move = catcell(1, flr_move)';
-            water_drop = catcell(1, water_drop)';
+            mvtOn = catcell(1, mvtOn)';
+            lick_start = catcell(1, lick_start);
             new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
 
             % ridge here
@@ -64,20 +62,20 @@ for j = 1:length(data_list{1})+1
             opts.mPreTime = ceil(0.5 * fs);  % precede motor events to capture preparatory activity in frames (used for eventType 3)
             opts.mPostTime = ceil(2 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
             opts.framesPerTrial = min_trial_length; % nr. of frames per trial
-            opts.folds = 10; %nr of folds for cross-validation
+            opts.folds = 1; %nr of folds for cross-validation
             
-            % regressor_mat = [new_trial' audio_tone' water_drop' ipsi' contra' bilat' fll_move' flr_move']; % tone drop ipsi contra bilatInclusive forelimbInc
-            regressor_mat = [audio_tone' water_drop' ipsi' contra' bilat' fll_move' flr_move']; % tone drop ipsi contra bilatInclusive forelimbInc
+            regressor_mat = [mvtOn' lick_start]; 
             % Full-Trial events:    new_trial
-            % Post-Stimulus events: audio_tone, water_drop
-            % Peri-Stimulus events: ipsi, contra, bilat, fll_move, flr_move
-            [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 3], opts);
-            regLabels = {'drop', 'left_move', 'right_move'}; %some movement variables
+            % Peri-Stimulus events: 
+            [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3], opts);
+            regLabels = {'Movment', 'Lick'}; %some movement variables
+%             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 1], opts);
+%             regLabels = {'Movment', 'Lick', 'Trial'}; %some movement variables
             fullR = [dMat];
 
             disp('Running ridge regression with 10-fold cross-validation')
             [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Vmaster, regLabels, regIdx, regLabels, opts.folds);
-            save([fPath 'cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
+%             save([fPath 'cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
             
             fullMat = modelCorr(Vmaster,Vfull,Umaster) .^2;
 
@@ -139,16 +137,28 @@ for j = 1:length(data_list{1})+1
 
     try
         brain_file = [data_dir, filesep, get_file_with_str(data_dir, 'cam0_svd')];
-%         beh_file = [data_dir, filesep, get_file_with_str(data_dir, [exp_date, '_svd'])];
-%         ME_file = [data_dir, filesep, get_file_with_str(data_dir, 'MEsvd')];
-%         frame_file = [data_dir, filesep, get_file_with_str(data_dir, 'singleFrame')];
-        grooming_file = [data_dir, filesep, 'grooming_events_roi_filtered.mat'];
+        boris_file = [data_dir, filesep, getAllFiles(data_dir, 'events.tsv')];
         dlc_speed_file = [data_dir, filesep, get_file_with_str(data_dir, 'speed.csv')];
         timestamp_file = [data_dir, filesep, get_file_with_str(data_dir, 'trim.txt')];
+        ini_file = [data_dir, filesep, getAllFiles(data_dir, '.ini')];
+
+        if ~any(isfile(brain_file) & isfile(boris_file) & isfile(dlc_speed_file) )
+            continue
+        end
     catch
         disp('Missing one or more of the required files. Skipping...')
         continue
     end
+    % read ini file
+    ini = ini2struct(ini_file);
+    fpath = fieldnames(ini);
+    ini = ini.(fpath{contains(fpath, 'sentech')});
+    
+%     try ini = ini.sentech_give_rewards;
+%     catch 
+%         ini = ini.sentech_dlc_live;
+%     end
+    fs = str2double(ini.framerate);
     
     % load experiment specific data into cell array
     load([data_dir filesep 'tform.mat'])
@@ -159,40 +169,72 @@ for j = 1:length(data_list{1})+1
     U = evaluate_tform(U, tformEstimate); % apply registration
     U = reshape(U, 128*128, []);
 
-    Vbrain = recastV(Umaster, U, s, V);
+    % Take off 2 frames due to possibility of dark frame at end creating
+    % filter artifacts
+    Vbrain = recastV(Umaster, U, s, V(:,1:end-2));
     % Vmaster{count} = Vbrain;
+    [b, a] = butter(1, [0.01 10]/(fs/2));
     Vmaster{count} = filtfilt(b, a, Vbrain')';
-    clear U s V Vbrain
+    
 
     %% load DLC tracks
     disp('Loading DLC tracks')
     dlc_speed = readmatrix(dlc_speed_file);
-    fll_speed = dlc_speed(:,1);
-    flr_speed = dlc_speed(:,2);
-    
-    % binarize movement speed
-    fll_speed = fll_speed > mean(fll_speed) + std(fll_speed);
-    flr_speed = flr_speed >  mean(flr_speed) + std(flr_speed);
-    
-    k = 35; % smoothing kernel - this matches smoothing kernel in grooming detection but may need to change
-    fll_move{count} = movmax(fll_speed, k);
-    flr_move{count} = movmax(flr_speed, k);
 
-%     % eliminate overlap of movement and grooming
-%     fll_move_ex = fll_move & ~(ipsi | contra | bilat)';
-%     flr_move_ex = flr_move & ~(ipsi | contra | bilat)';
-
-    clear dlc_speed fll_speed flr_speed
-
-    %% load stimulus info from timestamp file
-    % water presented to the mouse for 10s
-    disp('Getting stimulus info from timestamp file');
-    timestamps = readmatrix(timestamp_file);
-    water_drop{count} = timestamps(:,4);
+    % consolidate limb speeds from all angles
+    fl_l = sqrt(dlc_speed(:,1).^2 + dlc_speed(:,2).^2);
+    fl_r = sqrt(dlc_speed(:,3).^2 + dlc_speed(:,4).^2);
+    hl_l = dlc_speed(:,5);
+    hl_r = dlc_speed(:,6);
+    snout = sqrt(dlc_speed(:,7).^2 + dlc_speed(:,8).^2 + dlc_speed(:,9).^2);
+    tailbase = sqrt(dlc_speed(:,10).^2 + dlc_speed(:,11).^2);
     
-    clear trials timestamps 
+    all_movement = sqrt(fl_l.^2 + fl_r.^2 + hl_l.^2 + hl_r.^2 + snout.^2 + tailbase.^2);
+    mvt = resample(all_movement, size(Vmaster{count},2), length(all_movement));
+    k = 10;
+    mvtOn{count} = get_on_time(movmax(mvt > mean(mvt) + std(mvt), k));
+
+    disp('Reading BORIS')
+    [events, b_idx, b_tab] = read_boris(boris_file);
+    lick_start{count} = zeros(size(mvtOn{count}));
+    lick_start{count}(b_idx{1}(:,1)) = 1;
+
     count = count + 1;
-%     if j == 3, break; end
-%     master_SVD_file = [mouse_root_dir filesep 'masterSVD.mat'];
-%     if ~isfile(master_SVD_file)
+
+    clear U s V Vbrain
+end
+
+
+%%
+
+clc
+visual = true;
+cBetaRight = check_beta('Lick', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, [], visual);
+
+%%
+
+figure
+indices = floor(1:7.5:76);
+for i = 1:2
+    
+    test = reshape(Umaster*fullBeta{1}(fullIdx==i,:)', 128, 128, []);
+    subplot(2,1,i), imagesc(imtile(test, 'Frames', indices, 'GridSize', [1 length(indices)]))
+    yticks([]);
+    xticks((128:256:11*256)/2)
+    xticklabels(-0.5:0.25:2)
+    colormap(bluewhitered())
+    c=colorbar;
+    c.Label.String = 'Beta Kernel';
+    xlabel('Time (s)')
+end
+
+%%
+
+function new_dat = get_on_time(data)
+new_dat = zeros(size(data));
+d = diff(data);
+t_on = find(d>0)+ 1;
+
+new_dat(t_on) = 1;
+
 end

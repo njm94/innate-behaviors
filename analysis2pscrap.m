@@ -10,7 +10,11 @@ if ~isfile([event_path, 'Nresample.mat'])
     load([neuron_path, filesep, neuron_file]);
     
     
-    Nresample = resample(N, size(events,1), size(N, 2), 'Dimension', 2);
+    try Nresample = resample(N, size(events,1), size(N, 2), 'Dimension', 2);
+    catch
+        disp('Data too big. Splitting into halves and resampling each half separately')
+        Nresample = resamplee(N', size(events,1), size(N,2))';
+    end
 
     save([neuron_path, 'Nresample.mat'], 'Nresample')
 else
@@ -26,13 +30,13 @@ vel = vel(1:vid_end,:);
 flrv = sum(vel(:,4:5).^2, 2).^0.5;
 fllv = sum(vel(:,7:8).^2, 2).^0.5;
 %%
-
-
-tmpf = U * Vm;
-fullMat = corr(Nresample', tmpf');
-
-tmpr = U * VmR;
-redMat = corr(Nresample', tmpr');
+% 
+% 
+% tmpf = U * Vm;
+% fullMat = corr(Nresample', tmpf');
+% 
+% tmpr = U * VmR;
+% redMat = corr(Nresample', tmpr');
 
 
 
@@ -76,10 +80,13 @@ end
 toc
 
 %% plot single neuron responses to each behavior
-
+close all
 behaviors = stroke_events.Properties.VariableNames;
 sz = 5;
 figure
+pos_mod = cell(1, length(behaviors));
+neg_mod = cell(1, length(behaviors));
+no_mod = cell(1,length(behaviors));
 for i = 1:length(behaviors)
     idx = strcmp(event_table.Behavior, behaviors{i}) & strcmp(event_table.BehaviorType, 'START');
     frame_start = event_table.ImageIndex(idx);
@@ -92,8 +99,32 @@ for i = 1:length(behaviors)
     for j = 1:length(frame_start)
         try 
             tmp(:,:,j) = Nresample(:, frame_start(j)-(sz*fs):frame_start(j)+(sz*fs));
+            baseline_tmp(:,j) = mean(Nresample(:,frame_start(j)-(sz*fs):frame_start(j)),2);
+            response_tmp(:,j) = mean(Nresample(:,frame_start(j):frame_start(j)+(sz*fs)),2);
         catch
             disp('Inside catch')
+        end
+    end
+    
+    % Do a paired signrank test for each neuron's baseline vs response to 
+    % determine if it is significantly modulated by the behavior
+    no_mod_count = 1;
+    neg_mod_count = 1;
+    pos_mod_count = 1;
+    for j = 1:size(baseline_tmp,1)
+        [p, h] = signrank(baseline_tmp(j,:), response_tmp(j,:));
+%         disp(p)
+        if h
+            if mean(baseline_tmp(j,:)) > mean(response_tmp(j,:))
+                neg_mod{i}(neg_mod_count,:,:) = tmp(j,:,:);
+                neg_mod_count = neg_mod_count + 1;
+            else
+                pos_mod{i}(pos_mod_count,:,:) = tmp(j,:,:);
+                pos_mod_count = pos_mod_count + 1;
+            end
+        else
+            no_mod{i}(j,:,:) = tmp(j,:,:);
+            no_mod_count = no_mod_count + 1;
         end
     end
 
@@ -104,7 +135,7 @@ for i = 1:length(behaviors)
 %     if i == 5
 %         I5 = I;
 %     end
-    subplot(2, length(behaviors)+1, i)
+    subplot(2, length(behaviors)+2, i)
     imagesc(tmp(I,:))
     hold on
     vline(sz*fs+1, 'k-')
@@ -115,7 +146,7 @@ for i = 1:length(behaviors)
     caxis([-2 2])
     colormap(bluewhitered())
 
-    subplot(2, length(behaviors)+1, i+length(behaviors)+1)
+    subplot(2, length(behaviors)+2, i+length(behaviors)+2)
     plot(xt(mean(tmp),fs)-sz, mean(tmp));
     hold on
     axis([-sz sz -0.2 1.5])
@@ -134,7 +165,7 @@ for j = 1:size(flrmov,1)
     try
         tmp(:,:,j) = Nresample(:, frame_start(j)-(sz*fs):frame_start(j)+(sz*fs));
     catch
-        disp('in catch')
+        disp('in catch 1')
     end
 end
 
@@ -142,7 +173,7 @@ tmp = mean(tmp,3);
 mr = mean(tmp(:,sz*fs:end), 2);
 [~, I] = sort(mr);
 
-subplot(2, length(behaviors)+1, length(behaviors)+1)
+subplot(2, length(behaviors)+2, length(behaviors)+1)
 imagesc(tmp(I,:))
 hold on
 vline(sz*fs+1, 'k-')
@@ -152,7 +183,7 @@ title('FLR move')
 caxis([-2 2])
 colormap(bluewhitered())
 
-subplot(2, length(behaviors)+1, 2*(length(behaviors)+1))
+subplot(2, length(behaviors)+2, 2*(length(behaviors))+3)
 plot(xt(mean(tmp),fs)-sz, mean(tmp));
 axis([-sz sz -0.2 1.5])
 hold on
@@ -162,6 +193,65 @@ xlabel('Time (s)')
 
 
 
+clear tmp
+
+fllmov = arr2idx(aggregate(fllv >mean(fllv) + std(fllv), 1));
+frame_start = fllmov(:,1);
+for j = 1:size(fllmov,1)
+    try
+        tmp(:,:,j) = Nresample(:, frame_start(j)-(sz*fs):frame_start(j)+(sz*fs));
+    catch
+        disp('in catch')
+    end
+end
+
+tmp = mean(tmp,3);
+mr = mean(tmp(:,sz*fs:end), 2);
+[~, I] = sort(mr);
+
+subplot(2, length(behaviors)+2, length(behaviors)+2)
+imagesc(tmp(I,:))
+hold on
+vline(sz*fs+1, 'k-')
+xticklabels([])
+title('FLL move')
+%     colorbar,
+caxis([-2 2])
+colormap(bluewhitered())
+
+subplot(2, length(behaviors)+2, 2*(length(behaviors)+2))
+plot(xt(mean(tmp),fs)-sz, mean(tmp));
+axis([-sz sz -0.2 1.5])
+hold on
+vline(0, 'k')
+
+xlabel('Time (s)')
+
+
+%%
+
+figure
+clear tmp
+for i = 1:length(behaviors)
+    tmp = neg_mod{i};
+    
+    mr = mean(tmp(:,sz*fs:end,:), [3, 2]);
+    [~, I] = sort(mr);
+
+    baseline = mean(tmp(:,1:sz*fs,:), [3 2]);
+
+
+    subplot(2, length(behaviors), i)
+    imagesc(mean(tmp(I,:,:),3) - baseline)
+    title(behaviors{i})
+
+    subplot(2, length(behaviors), length(behaviors)+i)
+    plot(mean(tmp(I,:,:), [1 3]))
+    hold on
+    vline(sz*fs, 'k-')
+end
+caxis([-2 2])
+colormap(bluewhitered())
 
 %%
 
@@ -253,8 +343,10 @@ for i = 1:size(Nresample,1)
         tforms{cstat{i}.use_tform}.linear_to_wfield, ...
         tforms{cstat{i}.use_tform}.wfield_to_atlas);
 
-    plot(x, y, 'k.', 'MarkerSize', 5)
+    plot(x, y, 'r.', 'MarkerSize', 5)
 end
+
+%%
 
 prev_I = [];
 aa=1;

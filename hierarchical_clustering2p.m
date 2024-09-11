@@ -12,7 +12,11 @@ if ~isfile([event_path, 'Nresample.mat'])
     load([neuron_path, filesep, neuron_file]);
     
     disp("Resampling neural data to match behavior")
-    Nresample = resample(N, size(events,1), size(N, 2), 'Dimension', 2);
+    try Nresample = resample(N, size(events,1), size(N, 2), 'Dimension', 2);
+    catch
+        disp('Data too big. Splitting into halves and resampling each half separately')
+        Nresample = resamplee(N', size(events,1), size(N,2))';
+    end
 
     save([neuron_path, 'Nresample.mat'], 'Nresample', 'cstat', 'nloc', 'tforms')
 else
