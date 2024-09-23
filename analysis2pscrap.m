@@ -61,7 +61,7 @@ eventsarr = table2array(stroke_events)';
 
 %%
 
-figure, imagesc(imadjust([eventsarr; lick_events'; Nresample])),
+figure, imagesc(imadjust([Nresample])),
 colormap(flipud(colormap('gray')))
 
 
@@ -325,6 +325,18 @@ end
 
 %% plot location of highly correlated neurons onto the brain
 
+
+I = loadtiff('Y:\nick\behavior\grooming\2p\IDR3_tTA6s\dalsa\AVG_template.tif');
+load('Y:\nick\behavior\grooming\2p\IDR3_tTA6s\dalsa\atlas_tform.mat')
+load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
+test = imwarp(I, tform, 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+
+figure, imagesc(test), colormap gray, hold on
+axis off;
+for p = 1:length(dorsalMaps.edgeOutline)
+    plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'w', 'LineWidth', 2);
+end
+%%
 close all
 clc
 atlas_aligned_fig = fullfile(event_path, '..', 'dalsa', 'atlas_aligned.fig');
@@ -343,7 +355,7 @@ for i = 1:size(Nresample,1)
         tforms{cstat{i}.use_tform}.linear_to_wfield, ...
         tforms{cstat{i}.use_tform}.wfield_to_atlas);
 
-    plot(x, y, 'r.', 'MarkerSize', 5)
+    plot(x, y, 'Color', '#009E73', 'Marker', '.', 'MarkerSize', 5)
 end
 
 %%
@@ -521,7 +533,7 @@ figure, plot(Nresample(247,:))
 
 %%
 
-% all_groom = any(table2array(stroke_events),2);
+all_groom = any(table2array(stroke_events),2);
 
 for i = 1:size(Nresample,1)
     rmov(i) = corr(flrv, Nresample(i,:)');

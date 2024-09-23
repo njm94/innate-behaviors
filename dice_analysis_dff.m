@@ -1,4 +1,4 @@
-clear, clc
+clear, clc, close all
 addpath('C:\Users\user\Documents\Nick\grooming\utils')
 data_root = 'Y:\nick\behavior\grooming\1p';
 mice = {'ECR2_thy1', 'GER2_ai94', 'HYL3_tTA', 'IBL2_tTA'};
@@ -6,17 +6,40 @@ mice = {'ECR2_thy1', 'GER2_ai94', 'HYL3_tTA', 'IBL2_tTA'};
 for j = 1:length(mice)
     load([data_root, filesep, mice{j}, filesep, 'mask.mat'])
     dff_path = [data_root, filesep, mice{j}, filesep, 'outputs'];
-    h = openfig([dff_path, filesep, getAllFiles(dff_path, '_dFF.fig')]);
-    rightmove(:,:,j) = h.Children(8).Children.CData;
-    leftmove(:,:,j) = h.Children(10).Children.CData;
-    left(:,:,j) = h.Children(16).Children.CData;
-    right(:,:,j) = h.Children(14).Children.CData;
-    lick(:,:,j) = h.Children(12).Children.CData;
-    elliptical(:,:,j) = h.Children(24).Children.CData;
-    largeleft(:,:,j) = h.Children(22).Children.CData;
-    largeright(:,:,j) = h.Children(20).Children.CData;
-    dropright(:,:,j) = h.Children(2).Children.CData;
-    bilateral(:,:,j) = h.Children(18).Children.CData;
+    dff_fig = getAllFiles(dff_path, '_dFF.fig');
+    % If there are multiple versions, use the most recent one
+    if size(dff_fig,1) > 1
+        dff_fig = sort(dff_fig);
+        dff_fig = dff_fig{1};
+    end
+    h = openfig([dff_path, filesep, dff_fig]);
+    for i = 1:length(h.Children)
+        switch(h.Children(i).Title.String)
+            case 'flr_move' 
+                rightmove(:,:,j) = h.Children(i).Children(end).CData;
+            case 'fll_move' 
+                leftmove(:,:,j) = h.Children(i).Children(end).CData;
+            case 'largebilateral'
+                bilateral(:,:,j) = h.Children(i).Children(end).CData;
+            case 'elliptical'
+                elliptical(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical Asymmetric'
+                ellip_asymm(:,:,j) = h.Children(i).Children(end).CData;
+            case 'largeleft'
+                largeleft(:,:,j) = h.Children(i).Children(end).CData;
+            case 'largeright'
+                largeright(:,:,j) = h.Children(i).Children(end).CData;
+            case 'left'
+                left(:,:,j) = h.Children(i).Children(end).CData;
+            case 'right'
+                right(:,:,j) = h.Children(i).Children(end).CData;
+            case 'lick'
+                lick(:,:,j) = h.Children(i).Children(end).CData;
+            otherwise
+                continue
+        end
+    end
+
     close(h)
 end
 
@@ -36,10 +59,15 @@ end
 
 %% overlay contours from diff mice
 clc
-nanmask = zeros(128, 128, length(mice));
+% nanmask = zeros(128, 128, length(mice));
 
+load('allenDorsalMap.mat');
+clear nanmask
 for j = 1:length(mice)
     load([data_root, filesep, mice{j}, filesep, 'mask.mat'])
+    atlas_tform = load([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']);
+    warpmask = imwarp(mask, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+%     nanmask(:,:,j) = warpmask;
     nanmask(:,:,j) = mask;
 end
 nanmask(nanmask==0) = nan;
@@ -62,8 +90,8 @@ for j = 1:length(mice)
          
     for i = 1:length(vars)    
         test = eval(vars(i));
-        test = test .* nanmask;
-        test = test(:,:,j);
+        test = test(:,:,j) .* nanmask(:,:,j);
+%         test = test.*nanmask(:,:,j);
         test = imwarp(test, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
 
 
@@ -111,7 +139,8 @@ end
 [c,m,h,gnames] = multcompare(stats);
 
 figure, boxplot(similarity, 'Colors', 'k'),
-xticklabels(vars)
+xticklabels(["Lick", "Right", "Left", "Elliptical", "Right Asymmetric", ...
+    "Left Asymmetric", "Bilateral"])
 ylabel('Pairwise Dice Similarity Coefficient')
 ax = gca;
 ax.FontSize = 12;

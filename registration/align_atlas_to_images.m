@@ -1,5 +1,5 @@
 clear, clc
-
+%%
 mice = {'Y:\nick\behavior\grooming\1p\ECR2_thy1', ...
     'Y:\nick\behavior\grooming\1p\GER2_ai94', ...
     'Y:\nick\behavior\grooming\1p\HYL3_tTA', ...
@@ -35,7 +35,7 @@ for p = 1:length(dorsalMaps.edgeOutline)
     plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1));
 end
 set(gca, 'YDir', 'reverse');
-saveas(gcf, [template_path, 'atlas_aligned.fig'])
+% saveas(gcf, [template_path, 'atlas_aligned.fig'])
 
 
 

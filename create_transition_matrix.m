@@ -42,19 +42,20 @@ spontaneous = [1,2,8,9,14,15,20,21];
 evoked = [3:7,10:13,16:19,22:25];
 
 states = ["Stationary", "Elliptical", "Asymmetric", ...
-    "Elliptical Asymmetric", "Bilateral", "Unilateral"];
+    "Bilateral", "Elliptical Asymmetric", "Unilateral"];
 
 aggregation_sz = 3;
 
 % data_list{1} = [data_list{1}(evoked); mp_list];
-data_list{1} = mp_list;
+data_list{1} = [data_list{1}; mp_list];
+% data_list{1} = mp_list;
 
 %%
 N = length(data_list{1});
 
 tmat = zeros(numel(states), numel(states), N);
 
-for j = 1%:N
+for j = 1:N
     data_dir = data_list{1}{j};
     timestamp_file = [data_dir, filesep, getAllFiles(data_dir, '_trim.txt')];
     [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
@@ -117,7 +118,7 @@ for j = 1%:N
             [~, tmp_idx] = min(abs(tmp_snippets(:,1)-last_event_idx));       
             current_event = tmp_labels{tmp_idx};
 
-            [y,x] = set_xy_states(last_event, current_event);
+            [y,x] = set_xy_states(last_event, current_event, states);
 
             tmat(y,x,j) = tmat(y,x,j) + 1;
             disp([last_event, '   ', current_event]);
@@ -132,7 +133,7 @@ for j = 1%:N
 %             disp(size(tmp_snippets));
         end
         current_event = 'Stationary';
-        [y,x] = set_xy_states(last_event, current_event);
+        [y,x] = set_xy_states(last_event, current_event, states);
         tmat(y,x,j) = tmat(y,x,j) + 1;
 
         disp([num2str(counter), ' events found'])
@@ -146,11 +147,14 @@ figure,
 subplot(1,2,1), imagesc(mean(tmat,3))
 colormap(flipud(colormap('gray'))), 
 c=colorbar;
-c.Label.String = '# Transitions';
+c.Label.String = 'Count';
 xticks(1:length(states))
 yticks(1:length(states))
 xticklabels(states)
 yticklabels(states)
+title('Transitions', 'FontSize', 16)
+ylabel('From', 'FontSize', 14)
+xlabel('To', 'FontSize', 14)
 
 
 pmat = tmat ./ sum(tmat,2);
@@ -159,12 +163,14 @@ B = median(pmat, 3, 'omitnan');
 subplot(1,2,2), imagesc(B)
 colormap(flipud(colormap('gray'))), 
 c=colorbar;
-c.Label.String = 'Transition probability';
+c.Label.String = 'Probability';
+title('Transition probability', 'FontSize', 16)
 xticks(1:length(states))
 yticks(1:length(states))
 xticklabels(states)
 yticklabels(states)
-
+ylabel('From', 'FontSize', 14)
+xlabel('To', 'FontSize', 14)
 %% For Louvain Clustering, eliminate stationary from group by introducing recursive connection instead
 new_tmat = tmat(2:end, 2:end, :);
 for i = 1:size(tmat,3)
@@ -221,9 +227,10 @@ figure, plot(test_gamma, Q);
 hold on
 plot(test_gamma, num_uniq)
 %%
-dat = B(2:6, 2:6, 1);
+% dat = B(2:6, 2:6, 1);
+dat = B;
 
-[M,Q]=community_louvain(dat, 1);
+[M,Q]=community_louvain(dat, 0.9);
 % [M,Q]=community_louvain(btest);
 
 cols = zeros(length(M), 3);
@@ -249,9 +256,9 @@ pgraph = digraph(dat);
 figure, plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*10, ...
     'NodeColor', cols, 'NodeFontSize', 15, ...
     'EdgeColor', 'k', 'ArrowSize', 15, ...
-    'NodeLabel',states(2:6),...states(2:6), ... states,
-    'Layout', 'force', 'WeightEffect', 'inverse')
-
+    'NodeLabel',states,...states(2:6), ... states,
+    'Layout', 'force3', 'WeightEffect', 'inverse')
+axis off
 
 %%
 dat = pmat;
@@ -276,44 +283,51 @@ end
 
 
 %% 
-function [y,x] = set_xy_states(last_state, current_state)
+function [y,x] = set_xy_states(last_state, current_state, state_order)
+        stat_idx = find(strcmpi(state_order, 'Stationary'));
+        ellip_idx = find(strcmpi(state_order, 'Elliptical'));
+        assym_idx = find(strcmpi(state_order, 'Asymmetric'));
+        bilat_idx = find(strcmpi(state_order, 'Bilateral'));
+        ellip_assym_idx = find(strcmpi(state_order, 'Elliptical Asymmetric'));
+        uni_idx = find(strcmpi(state_order, 'Unilateral'));
+
             switch last_state
                 case 'Stationary'
-                    y = 1;
+                    y = stat_idx;
                 case 'Elliptical'
-                    y = 2;
+                    y = ellip_idx;
                 case 'Right Asymmetric' 
-                    y = 3;
+                    y = assym_idx;
                 case 'Left Asymmetric'
-                    y = 3;
+                    y = assym_idx;
                 case 'Elliptical Asymmetric'
-                    y = 4;
+                    y = ellip_assym_idx;
                 case 'Large Bilateral'
-                    y = 5;
+                    y = bilat_idx;
                 case 'Right' 
-                    y = 6;
+                    y = uni_idx;
                 case 'Left'
-                    y = 6;
+                    y = uni_idx;
             end
 
 
             switch current_state
                 case 'Stationary'
-                    x = 1;
+                    x = stat_idx;
                 case 'Elliptical'
-                    x = 2;
+                    x = ellip_idx;
                 case 'Right Asymmetric' 
-                    x = 3;
+                    x = assym_idx;
                 case 'Left Asymmetric'
-                    x = 3;
+                    x = assym_idx;
                 case 'Elliptical Asymmetric'
-                    x = 4;
+                    x = ellip_assym_idx;
                 case 'Large Bilateral'
-                    x = 5;
+                    x = bilat_idx;
                 case 'Right' 
-                    x = 6;
+                    x = uni_idx;
                 case'Left'
-                    x = 6;
+                    x = uni_idx;
             end
 end
 

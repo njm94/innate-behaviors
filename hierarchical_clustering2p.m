@@ -77,7 +77,7 @@ labs = [labs, 'FLR', 'FLL'];
 % Z = linkage(distMatrix, 'average');
 Z = linkage(Bmean', 'average', 'correlation');
 
-figure, subplot(3,1,1)
+figure, subplot(3,2,1)
 cutoff = 0.3;
 [H, T, outperm] = dendrogram(Z,'Labels', labs);  % Plot the dendrogram
 % [H, T, outperm] = dendrogram(Z,'Labels', labs, 'ColorThreshold', cutoff);  % Plot the dendrogram
@@ -90,7 +90,11 @@ label_column = ones(size(Bmean,1), 2);
 anat = sort(unique(nloc));
 I = [];
 for i = 1:length(anat)
-    I = [I; find(strcmp(nloc, anat{i}))];
+    Itmp = find(strcmp(nloc,anat{i}));
+    [~, Itmp_sorted] = sort(mean(Bmean(Itmp,[8,9]),2));
+%     I = [I; find(strcmp(nloc, anat{i}))];
+    I = [I; Itmp(Itmp_sorted)];
+
 end
 
 
@@ -105,16 +109,18 @@ end
 
 % label_column
 
-subplot(3,1,2:3)
+subplot(3,2,[3,5])
 imagesc(Bmean(I, outperm)),
 xticks(1:length(labs))
 xticklabels(labs(outperm))
-% colorbar
+% c=colorbar;
+% c.Label.String = 'Z-score';
 caxis([-1 3])
 colormap(bluewhitered())
 ylabel('Neuron')
-
-figure, imagesc(label_column), colormap lines
+freezeColors
+% 
+subplot(3,2,[4, 6]), imagesc(label_column), colormap default
 
 
 %%

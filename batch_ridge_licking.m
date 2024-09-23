@@ -19,6 +19,7 @@ ecr2_idx = 57:59;
 current_mouse = '';
 
 %%
+k = 0.2;
 for j = ger2_idx
      try
         data_dir = data_list{j};
@@ -49,10 +50,12 @@ for j = ger2_idx
                 Vmaster{i} = Vmaster{i}(:,1:min_trial_length);
                 mvtOn{i} = mvtOn{i}(1:min_trial_length);
                 lick_start{i} = lick_start{i}(1:min_trial_length);
+                lick_timer{i} = lick_timer{i}(1:min_trial_length);
             end
             Vmaster = catcell(2, Vmaster);
             mvtOn = catcell(1, mvtOn)';
             lick_start = catcell(1, lick_start);
+            lick_timer = catcell(1, lick_timer);
             new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
 
             % ridge here
@@ -60,7 +63,7 @@ for j = ger2_idx
             opts.frameRate = fs;
             opts.sPostTime=round(fs*2);
             opts.mPreTime = ceil(0.5 * fs);  % precede motor events to capture preparatory activity in frames (used for eventType 3)
-            opts.mPostTime = ceil(2 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
+            opts.mPostTime = ceil(1 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
             opts.framesPerTrial = min_trial_length; % nr. of frames per trial
             opts.folds = 1; %nr of folds for cross-validation
             
@@ -68,10 +71,11 @@ for j = ger2_idx
             % Full-Trial events:    new_trial
             % Peri-Stimulus events: 
             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3], opts);
-            regLabels = {'Movment', 'Lick'}; %some movement variables
+            regLabels = {'Movement', 'Lick', 'Timer'}; %some movement variables
 %             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 1], opts);
 %             regLabels = {'Movment', 'Lick', 'Trial'}; %some movement variables
-            fullR = [dMat];
+            fullR = [dMat, lick_timer];
+            regIdx = [regIdx; max(regIdx)+1];
 
             disp('Running ridge regression with 10-fold cross-validation')
             [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Vmaster, regLabels, regIdx, regLabels, opts.folds);
@@ -97,7 +101,7 @@ for j = ger2_idx
             save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
 
             figure
-            subplot(3, 3, 1)
+            subplot(4, 1, 1)
             imagesc(reshape(fullMat, [128 128]))
             xticks([])
             c=colorbar;
@@ -105,7 +109,7 @@ for j = ger2_idx
             c.Label.String = 'cvR^2';
             yticks([])
             for i = 1:length(regLabels)
-                subplot(3, 3, i+1)
+                subplot(4, 1, i+1)
                 imagesc(reshape(fullMat - reducedMat(:,i), [128 128]))
                 c=colorbar;
                 title(regLabels{i})
@@ -153,11 +157,6 @@ for j = ger2_idx
     ini = ini2struct(ini_file);
     fpath = fieldnames(ini);
     ini = ini.(fpath{contains(fpath, 'sentech')});
-    
-%     try ini = ini.sentech_give_rewards;
-%     catch 
-%         ini = ini.sentech_dlc_live;
-%     end
     fs = str2double(ini.framerate);
     
     % load experiment specific data into cell array
@@ -172,7 +171,7 @@ for j = ger2_idx
     % Take off 2 frames due to possibility of dark frame at end creating
     % filter artifacts
     Vbrain = recastV(Umaster, U, s, V(:,1:end-2));
-    % Vmaster{count} = Vbrain;
+%     Vmaster{count} = Vbrain;
     [b, a] = butter(1, [0.01 10]/(fs/2));
     Vmaster{count} = filtfilt(b, a, Vbrain')';
     
@@ -191,13 +190,20 @@ for j = ger2_idx
     
     all_movement = sqrt(fl_l.^2 + fl_r.^2 + hl_l.^2 + hl_r.^2 + snout.^2 + tailbase.^2);
     mvt = resample(all_movement, size(Vmaster{count},2), length(all_movement));
-    k = 10;
-    mvtOn{count} = get_on_time(movmax(mvt > mean(mvt) + std(mvt), k));
+%     k = 10;
+    mvtOn{count} = get_on_time(mvt > mean(mvt) + std(mvt));
 
     disp('Reading BORIS')
     [events, b_idx, b_tab] = read_boris(boris_file);
-    lick_start{count} = zeros(size(mvtOn{count}));
-    lick_start{count}(b_idx{1}(:,1)) = 1;
+    lick = zeros(size(mvtOn{count}));
+    lick(b_idx{1}(:,1)) = 1;
+%     lick_start{count}(b_idx{1}(:,1)) = 1;
+    lick_start{count} = lick;
+    [~, lick_timer{count}] = start_timer(lick, k, fs);
+
+%     lick_duration = b_idx{1}(end,end)-b_idx{1}(1,1);
+%     lick_timer{count} = zeros(size(mvtOn{count}));
+%     lick_timer{count}(b_idx{1}(1,1):b_idx{1}(end,end)) = 1:lick_duration+1;
 
     count = count + 1;
 
@@ -207,26 +213,65 @@ end
 
 %%
 
-clc
+fullLabels
 visual = true;
-cBetaRight = check_beta('Lick', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, [], visual);
+cBetaRight = check_beta('Timer', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, [], visual);
 
 %%
 
-figure
-indices = floor(1:7.5:76);
-for i = 1:2
+test = reshape(Umaster*Vmaster, 128, 128, []);
+test2 = reshape(Umaster*Vfull, 128, 128, []);
+figure, plot(xt(test,fs), squeeze(mean(test, [1, 2])),'k'),
+hold on
+plot(xt(test, fs), squeeze(mean(test2, [1, 2]))), hold on,
+% plot(xt(test,fs), lick_timer*.057)
+%%
+
+% figure
+
+for i = 11
     
     test = reshape(Umaster*fullBeta{1}(fullIdx==i,:)', 128, 128, []);
-    subplot(2,1,i), imagesc(imtile(test, 'Frames', indices, 'GridSize', [1 length(indices)]))
-    yticks([]);
-    xticks((128:256:11*256)/2)
-    xticklabels(-0.5:0.25:2)
-    colormap(bluewhitered())
-    c=colorbar;
-    c.Label.String = 'Beta Kernel';
-    xlabel('Time (s)')
+    indices = floor(1:fs/4:size(test,3));
+    if size(test,3)>1
+        figure, imagesc(imtile(test, 'Frames', indices, 'GridSize', [1 length(indices)]))
+        yticks([]);
+        xticks((128:256:11*256)/2)
+        xticklabels(-0.5:0.25:2)
+        colormap(bluewhitered())
+        c=colorbar;
+        c.Label.String = 'Beta Kernel';
+        xlabel('Time (s)')
+    else
+        figure, imagesc(test)
+        xticks([])
+        yticks([])
+        caxis([-max(abs(clim)) max(abs(clim))]);
+        colormap(bluewhitered())
+        c=colorbar;
+        c.Label.String = 'Beta';
+        c.Label.FontSize = 14;
+    end
 end
+
+
+%%
+
+
+figure, plot(xt(lick_start, fs), lick_start*50, 'm')
+hold on,
+test = reshape(Umaster*Vmaster, 128, 128, []);
+plot(xt(lick_start, fs), squeeze(mean(test, [1 2])),'k', 'LineWidth', 1)
+xlabel('Time (s)')
+axis tight
+%%
+%  start_timer(lick, k, fs)
+test = aggregate(lick, k, fs)
+%%
+
+fs = 30;
+k = 0.2;
+[start_idx, b_timer] = start_timer(test, k, fs);
 
 %%
 
@@ -236,5 +281,23 @@ d = diff(data);
 t_on = find(d>0)+ 1;
 
 new_dat(t_on) = 1;
+
+end
+
+function [start_idx, behavior_timer] = start_timer(data, k, fs)
+% takes a binary event vector (data) and aggregation window size (k)
+% aggregates all behavior events and creates a linear ramp
+% also outputs start of each aggregated behavior session
+
+
+idx = arr2idx(aggregate(data, k, fs));
+start_idx = zeros(size(data));
+start_idx(idx(:,1)) = 1;
+
+behavior_timer = zeros(size(data));
+for i = 1:size(idx,1)
+    tmp = 1:(idx(i,2)-idx(i,1))+1;
+    behavior_timer(idx(i,1):idx(i,2)) = tmp;
+end
 
 end

@@ -25,13 +25,16 @@ fs = 90 ;
 thy1_idx = 1:7;
 ai94_idx = 8:13;
 camk_idx = 14:25;
+hyl3_idx = 14:19;
+ibl2_idx = 22:23;
 
-save_average_across_days = false;
+save_average_across_days = true;
 
 load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
 %%
-spon_behavior_frames = cell(1,14);
-evoked_behavior_frames = cell(1,14);
+% spon_behavior_frames = cell(1,14);
+% evoked_behavior_frames = cell(1,14);
+bFrames = cell(1,14);
 for j = thy1_idx %23:length(data_list{1})+1
     try
         data_dir = data_list{1}{j};
@@ -41,25 +44,39 @@ for j = thy1_idx %23:length(data_list{1})+1
             data_dir = strrep(data_dir, 'Y:/', '/media/user/teamshare/');
         end    
         disp(['Loading ' data_dir])
-        load([data_dir, filesep, 'outputs', filesep,getAllFiles([data_dir, filesep, 'outputs'], 'behavior_frames.mat')])
+        % If there are multiple versions, use the most recent one
+        b_frame_file = getAllFiles([data_dir, filesep, 'outputs'], 'behavior_frames.mat');
+        if size(b_frame_file,1) > 1
+            b_frame_file = sort(b_frame_file);
+            b_frame_file = b_frame_file{end};
+        end
+        load([data_dir, filesep, 'outputs', filesep,b_frame_file])
 
         disp('Done loading')
 
         for i = 1:length(behavior_frames)
-            if j <= 2
-                if isempty(spon_behavior_frames{i})
-                    spon_behavior_frames{i} = behavior_frames{i};
-                else
-                    spon_behavior_frames{i} = cat(3, spon_behavior_frames{i}, behavior_frames{i});
-                end
+            if isempty(bFrames{i})
+                bFrames{i} = behavior_frames{i};
             else
-                if isempty(evoked_behavior_frames{i})
-                    evoked_behavior_frames{i} = behavior_frames{i};
-                else
-                    evoked_behavior_frames{i} = cat(3, evoked_behavior_frames{i}, behavior_frames{i});
-                end
+                bFrames{i} = cat(3, bFrames{i}, behavior_frames{i});
             end
         end
+
+%         for i = 1:length(behavior_frames)
+%             if j <= 2
+%                 if isempty(spon_behavior_frames{i})
+%                     spon_behavior_frames{i} = behavior_frames{i};
+%                 else
+%                     spon_behavior_frames{i} = cat(3, spon_behavior_frames{i}, behavior_frames{i});
+%                 end
+%             else
+%                 if isempty(evoked_behavior_frames{i})
+%                     evoked_behavior_frames{i} = behavior_frames{i};
+%                 else
+%                     evoked_behavior_frames{i} = cat(3, evoked_behavior_frames{i}, behavior_frames{i});
+%                 end
+%             end
+%         end
 
     catch
         new_mouse = true;
@@ -72,18 +89,16 @@ end
 
 
 figure
-atlas_tform = load(['Y:\nick\behavior\grooming\1p\ECR2_thy1', filesep, 'atlas_tform.mat']);
+mouse_dir = fileparts(data_dir);
+atlas_tform = load([mouse_dir, filesep, 'atlas_tform.mat']);
+load([mouse_dir, filesep, 'mask.mat']);
 
-for i = [6:12,5]%1:length(bvars)
-    if i < 6
-        aa = -3;
-    else
-        aa = 5;
-    end
-    subplot(2,4,i-aa)
-    if ~isempty(evoked_behavior_frames{i})
-        mean_image = mask.*mean(evoked_behavior_frames{i},3)';
-    
+for i = 1:length(bvars)
+
+    subplot(4,4,i)
+    if ~isempty(bFrames{i})
+        mean_image = mask.*mean(bFrames{i},3)';
+    1+1
         mean_image = imwarp(mean_image, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
         imagesc(mean_image)
         title(bvars(i)), colorbar, xticks([]),  yticks([])
@@ -95,6 +110,7 @@ for i = [6:12,5]%1:length(bvars)
     end
     
 end
+savefig(gcf, [mouse_dir, filesep, 'outputs', filesep, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_dFF.fig'])
 
 
 %%

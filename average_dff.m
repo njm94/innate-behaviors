@@ -33,14 +33,15 @@ thy1_idx = 1:7;
 ai94_idx = 8:13;
 camk_idx = 14:25;
 
-save_average_across_days = false;
+save_average_across_days = true;
 
 load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
 %%
  
-for j = thy1_idx %23:length(data_list{1})+1
+for j = thy1_idx%camk_idx %23:length(data_list{1})+1
      try
-        data_dir = data_list{1}{j};
+
+         data_dir = data_list{1}{j};
         disp(['Starting ' data_dir])
 
         if isunix % working on linux computer - modify paths
@@ -59,26 +60,30 @@ for j = thy1_idx %23:length(data_list{1})+1
         if ~isempty(current_mouse)
             % if all the trials have completed for the previous mouse,
             % compile all behavior frames and take the average
-
+%%
             if save_average_across_days
                 figure
                 for iii = 1:size(behavior_frames,2)
                     % transpose the mean image to get the brains in proper
                     % orientation
+                    if isempty(behavior_frames{iii}), continue; end
                     mean_image = mean(behavior_frames{iii},3)';
-                    subplot(3,4,iii)
+                    subplot(4,4,iii)
                     imagesc(mean_image)
-                    set(gca, 'clim', [-max(abs(mean_image(:))) max(abs(mean_image(:)))])
+%                     set(gca, 'clim', [-max(abs(mean_image(:))) max(abs(mean_image(:)))])
                     c=colorbar;
                     c.Label.String = '\DeltaF/F_0 (\sigma)';
                     title(bvars(iii))
                     xticks([])
                     yticks([])
-                    colormap(fliplr(redblue([],[],'k')))
+%                     colormap(bluewhitered())
+%                     colormap(fliplr(redblue([],[],'w')))
                 end
                                        
                 savefig(gcf, [fPath,  char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_dFF.fig'])
             end
+            ahahahah
+            %%
             % all mice completed - break the loop
             if j == length(data_list{1})+1, break; end
         end        
@@ -240,9 +245,9 @@ for j = thy1_idx %23:length(data_list{1})+1
     figure
     for ii = 1:length(bvars)
         if any(strcmp(events.Properties.VariableNames, bvars(ii)))
-            b_idx = logical(table2array(events(:,strcmp(events.Properties.VariableNames, bvars(ii)))));
+            b_idx = logical(aggregate(table2array(events(:,strcmp(events.Properties.VariableNames, bvars(ii)))), 3));
         elseif exist(bvars(ii), 'var')
-            b_idx = logical(eval(bvars(ii)));
+            b_idx = logical(aggregate(eval(bvars(ii)),3));
         else
             continue
         end

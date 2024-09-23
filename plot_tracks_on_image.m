@@ -1,4 +1,4 @@
-% clear
+clear
 addpath('C:\Users\user\Documents\Nick\ridgeModel');
 addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
 addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
@@ -21,13 +21,16 @@ camk_idx = 14:25;
  
 
 %%
-for j = 1:length(data_list{1})
+for j = 19%:length(data_list{1})
     data_dir = data_list{1}{j};
     brain_file = [data_dir, filesep, getAllFiles(data_dir, 'cam0_svd')];
+    beh_file = [data_dir, filesep, getAllFiles(data_dir, 'trim.mp4')];
     [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
     [~, mouse_id, ~] = fileparts(mouse_root_dir);
     [expt_root_dir, ~, ~] = fileparts(mouse_root_dir);
     snippets_dir = [data_dir, filesep, 'snippets'];
+    boris_file = [data_dir, filesep, getAllFiles(data_dir, '_events.tsv')];
+    if ~isfile(boris_file), continue; end
     output_dir = [data_dir, filesep, 'outputs'];
 
 %     if ~isempty(getAllFiles(output_dir, '.png'))
@@ -39,10 +42,25 @@ for j = 1:length(data_list{1})
         mkdir(output_dir)
     end
 
-    snippets_dir = [data_dir filesep 'snippets'];
+%     snippets_dir = [data_dir filesep 'snippets'];
     dlc_pos_file = [data_dir, filesep, getAllFiles(data_dir, '1030000.csv')];
     
-    [b, anno] = parse_snippets(snippets_dir);
+%     [b, anno] = parse_snippets(snippets_dir);
+    % read boris file, remove point event variables
+    [events, b_idx, ~] = read_boris(boris_file);
+    video_end = find(events.('Video End'));
+    vid_end_idx = contains(events.Properties.VariableNames, 'Video End');
+    events = removevars(events, vid_end_idx);
+    b_idx(vid_end_idx) = [];
+    % consolidate drop events
+    drop_idx = contains(events.Properties.VariableNames, 'Drop');
+    if any(drop_idx)
+        events = removevars(events, drop_idx);
+        b_idx(drop_idx) = [];
+    end
+    anno = events.Properties.VariableNames;
+
+
 
 
     % load DLC tracks
@@ -60,25 +78,19 @@ for j = 1:length(data_list{1})
 
     
     
-    % figure, 
-    for jj = 1:length(b)
-    
-        bvids = getAllFiles(snippets_dir, anno(jj));
-        if isempty(bvids)
-            continue
-        end
-        if iscell(bvids)
-            bvids = bvids{end};
-        end
-        img = loadtiff([snippets_dir filesep bvids]);
-        img = img(:, :, round(size(img,3)/2));
+    for jj = 1:length(b_idx)
+
+
+        v = VideoReader(beh_file);
+        img = read(v, round(mean(b_idx{jj}(1,:))));
     
         figure
-        imshow(imadjust(img, [], [], 0.5)), colormap gray, hold on, axis off, clim([500 4000])
+%         imshow(imadjust(img, [], [], 0.5)), colormap gray, hold on, axis off, clim([500 5000])
+        imshow(img(:,:,1), [0 200]), colormap gray, hold on, axis off, %clim([500 5000])
         
-        for i = 1:size(b{jj}, 1)
-            plot(flr_x(b{jj}(i,1):b{jj}(i,2)), flr_y(b{jj}(i,1):b{jj}(i,2)), 'Color', [1 0 1 0.4])
-            plot(fll_x(b{jj}(i,1):b{jj}(i,2)), fll_y(b{jj}(i,1):b{jj}(i,2)), 'Color', [0 1 1 0.4])
+        for i = 1:size(b_idx{jj}, 1)
+            plot(flr_x(b_idx{jj}(i,1):b_idx{jj}(i,2)), flr_y(b_idx{jj}(i,1):b_idx{jj}(i,2)), 'Color', [1 0 1 0.4])
+            plot(fll_x(b_idx{jj}(i,1):b_idx{jj}(i,2)), fll_y(b_idx{jj}(i,1):b_idx{jj}(i,2)), 'Color', [0 1 1 0.4])
         end
         % center image on nose
         axis([nose_x - 150 nose_x + 150 nose_y-100 nose_y+200])
@@ -86,7 +98,7 @@ for j = 1:length(data_list{1})
     
         fig = gcf;
         fig.Renderer = 'Painters';
-        exportgraphics(gcf, [output_dir, filesep, char(anno(jj)),'.png'], 'Resolution', 300)
+        exportgraphics(gcf, [output_dir, filesep, char(anno{jj}),'.png'], 'Resolution', 300)
         close all
     
     end
