@@ -18,10 +18,15 @@ current_mouse = '';
 % mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
 %     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
 %     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'};
-mp_list = {'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
+mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'; ...
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802';
+    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240729';
     'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240731';
+    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240802';
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
@@ -54,6 +59,7 @@ data_list{1} = [data_list{1}; mp_list];
 N = length(data_list{1});
 
 tmat = zeros(numel(states), numel(states), N);
+episode_durations = cell(1, N);
 
 for j = 1:N
     data_dir = data_list{1}{j};
@@ -92,6 +98,7 @@ for j = 1:N
 
 
     [episodes, idx] = aggregate(bmat, aggregation_sz);
+    episode_durations{j} = diff(idx, 1, 2)/90;
     num_episodes(j) = size(idx,1);
 
     % concatenate all snippets into one array

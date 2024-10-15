@@ -30,15 +30,27 @@ addpath('C:\Users\user\Documents\Nick\grooming\utils')
 
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
-mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
+mp_list1 = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
     };
-mp_list = {'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
+mp_list2 = {'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802'};
+
+mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'; ...
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802';
+    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240729';
+    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240731';
+    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240802';
+    'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
+    'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 data_list{1} = [data_list{1}; mp_list];
-data_list{1} = mp_list;
+% data_list{1} = mp_list;
 current_mouse = '';
 
 fs = 90 ;
@@ -288,7 +300,7 @@ for i = 1:size(behavior_label,1)
             c = 'k';
             mkr = 'o';
         case 'Large Bilateral'
-            continue
+%             continue
             c = 'g';
             mkr = 'o';
         case 'Left'
@@ -310,6 +322,152 @@ for i = 1:size(behavior_label,1)
     end
     scatter3(score(i,1), score(i,2), score(i,3), c, mkr, 'filled', 'MarkerFaceAlpha', 0.25);
 end
+
+%%
+
+[a,b] = kmeans(test, 3);
+
+cols = ['r', 'g', 'b', 'm', 'c', 'y', 'k'];
+
+
+figure, hold on
+% h=biplot(coeff(:,1:3),'scores',score(:,1:3));
+
+for i = 1:size(behavior_label,1)
+    scatter3(score(i,1), score(i,2), score(i,3), cols(a(i)), 'filled', 'MarkerFaceAlpha', 0.25);
+end
+
+
+
+%% 
+
+% Train a random forest classifier to predict the cluster labels
+random_forest_model = fitcensemble(test, behavior_label, 'Method', 'Bag', 'NumLearningCycles', 100);
+
+%%
+
+% Perform cross-validation to get accuracy
+cv_model = crossval(random_forest_model);
+classification_error = kfoldLoss(cv_model);
+
+% Convert classification error to accuracy
+classification_accuracy = 1 - classification_error;
+fprintf('Classification Accuracy: %.2f%%\n', classification_accuracy * 100);
+
+%%
+
+% Compute feature importance
+feature_importance = oobPermutedPredictorImportance(random_forest_model);
+
+% Plot feature importance
+figure
+bar(feature_importance);
+xlabel('Feature');
+ylabel('Importance Score');
+title('Feature Importance for Cluster Separation');
+
+
+%%
+
+% Predict cluster labels using the trained random forest
+predicted_labels = predict(random_forest_model, test);
+
+% Confusion matrix
+figure
+confusionchart(behavior_label, predicted_labels);
+
+%%
+
+% Use cross-validation to evaluate the model
+cv_model = crossval(random_forest_model);  % Cross-validate the model
+predicted_labels = kfoldPredict(cv_model); % Predict labels from cross-validation
+
+
+
+%%
+clc
+unique_classes = unique(behavior_label);
+n_classes = length(unique_classes);
+weights = zeros(n_classes, 1);
+
+for i = 1:n_classes
+    n_i = sum(strcmp(behavior_label, unique_classes{i})); % Count of samples in class i
+    weights(i) = numel(behavior_label) / n_i; % Inverse frequency weight
+end
+
+% Create a weight map
+class_weights = containers.Map(unique_classes, weights);
+
+
+% Create a stratified cross-validation partition
+cv = cvpartition(behavior_label, 'KFold', 10, 'Stratify', true);
+
+% Initialize arrays to store performance metrics
+accuracy = zeros(cv.NumTestSets, 1);
+f1_scores = zeros(cv.NumTestSets, 1);
+
+% Loop through each fold
+for i = 1:cv.NumTestSets
+    % Get training and test indices
+    trainIdx = cv.training(i);
+    testIdx = cv.test(i);
+    
+    % Train the model on the training set
+    rf_model = fitcensemble(test(trainIdx, :), behavior_label(trainIdx), 'Method', 'Bag', 'NumLearningCycles', 100, 'Weights', class_weights);
+    
+    % Make predictions on the test set
+    Y_pred = predict(rf_model, test(testIdx, :));
+    
+    % Calculate accuracy
+    accuracy(i) = sum(Y_pred == behavior_label(testIdx)) / numel(behavior_label(testIdx));
+    
+    % Calculate F1-score for cluster 2
+    % Assuming cluster 2 corresponds to label 2
+    tp = sum((Y_pred == 2) & (behavior_label(testIdx) == 2)); % True Positives
+    fp = sum((Y_pred == 2) & (behavior_label(testIdx) ~= 2)); % False Positives
+    fn = sum((Y_pred ~= 2) & (behavior_label(testIdx) == 2)); % False Negatives
+    
+    precision = tp / (tp + fp); % Precision for cluster 2
+    recall = tp / (tp + fn); % Recall for cluster 2
+    
+    if tp + fp == 0 || tp + fn == 0
+        f1_scores(i) = 0; % Handle division by zero
+    else
+        f1_scores(i) = 2 * (precision * recall) / (precision + recall); % F1-score for cluster 2
+    end
+end
+
+% Average accuracy and F1-score across folds
+avg_accuracy = mean(accuracy);
+avg_f1_score = mean(f1_scores);
+fprintf('Average Accuracy: %.2f%%\n', avg_accuracy * 100);
+fprintf('Average F1-Score for Cluster 2: %.2f\n', avg_f1_score);
+
+
+%%
+
+figure
+
+bl2 = behavior_label;
+for i = 1:length(behavior_label)
+    switch bl2{i}
+        case 'Left'
+            continue
+        case 'Right'
+            continue
+        otherwise
+            bl2{i} = 'Biltaeral';
+    end
+end
+
+%%
+figure
+[s,h] = silhouette(test, bl2);
+
+%%
+
+z=linkage(test);
+size(z)
 
 
 %%

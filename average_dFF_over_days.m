@@ -26,7 +26,7 @@ thy1_idx = 1:7;
 ai94_idx = 8:13;
 camk_idx = 14:25;
 hyl3_idx = 14:19;
-ibl2_idx = 22:23;
+ibl2_idx = 20:25;
 
 save_average_across_days = true;
 
@@ -35,7 +35,7 @@ load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
 % spon_behavior_frames = cell(1,14);
 % evoked_behavior_frames = cell(1,14);
 bFrames = cell(1,14);
-for j = thy1_idx %23:length(data_list{1})+1
+for j = ibl2_idx %23:length(data_list{1})+1
     try
         data_dir = data_list{1}{j};
 

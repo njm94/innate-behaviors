@@ -38,7 +38,7 @@ ai94_idx = 8:13;
 camk_idx = 14:25;
 %%
 
-for j = 13%ai94_idx(1):ai94_idx(end)+1%:20%_file1:length(data_list)+1
+for j = ai94_idx(1):ai94_idx(end)+1%:20%_file1:length(data_list)+1
      try
         data_dir = data_list{j};
         disp(['Starting ' data_dir])
@@ -151,7 +151,8 @@ for j = 13%ai94_idx(1):ai94_idx(end)+1%:20%_file1:length(data_list)+1
                 {'Lick', 'LeftMove', 'RightMove', 'Timer'}];
 
             regIdx = [regIdx; max(regIdx)+1;];
-
+            
+            activity_timer = activity_timer ./ fs; % scale the activity timer so it's expressed wrt seconds
             fullR = [dMat, activity_timer];
 
             disp('Running ridge regression with 10-fold cross-validation')
@@ -159,6 +160,8 @@ for j = 13%ai94_idx(1):ai94_idx(end)+1%:20%_file1:length(data_list)+1
             save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
             
             fullMat = modelCorr(Vmaster,Vfull,Umaster) .^2;
+
+            break
 
             disp('Running reduced models')
             reducedMat = [];
@@ -197,7 +200,7 @@ for j = 13%ai94_idx(1):ai94_idx(end)+1%:20%_file1:length(data_list)+1
             end
 
         
-            savefig(gcf, [fPath 'summary.fig'])
+            savefig(gcf, [fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_summary.fig'])
             break
 
             % all mice completed - break the loop

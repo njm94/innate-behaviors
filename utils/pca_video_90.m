@@ -18,5 +18,5 @@ function numComponents = pca_video_90(video)
     explained_variance = cumsum(latent) / sum(latent);
 
     % Find the number of components that explain 90% of the variance
-    numComponents = find(explained_variance >= 0.90, 1);
+    numComponents = find(explained_variance >= 0.99, 1);
 end

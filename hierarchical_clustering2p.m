@@ -45,19 +45,24 @@ flrthresh = flrv>mean(flrv) + std(flrv);
 fllthresh = fllv>mean(fllv) + std(fllv);
 
 
-%%
 clear Bmean
 count = 1;
 labs = {};
+
 for i = 1:size(events,2)
-    if contains(events.Properties.VariableNames{i}, 'Drop') || contains(events.Properties.VariableNames{i}, 'Video')
+    if contains(events.Properties.VariableNames{i}, 'Drop') || contains(events.Properties.VariableNames{i}, 'Video') || contains(events.Properties.VariableNames{i}, 'Lick')
         continue
     end
-    Bmean(:,count) = mean(Nresample(:,logical(table2array(events(:,i)))),2);
+    event_table(:, count) = table2array(events(:,i));
+    Bmean(:,count) = mean(Nresample(:,logical(event_table(:,count))),2);
     labs{count} = events.Properties.VariableNames{i};
     count = count + 1;
     
 end
+
+flrthresh(any(event_table, 2)) = 0;
+fllthresh(any(event_table, 2)) = 0;
+
 
 Bmean = cat(2, Bmean, mean(Nresample(:, logical(flrthresh)),2));
 Bmean = cat(2, Bmean, mean(Nresample(:, logical(fllthresh)),2));
@@ -76,6 +81,7 @@ labs = [labs, 'FLR', 'FLL'];
 % distMatrix = pdist(Bmean', 'euclidean');
 % Z = linkage(distMatrix, 'average');
 Z = linkage(Bmean', 'average', 'correlation');
+% Z = linkage(Bmean', 'average', 'correlation');
 
 figure, subplot(3,2,1)
 cutoff = 0.3;
@@ -91,7 +97,8 @@ anat = sort(unique(nloc));
 I = [];
 for i = 1:length(anat)
     Itmp = find(strcmp(nloc,anat{i}));
-    [~, Itmp_sorted] = sort(mean(Bmean(Itmp,[8,9]),2));
+%     [~, Itmp_sorted] = sort(mean(Bmean(Itmp,end-1:end),2)); % forelimbs
+    [~, Itmp_sorted] = sort(mean(Bmean(Itmp,[4,6]),2));
 %     I = [I; find(strcmp(nloc, anat{i}))];
     I = [I; Itmp(Itmp_sorted)];
 

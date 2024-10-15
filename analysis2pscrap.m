@@ -80,7 +80,7 @@ end
 toc
 
 %% plot single neuron responses to each behavior
-close all
+% close all
 behaviors = stroke_events.Properties.VariableNames;
 sz = 5;
 figure
@@ -93,8 +93,8 @@ for i = 1:length(behaviors)
     clear tmp
 
 
-%     idx = arr2idx(aggregate(table2array(stroke_events(:,i)),1,fs));
-%     frame_start = idx(:,1);
+    idx = arr2idx(aggregate(table2array(stroke_events(:,i)),1,fs));
+    frame_start = idx(:,1);
 
     for j = 1:length(frame_start)
         try 
@@ -451,9 +451,10 @@ patchplot(t(arr2idx(aggregate(eventsarr(idx,:)', 3))), ylim, 'c', 0.5)
 xlabel('Time (s)')
 
 %%
+close all
 nlabel = cell(1,10);
 subplot(1,2,2), hold on
-tmp = r(5,:);
+tmp = r(6,:);
 for i = 1:10
     [~, I] = max(tmp);
     plot(t, Nresample(I,:)-10*i, 'k') % "right" correlated neuron
@@ -467,7 +468,7 @@ title('Right')
 vline(t(find(table2array(events(:,1)))), 'r:')
 
 patchplot(t(arr2idx(aggregate(eventsarr(1,:)', 3))), ylim, 'c', 0.5)
-patchplot(t(arr2idx(aggregate(eventsarr(5,:)',3))), ylim, 'm', 0.5)
+patchplot(t(arr2idx(aggregate(eventsarr(6,:)',3))), ylim, 'm', 0.5)
 xlabel('Time (s)')
 
 %%

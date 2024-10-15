@@ -1,4 +1,13 @@
-%% Make average responses
+% Analyze changes in functional connectivity associated with long duration
+% continuous grooming behaviors
+%
+% Expected outcome - Increase in FC at onset, followed by reduced FC at the
+% end
+%
+% This is on 1p data only
+
+
+
 
 %% average events
 
@@ -26,23 +35,26 @@ formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 current_mouse = '';
 
-fs = 90 ;
+fs = 90 ; % sampling rate
 [b, a] = butter(2, 0.01/(fs/2), 'high');
+aggregation_sz = 3; % window of time to aggregate behaviors
+clen = 15; % duration after which continuous behavior is considered long
+blen = 10; % duration of baseline period before and after continuous grooming event
 
 thy1_idx = 1:7;
 ai94_idx = 8:13;
-hyl3_idx = 14:19;
-ibl2_idx = 22:25;
+camk_idx = 14:25;
 
 save_average_across_days = true;
 
 load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
 %%
  
-for j = 21%ibl2_idx%camk_idx %23:length(data_list{1})+1
+for j = thy1_idx%camk_idx %23:length(data_list{1})+1
+    disp('\n\n')
      try
 
-         data_dir = data_list{1}{j};
+        data_dir = data_list{1}{j};
         disp(['Starting ' data_dir])
 
         if isunix % working on linux computer - modify paths
@@ -83,7 +95,7 @@ for j = 21%ibl2_idx%camk_idx %23:length(data_list{1})+1
                                        
                 savefig(gcf, [fPath,  char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_dFF.fig'])
             end
-            ahahahah
+            
             %%
             % all mice completed - break the loop
             if j == length(data_list{1})+1, break; end
@@ -92,6 +104,8 @@ for j = 21%ibl2_idx%camk_idx %23:length(data_list{1})+1
         disp('Loading master basis set')
         load([mouse_root_dir filesep 'Umaster.mat'])
         load([mouse_root_dir filesep 'mask.mat'])
+        nanmask = mask;
+        nanmask(nanmask==0) = nan;
         atlas_tform = load([mouse_root_dir filesep 'atlas_tform.mat']);
         clear Vmaster left right elliptical large_left large_right largebilateral lick LeftMove RightMove Audio drop_left drop_right
         current_mouse = mouse_id;
@@ -120,6 +134,36 @@ for j = 21%ibl2_idx%camk_idx %23:length(data_list{1})+1
 
     %% load grooming events from BORIS file
     events = read_boris(boris_file);
+
+    % create the aggregated behavior episodes - if none exceed 15s, skip
+    % consolidate lick events
+    lick_idx = contains(events.Properties.VariableNames, 'Lick');
+    lick_events = events(:,lick_idx);
+    lick_events = any(table2array(lick_events),2);
+    
+    % remove lick and point events from event matrix
+    idx = contains(events.Properties.VariableNames, 'Lick') | ...
+        contains(events.Properties.VariableNames, 'Drop') | ...
+        contains(events.Properties.VariableNames, 'Video') | ...
+        contains(events.Properties.VariableNames, 'Flail') ;
+    stroke_events = removevars(events, idx);
+    labels = stroke_events.Properties.VariableNames;
+
+    bmat = any(table2array(stroke_events),2);
+    [episodes, idx] = aggregate(bmat, aggregation_sz);
+    episode_durations = diff(idx, 1, 2)/90;
+
+    if ~any(episode_durations >= 15)
+%         disp(['No episodes longer than ', num2str(clen),'s. Skipping...'])
+        continue
+    else
+        idx = idx(episode_durations >= 15, :);
+        if size(idx,1) > 1      
+            [~, aa] = sort(diff(idx, 1, 2), 'descend');
+            idx = idx(aa,:);
+        end
+        
+    end
 
     % load experiment specific data into cell array
     load([data_dir filesep 'tform.mat'])
@@ -155,22 +199,10 @@ for j = 21%ibl2_idx%camk_idx %23:length(data_list{1})+1
 %     U = reshape(U, 128*128, []);
     
     disp('Computing DF/F0')
-    dataR = permute(reshape(Umaster*Vmaster, 128, 128, []), [2 1 3]);
+%     dataR = permute(reshape(Umaster*Vmaster, 128, 128, []), [2 1 3]);
+    dataR = reshape(Umaster*Vmaster, 128, 128, []);
     dFF = zscore((dataR-min(dataR(:))./mean(dataR - min(dataR(:)), 3))-1, [], 3);
     clear dataR Vbrain U s V
-
-    % %% load grooming events
-    % disp('Loading grooming events')
-    % [behaviors, annotation_labels] = parse_snippets(snippets_dir);
-    % 
-    % left= idx2arr(behaviors{annotation_labels == "left"}, trial_length);
-    % right= idx2arr(behaviors{annotation_labels == "right"}, trial_length);
-    % elliptical= idx2arr(behaviors{annotation_labels == "elliptical"}, trial_length);
-    % largeleft= idx2arr(behaviors{annotation_labels == "largeleft"}, trial_length);
-    % largeright= idx2arr(behaviors{annotation_labels == "largeright"}, trial_length);
-    % largebilateral= idx2arr(behaviors{annotation_labels == "largebilateral"}, trial_length);
-    % lick = idx2arr(behaviors{annotation_labels == "lick"}, trial_length);
-
 
     %% load DLC tracks
     disp('Loading DLC tracks')
@@ -182,127 +214,79 @@ for j = 21%ibl2_idx%camk_idx %23:length(data_list{1})+1
     fll_speed = fll_speed > mean(fll_speed) + std(fll_speed);
     flr_speed = flr_speed >  mean(flr_speed) + std(flr_speed);
     
-    k = 35; % smoothing kernel - this matches smoothing kernel in grooming detection but may need to change
+    k = 90; % smoothing kernel - tp ensure rest phase doesn't capture movement
     LeftMove= movmax(fll_speed, k);
     RightMove= movmax(flr_speed, k);
 
+    
+
     clear dlc_speed fll_speed flr_speed
 
-    %% load stimulus info from timestamp file
-    % 10kHz tone occurs for 1 second immediately at start of trial
-    % Tone is followed by 1 second of silence
-    % Then valve is opened for 1.5s. Water drop occurs somewhere in there
-    disp('Getting stimulus info from timestamp file');
-    timestamps = readmatrix(timestamp_file);
-    trials = unique(timestamps(:, 4));
-    Audio= zeros(size(LeftMove));
-    % drop_left = zeros(size(fll_move));
-    % drop_right = zeros(size(fll_move));
-    for i = 1:length(trials)
-        if trials(i) == 0, continue; end
-        trial_start  = find(timestamps(:,4)==trials(i), 1); 
-        Audio(trial_start:trial_start+fs) = 1;
-        % if count > 2 && count < 6
-        %     % first 2 trials for each mouse are spontaneous trials - no
-        %     % water drop. then on last trial for HYL3, drop goes on left
-        %     % side
-        %     drop_right(trial_start+ceil(2*fs): trial_start+ceil(3.5*fs))=1;
-        % elseif count == 6
-        %     drop_left(trial_start+ceil(2*fs): trial_start+ceil(3.5*fs))=1;
-        % end
-    end
+    % get ROIs - seeds are in atlas coords
+    [seeds, labels] = get_seeds();
 
-    % iterate through behaviors and store frames
-    % bvars = ["elliptical", "largeleft", "largeright", "largebilateral", ...
-    %     "left", "right", "lick", "fll_move", "flr_move", ...
-    %     "audio_tone", "drop_left", "drop_right"];
+    % use these vars to find contiguous stretch of stationary behavior
+    % which is same duration as grooming- we will overwrite tmp in the loop
+    % starting with longest grooming behavior first, so we avoid choosing
+    % same time
+    any_behavior = any([bmat, lick_events, LeftMove, RightMove], 2);
+    tmp = any_behavior;
 
-    % consolidate lick events into a single variable in the table
-    lick_idx = contains(events.Properties.VariableNames, 'Lick');
+    for i = 1:size(idx,1)
+        % crop data frames to include rest frames before and after grooming
+        % episodes
 
-    Lick = events(:,lick_idx);
-    events = removevars(events, lick_idx);
-    Lick = any(table2array(Lick),2); 
-    events = addvars(events, logical(Lick));
+%         tmp_idx(i,:) = [idx(i,1)-round(blen*fs), idx(i,2)+round(blen*fs)];
+        dFF_crop = dFF(:,:,idx(1):idx(2));
 
+%         dFF_crop = dFF_crop.*mask;
+%         clear pc90
+%         stepsize = round(0.25 * fs);
+%         corrk = 1 * fs;
+%         count = 1;
+%         for ii = 1:stepsize:size(ts,1)-corrk
+%             pc90(count) = pca_video_90(dFF_crop(:,:,ii:ii+corrk));
+%             count = count +1;
+%         end
 
+    
 
-    bvars = ["Drop Hits Left", "Drop Hits Right", "Drop Hits Center", "Audio", ...
-        "Lick", ...
-        "Right", "Left", "Right Asymmetric", "Left Asymmetric" ...
-        "Elliptical", "Elliptical Asymmetric", "Large Bilateral", ...
-        "LeftMove", "RightMove"];
+        %%
 
-    behavior_frames = cell(1, length(bvars));
+        % get into atlas coords
+        dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+        ts = getTimeseries(dFF_crop, seeds, 2);
+        corrmat{j}(:,:,i) = corrcoef(ts);
 
-    % Update drop variable to capture window surrounding each event
-    for ii = 1:3
-        if any(strcmp(events.Properties.VariableNames, bvars(ii)))
-            drop_event_idx = find(table2array(events(:,ii)));
-            for jj = 1:length(drop_event_idx)
-                events.(bvars(ii))(drop_event_idx(jj)-30:drop_event_idx(jj)+90) = 1;
-            end
-        end
-    end
+%         % perform a moving window correlation over the data
+%         clear corrmat
+%         stepsize = round(0.25 * fs);
+%         corrk = 1 * fs;
+%         count = 1;
+%         for ii = 1:stepsize:size(ts,1)-corrk
+%             corrmat(:,:,count) = corrcoef(ts(ii:ii+corrk,:));
+%             count = count +1;
+%         end
 
-    figure
-    for ii = 1:length(bvars)
-        if any(strcmp(events.Properties.VariableNames, bvars(ii)))
-            b_idx = logical(aggregate(table2array(events(:,strcmp(events.Properties.VariableNames, bvars(ii)))), 3));
-        elseif exist(bvars(ii), 'var')
-            if any(eval(bvars(ii)))
-                b_idx = logical(aggregate(eval(bvars(ii)),3));
-            else
-                continue
-            end
-        else
+        % find a period of time that is equal in length with no activity
+        groom_dur = size(ts,1);
+        
+        a = strfind(tmp', zeros(1,groom_dur));
+        if isempty(a)
             continue
-        end
-        behavior_frames{ii} = dFF(:,:,b_idx(1:end));
-        subplot(5, 4, ii)
+        else
+            dFF_crop = dFF(:,:,a(1):a(1)+groom_dur);
+            dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
 
-        % transpose the mean image to get the brains in proper
-        % orientation and % transform to get into coordinates of atlas
-        mean_image = mask.*mean(dFF(:,:,b_idx(1:end)),3)';
-        mean_image = imwarp(mean_image, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
-        imagesc(mean_image);
-        title(bvars(ii)), colorbar, xticks([]),  yticks([])
-        hold on;
-        for p = 1:length(dorsalMaps.edgeOutline)
-            plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'w');
+            ts_rest = getTimeseries(dFF_crop, seeds, 2);
+            rest_corrmat{j}(:,:,i) = corrcoef(ts_rest);
+
+            tmp(a(1):a(1)+groom_dur)=1;
+            count = count + 1;
         end
-        set(gca, 'YDir', 'reverse');
+
     end
 
-    % figure,  
-    % for ii = 1:length(bvars)
-    %     behavior_frames{ii} = cat(3, behavior_frames{ii}, dFF(:,:,logical(eval(bvars(ii)))));
-    %     if any(logical(eval(bvars(ii))))
-    %         subplot(4, 3, ii)
-    %         % transpose the mean image to get the brains in proper
-    %         % orientation
-    %         imagesc(mean(dFF(:,:,logical(eval(bvars(ii)))), 3)');
-    %         title(bvars(ii)), colorbar, xticks([]), yticks([])
-    %     end
-    % end
-    savefig(gcf, [data_dir, filesep, 'outputs', filesep,  char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_dFF.fig'])
-    close(gcf)
-
-    save([data_dir, filesep, 'outputs', filesep, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_behavior_frames.mat'], 'bvars', 'behavior_frames', '-v7.3')
-
-    disp('Clearing variables')
-    clear trials timestamps dFF largeright largeleft largebilateral lick left right LeftMove RightMove
-%     if ~save_average_across_days
-%         clear behavior_frames
-%     end
-    % count = count + 1;
-%     if j == 3, break; end
-%     master_SVD_file = [mouse_root_dir filesep 'masterSVD.mat'];
-%     if ~isfile(master_SVD_file)
-
-
-
-% %% load behavior video SVD
 
 end
 

@@ -106,7 +106,7 @@ for j = 1:length(mice)
             plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k');
         end
             if v > 0
-                contourf(test, [v v], 'FaceAlpha', 0.25)
+                contourf(a{i}(:,:,j).*j, [j-0.1 j-0.1], 'FaceAlpha', 0.25)
     
                 title(vars(i));
             else

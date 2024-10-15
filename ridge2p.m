@@ -46,6 +46,7 @@ bopts.folds = 10; %nr of folds for cross-validation
 
 % use only first frame times
 bmat = zeros(size(events,1), sum(~strcmp(events.Properties.VariableNames, 'Video End')));
+count = 1;
 for i = 1:size(b_idx,2)
     if strcmp(events.Properties.VariableNames{i}, 'Video End')
         continue
@@ -53,7 +54,9 @@ for i = 1:size(b_idx,2)
         continue
         bmat(:,i) = table2array(events(:,i));        
     else
+        behaviors(:, count) = table2array(events(:,i));
         bmat(b_idx{i}(:,1),i) = 1;
+        count = count + 1;
     end
 end
 
@@ -63,14 +66,14 @@ end
 % consolidate Asymmetric, Bilateral, and Elliptical movements since those
 % appear similar in the behavior clustering (louvain) and large bilateral events
 % tend to be extremely rare, so this makes it easier for cross-validation
-bilat_vars = {'Elliptical', 'Right Asymmetric', 'Left Asymmetric', 'Bilateral'};
-bilat_idx = [];
-for i = 1 :length(bilat_vars)
-    bilat_idx = [bilat_idx, find(strcmp(events.Properties.VariableNames, bilat_vars{i}))];
-end
-bilat = any(bmat(:, bilat_idx),2);
-bmat(:, bilat_idx) = [];
-bmat = [bmat, bilat];
+% bilat_vars = {'Elliptical', 'Right Asymmetric', 'Left Asymmetric', 'Bilateral'};
+% bilat_idx = [];
+% for i = 1 :length(bilat_vars)
+%     bilat_idx = [bilat_idx, find(strcmp(events.Properties.VariableNames, bilat_vars{i}))];
+% end
+% bilat = any(bmat(:, bilat_idx),2);
+% bmat(:, bilat_idx) = [];
+% bmat = [bmat, bilat];
 
 
 % get rid of drop
@@ -88,16 +91,16 @@ for ii = 1:size(events,2)
         reg_type = [reg_type 2];
     elseif strcmp(events.Properties.VariableNames{ii}, 'Video End')
         continue
-    elseif any(strcmp(bilat_vars, events.Properties.VariableNames{ii}))
-        continue
+%     elseif any(strcmp(bilat_vars, events.Properties.VariableNames{ii}))
+%         continue
     else
         reg_type = [reg_type 3];
     end
     regLabels = [regLabels, events.Properties.VariableNames{ii}];
 end
 
-reg_type = [reg_type, 3]; % add another motor term for the consolidated bilateral movements
-regLabels = [regLabels, {'Bilateral'}];
+% reg_type = [reg_type, 3]; % add another motor term for the consolidated bilateral movements
+% regLabels = [regLabels, {'Bilateral'}];
 
 %% load audio and valve open information
 
@@ -108,11 +111,19 @@ valve = test(1:vid_end,6);
 flrthresh = flrv>mean(flrv) + std(flrv);
 fllthresh = fllv>mean(fllv) + std(fllv);
 
+behaviors = [behaviors, flrthresh, fllthresh];
+
 % get time on for all movement and audio/valve data
 audio = get_on_time(audio);
 valve = get_on_time(valve);
 flrthresh = get_on_time(flrthresh);
 flllthresh = get_on_time(fllthresh);
+
+%% 
+% concatenate FL movements as binary variables
+bmat = [bmat flrthresh fllthresh];
+reg_type = [reg_type 3 3];
+regLabels = [regLabels, 'FLR', 'FLL'];
 
 %%
 % concatenate 2 STIMULUS variable types for audio tone and valve opening
@@ -128,15 +139,20 @@ regLabels = ['audio', 'valve', regLabels];
 % regLabels = events.Properties.VariableNames(2:end-1);
 
 
+[~, activity_timer] = start_timer(any(behaviors,2), 2, fs);
+activity_timer = activity_timer ./ fs;
+fullR = [dMat, activity_timer];
+regIdx = [regIdx; max(regIdx)+1];
+regLabels = [regLabels, 'Timer'];
 
 
 % add forelimb movements to the design matrix as continuous variables
 % fullR = [dMat flrv fllv];
+% regIdx = [regIdx; max(regIdx)+1; max(regIdx)+2]; %regressor index
 
-fullR = [dMat, flrv, fllv];
 
-regIdx = [regIdx; max(regIdx)+1; max(regIdx)+2]; %regressor index
-regLabels = [regLabels, 'FLR', 'FLL'];
+
+% regLabels = [regLabels, 'FLR', 'FLL'];
 % regLabels = [regLabels, 'rFLv', 'lFLv'];
 
 
@@ -401,5 +417,25 @@ d = diff(data);
 t_on = find(d>0)+ 1;
 
 new_dat(t_on) = 1;
+
+end
+
+
+function [start_idx, behavior_timer] = start_timer(data, k, fs)
+% takes a binary event vector (data) and aggregation window size (k) in
+% seconds
+% aggregates all behavior events and creates a linear ramp
+% also outputs start of each aggregated behavior session
+
+
+idx = arr2idx(aggregate(data, k, fs));
+start_idx = zeros(size(data));
+start_idx(idx(:,1)) = 1;
+
+behavior_timer = zeros(size(data));
+for i = 1:size(idx,1)
+    tmp = 1:(idx(i,2)-idx(i,1))+1;
+    behavior_timer(idx(i,1):idx(i,2)) = tmp;
+end
 
 end

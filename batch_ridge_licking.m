@@ -83,6 +83,8 @@ for j = ger2_idx
             
             fullMat = modelCorr(Vmaster,Vfull,Umaster) .^2;
 
+            break
+
             disp('Running reduced models')
             reducedMat = [];
             for i = 1:length(regLabels)
@@ -215,7 +217,7 @@ end
 
 fullLabels
 visual = true;
-cBetaRight = check_beta('Timer', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, [], visual);
+cBetaRight = check_beta('Lick', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, [], visual);
 
 %%
 
@@ -228,29 +230,32 @@ plot(xt(test, fs), squeeze(mean(test2, [1, 2]))), hold on,
 %%
 
 % figure
-
-for i = 11
+fs = 90;
+fullLabels
+for i = 14
     
     test = reshape(Umaster*fullBeta{1}(fullIdx==i,:)', 128, 128, []);
     indices = floor(1:fs/4:size(test,3));
     if size(test,3)>1
-        figure, imagesc(imtile(test, 'Frames', indices, 'GridSize', [1 length(indices)]))
+        figure, imagesc(imtile(test.*mask, 'Frames', indices, 'GridSize', [1 length(indices)]))
         yticks([]);
         xticks((128:256:11*256)/2)
         xticklabels(-0.5:0.25:2)
+        caxis([-max(abs(clim)) max(abs(clim))]);
         colormap(bluewhitered())
         c=colorbar;
-        c.Label.String = 'Beta Kernel';
+        c.Label.String = 'Beta';
+        c.FontSize = 12;
         xlabel('Time (s)')
     else
-        figure, imagesc(test)
+        figure, imagesc(test.*mask)
         xticks([])
         yticks([])
         caxis([-max(abs(clim)) max(abs(clim))]);
         colormap(bluewhitered())
         c=colorbar;
         c.Label.String = 'Beta';
-        c.Label.FontSize = 14;
+        c.FontSize = 14;
     end
 end
 
