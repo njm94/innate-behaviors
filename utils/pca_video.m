@@ -11,6 +11,9 @@ function numComponents = pca_video(video, N)
     % Reshape the video to 2D: each column is a flattened frame
     video_reshaped = reshape(video, H*W, T);
 
+    % If video contains nans, remove those
+    video_reshaped(isnan(video_reshaped(:,1)), :) = [];
+
     % Perform PCA (using 'econ' to calculate only the necessary number of components)
     [~, ~, latent] = pca(video_reshaped', 'economy', true); % Transpose for PCA
 

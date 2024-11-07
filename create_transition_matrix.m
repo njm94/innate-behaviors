@@ -237,7 +237,7 @@ plot(test_gamma, num_uniq)
 % dat = B(2:6, 2:6, 1);
 dat = B;
 
-[M,Q]=community_louvain(dat, 0.9);
+[M,Q]=community_louvain(dat, 1);
 % [M,Q]=community_louvain(btest);
 
 cols = zeros(length(M), 3);

@@ -11,14 +11,15 @@ formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 data_list = data_list{1};
 
-ger2_idx = 1:11;
-hyl3_idx = 52:56;
-ecr2_idx = 57:59;
+ger2_idx = 1:18;
+hyl3_idx = 22:34;
+ecr2_idx = 35:46;
 
 
 current_mouse = '';
 
 %%
+win_length = 5;
 k = 0.2;
 for j = ger2_idx
      try
@@ -131,12 +132,18 @@ for j = ger2_idx
         count = 1;
         disp('Loading master basis set')
         load([mouse_root_dir filesep 'Umaster.mat'])
+        % draw mask - might be needed for memory management
+        if ~isfile([mouse_root_dir filesep 'mask.mat'])
+            frame = loadtiff([mouse_root_dir filesep 'template.tif']);
+            mask = draw_roi(frame, 2);
+            save([mouse_root_dir filesep 'mask.mat'], 'mask')
+        else
+            load([mouse_root_dir filesep 'mask.mat'])
+        end
         clear Vmaster ipsi contra bilat fll_move flr_move audio_tone water_drop
         current_mouse = mouse_id;
 
-        %     %% draw mask - might be needed for memory management
-        %     frame = loadtiff(frame_file);
-        %     mask = draw_roi(frame, 4);
+        
     else
         fPath = [mouse_root_dir filesep 'outputs' filesep];
     end
@@ -206,6 +213,39 @@ for j = ger2_idx
 %     lick_duration = b_idx{1}(end,end)-b_idx{1}(1,1);
 %     lick_timer{count} = zeros(size(mvtOn{count}));
 %     lick_timer{count}(b_idx{1}(1,1):b_idx{1}(end,end)) = 1:lick_duration+1;
+
+    
+
+    dataR = reshape(Umaster*Vmaster{count}, 128, 128, []);
+    dFF = zscore((dataR-min(dataR(:))./mean(dataR - min(dataR(:)), 3))-1, [], 3);
+    
+%     nanmask = mask;
+%     nanmask(nanmask==0) = nan;
+    dFF = dFF.*mask;
+
+
+    for i = 1:size(dFF,3)
+        pc99{j}(i) = pca_image(dFF(:,:,i), 99);
+    end
+    
+%     stepsize = round(1 * fs);
+%     step_count = 1;
+%     for i = 1:stepsize:size(dFF,3)-round(win_length * fs)
+%         pc99{j}(step_count) = pca_video(dFF(:, :, i:i+round(win_length * fs)), 99);
+%         step_count = step_count + 1;
+%     end
+
+    figure, 
+%     hold on
+%     yyaxis left
+    subplot(2,1,1)
+    plot(xt(dFF, fs, 3), squeeze(nanmean(dFF, [1 2])))
+    axis tight
+    tvec = xt(pc99{j}, fs/win_length);
+%     yyaxis right
+    subplot(2,1,2)
+    plot(pc99{j})
+    axis tight
 
     count = count + 1;
 
