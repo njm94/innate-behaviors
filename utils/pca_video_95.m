@@ -1,10 +1,7 @@
-<<<<<<< Updated upstream
-function numComponents = pca_video(video, N)
-=======
-function numComponents = pca_video_95(video)
->>>>>>> Stashed changes
+function numComponents = pca_video_complexity(video, N)
     % Input:
     % video: HxWxT video where H is height, W is width, T is number of frames
+    % N:     Percentage of variance trying to achieve
     %
     % Output:
     % numComponents: The number of principal components that explain 90% of the variance
@@ -22,9 +19,5 @@ function numComponents = pca_video_95(video)
     explained_variance = cumsum(latent) / sum(latent);
 
     % Find the number of components that explain 90% of the variance
-<<<<<<< Updated upstream
     numComponents = find(explained_variance >= N/100, 1);
-=======
-    numComponents = find(explained_variance >= 0.95, 1);
->>>>>>> Stashed changes
 end

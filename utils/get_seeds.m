@@ -1,6 +1,10 @@
 function [seeds, labels] = get_seeds()
 
-load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
+if ~isunix
+    load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
+else
+    load('/home/user/Documents/grooming/utils/allen_map/allenDorsalMap.mat')
+end
 midline = round(size(dorsalMaps.dorsalMapScaled, 2)/2);
 
 
