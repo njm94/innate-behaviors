@@ -142,7 +142,6 @@ for j = 1:length(b)
         axis([200 460 20 270])
     end
 
-
 fig = gcf;
 fig.Renderer = 'Painters';
 exportgraphics(gcf, ['Y:\nick\behavior\grooming\figures\', char(anno(j)),'.png'], 'Resolution', 300)

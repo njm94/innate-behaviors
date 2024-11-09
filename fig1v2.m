@@ -32,8 +32,8 @@ mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
-% data_list{1} = [data_list{1}; mp_list];
-data_list{1} = data_list{1};
+data_list{1} = [data_list{1}; mp_list];
+% data_list{1} = data_list{1};
 
 fs = 90 ;
 % [b, a] = butter(2, 0.01/(fs/2), 'high');
