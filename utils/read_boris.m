@@ -1,4 +1,4 @@
-function [events, b_idx, t] = read_boris(boris_tsv, len)
+function [events, b_idx, t, video_end] = read_boris(boris_tsv, len)
 % Reads the annotated BORIS file to extract behaviors
 %
 % Input:
@@ -12,6 +12,7 @@ function [events, b_idx, t] = read_boris(boris_tsv, len)
 %       events          (Binary table [trial_length x num_behaviors])
 %       b_idx           (Cell array of event indices [trial_length x 1])
 %       t               (Raw table)
+%       video_end       (Ending frame)
 %
 % Usage: 
 %       [events, b_idx, t] = read_boris(boris_tsv);
@@ -30,6 +31,14 @@ t.ImageIndex = t.ImageIndex + 1;
 annotations = unique(t.Behavior);
 events = zeros(length(annotations), len);
 b_idx = cell(1,length(annotations));
+
+% By default set video end to last detected behavior
+if any(strcmp(annotations, 'Video End'))
+    video_end = t.ImageIndex(strcmp(t.Behavior, 'Video End'));
+else
+    disp('Video end was not labelled in Boris. Using last behavior as end')
+    video_end = t.ImageIndex(end);
+end
 
 % Populate event vector
 for i = 1:length(annotations)
