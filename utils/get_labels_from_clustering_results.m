@@ -20,9 +20,11 @@ function [events, b_idx, t, video_end, cluster_labels] = get_labels_from_cluster
 % umap_file = fix_path('Y:\nick\behavior\grooming\220241108104909_behavior_clustering.mat');
 umap_results = load(cluster_data);
 
-% label map
-label_map = ["Right", "Left", "Elliptical Asymmetric", ...
-    "Left Asymmetric", "Right Asymmetric", "Elliptical"];
+% map dendrogram labels to behaviors - Note this is subject to change based
+% on the ordering of the output labels from the dendrogram in python
+% script. Double check this.
+label_map = ["Right", "Left", "Left Asymmetric", ...
+    "Elliptical Asymmetric", "Right Asymmetric", "Elliptical"];
 
 % get video end information from boris
 [~, ~, t, video_end] = read_boris(boris_tsv);

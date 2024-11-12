@@ -160,8 +160,9 @@ for j = 1:length(data_list{1})%mp_idx %23:length(data_list{1})+1
     lick_events = events(:,contains(events.Properties.VariableNames, 'Lick'));
     lick_events = any(table2array(lick_events),2);
 
-    % remove lick and point events from event matrix
+    % remove lick, flail, and point events from event matrix
     idx = contains(events.Properties.VariableNames, 'Lick') | ...
+        contains(events.Properties.VariableNames, 'Flail') | ...
         contains(events.Properties.VariableNames, 'Drop') | ...
         contains(events.Properties.VariableNames, 'Video');
     stroke_events = removevars(events, idx);
@@ -388,7 +389,8 @@ featureMat = zscore([behavior_duration, l_paw_xrange, l_paw_yrange, fll_ypos_sta
 
 %%
 disp('Saving')
-save('/media/user/teamshare/nick/behavior/grooming/umap_test.mat', 'featureMat', 'bFilepath', 'behavior_label', 'behavior_index')
+timenow = char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss'));
+save(['/media/user/teamshare/nick/behavior/grooming/', timenow, '_umap_test.mat'], 'featureMat', 'bFilepath', 'behavior_label', 'behavior_index')
 
 
 

@@ -30,7 +30,7 @@ mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
-cluster_data = 'Y:\nick\behavior\grooming\20241108104909_behavior_clustering.mat';
+cluster_data = fix_path('Y:\nick\behavior\grooming\20241112141427_behavior_clustering.mat');
 % data_list{1} = mp_list;
 
 fs = 90 ;
@@ -62,7 +62,7 @@ tmat = zeros(numel(states), numel(states), N);
 episode_durations = cell(1, N);
 
 for j = 1:N
-    data_dir = data_list{1}{j};
+    data_dir = fix_path(data_list{1}{j});
     timestamp_file = [data_dir, filesep, getAllFiles(data_dir, '_trim.txt')];
     [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
     [~, mouse_id, ~] = fileparts(mouse_root_dir);
@@ -140,7 +140,7 @@ end
 
 %% Create conditional probability matrix from transition matrix
 
-figure,
+figure('Position', [161 368 1261 495])
 
 subplot(1,2,1), imagesc(mean(tmat,3))
 colormap(flipud(colormap('gray'))), 
@@ -170,6 +170,9 @@ yticklabels(states)
 ylabel('From', 'FontSize', 14)
 xlabel('To', 'FontSize', 14)
 
+% ax = gca;
+% exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.png']), 'Resolution', 300)
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.svg']))
 %%
 
 
@@ -205,7 +208,7 @@ yticklabels(states)
 % dat = B(2:6, 2:6, 1);
 dat = B;
 
-[M,Q]=community_louvain(dat, 1);
+[M,Q]=community_louvain(dat);
 
 cols = zeros(length(M), 3);
 col1 = [0 0.4470 0.7410];
@@ -224,19 +227,19 @@ for i = 1:length(M)
     end
 end
 pgraph = digraph(dat);
-% pgraph = digraph(B(2:6, 2:6));
-% pgraph = digraph(B);
-% pgraph = digraph(btest);
-figure, plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*10, ...
+
+figure('Position', [395 75 1092 833]), 
+plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*10, ...
     'NodeColor', cols, 'NodeFontSize', 15, ...
     'EdgeColor', 'k', 'ArrowSize', 15, ...
-    'NodeLabel',states,...states(2:6), ... states,
-    'Layout', 'force')%, 'WeightEffect', 'inverse')
+    'NodeLabel',states, ...
+    'Layout', 'force', 'WeightEffect', 'inverse')
 axis off
 
 
-
-
+ax = gca;
+exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.png']), 'Resolution', 300)
+saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.svg']))
 %% 
 function [y,x] = set_xy_states(last_state, current_state, state_order)
         stat_idx = find(strcmpi(state_order, 'Stationary'));

@@ -1,20 +1,30 @@
 % This code will read the clustered behaviors and generate figure 1
 addpath('/home/user/Documents/grooming/utils')
-load(fix_path('Y:\nick\behavior\grooming\20241108104909_behavior_clustering.mat'))
+load(fix_path('Y:\nick\behavior\grooming\20241112141427_behavior_clustering.mat'))
 
-figure, hold on
+
+% map dendrogram labels to behaviors - Note this is subject to change based
+% on the ordering of the output labels from the dendrogram in python
+% script. Double check this.
+label_map = ["Right", "Left", "Left Asymmetric", ...
+    "Elliptical Asymmetric", "Right Asymmetric", "Elliptical"];
+
+
+
+figure, hold on, 
 % show UMAP embedding
 
 labs = unique(dendrogram_labels);
 for i = 1:length(labs)
     scatter(embedding(dendrogram_labels==labs(i),1), embedding(dendrogram_labels==labs(i),2),'.')
-    axis off
+    axis off equal
 end
+ax = gca;
+
+% exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','UMAP', '.png']), 'Resolution', 300)
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','UMAP', '.svg']))
 
 %%
-% map dendrogram labels to behaviors
-label_map = ["Right", "Left", "Elliptical Asymmetric", ...
-    "Left Asymmetric", "Right Asymmetric", "Elliptical"];
 
 clc, close all
 % get the example images
@@ -109,7 +119,7 @@ for i = 1:length(label_map)
     ax = gca;
 %     exportgraphics(ax, append('Y:\nick\behavior\grooming\figures', label_map(i),'.eps'), 'ContentType', 'vector')
     % exportgraphics(ax, append('Y:\nick\behavior\grooming\figures\', label_map(i),'.png'), 'Resolution', 300)
-    saveas(ax, fix_path(append('Y:\nick\behavior\grooming\figures\',label_map(i), '.pdf')))
+    % saveas(ax, fix_path(append('Y:\nick\behavior\grooming\figures\',label_map(i), '.pdf')))
 
 end
 

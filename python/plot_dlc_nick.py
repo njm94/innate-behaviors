@@ -71,6 +71,7 @@ for expt in tqdm(data_list):
             df_acc.to_csv(dlc_file.replace('.h5','_acc.csv'), index = False)
             df_speed.to_csv(dlc_file.replace('.h5','_speed.csv'), index = False)
         else:
+            print(mouse_id + os.sep + rec_dir)
             print('DLC csv files already created')
 
         
