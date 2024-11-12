@@ -3,7 +3,7 @@ function [behaviors, annotations, vPaths] = parse_snippets(snippets_dir)
 %   [behaviors, annotations, vPaths] = parse_snippets(snippets_dir)
 
 % annotations = ["Left", "Right", "Elliptical", "LargeLeft", "LargeRight", "LargeBilateral", "Lick"];
-annotations = ["elliptical", "largeleft", "largeright", "largebilateral", "left", "right", "lick"];
+annotations = ["elliptical", "largeleft", "largeright", "largebilateral", "left", "right", "lick", 'bilateral'];
 
 snippets = convertCharsToStrings(getAllFiles(snippets_dir, '.tif'));
 snippets(contains(snippets, 'discard')) = [];
@@ -41,6 +41,6 @@ function [behaviors, vPaths] = prune_snippets(snippets, annotations)
     snippets(index) = [];
 
     if ~isempty(snippets)
-        error(['Improperly labeled behavior annotation was detected: ', snippets{:}])
+        disp(['Improperly labeled behavior annotation was detected: ', snippets{:}])
     end
 end

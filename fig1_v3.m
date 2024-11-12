@@ -1,6 +1,6 @@
 % This code will read the clustered behaviors and generate figure 1
-
-load('Y:\nick\behavior\grooming\20241108104909_behavior_clustering.mat')
+addpath('/home/user/Documents/grooming/utils')
+load(fix_path('Y:\nick\behavior\grooming\20241108104909_behavior_clustering.mat'))
 
 figure, hold on
 % show UMAP embedding
@@ -71,7 +71,7 @@ counter = zeros(length(labs),1);
 
 for i = 1:size(behavior_files,1)
     % load DLC tracks
-    data_root = fileparts(behavior_files(i,:));
+    data_root = fix_path(fileparts(behavior_files{i,:}));
     dlc_pos = readmatrix([data_root, filesep, getAllFiles(data_root, '1030000.csv')]);
     nose_x = median(dlc_pos(:,1));
     nose_y = median(dlc_pos(:,2));
@@ -93,7 +93,7 @@ for i = 1:size(behavior_files,1)
         figure(j),
         for k = 1:length(clus_j)
             counter(j) = counter(j)+1;
-            if counter(j)>200, continue; end
+            if counter(j)>50, continue; end
             plot(nose_ref_x(j)-151-flr_x(bIdx(clus_j(k),1):bIdx(clus_j(k),2)), nose_ref_y(j)+flr_y(bIdx(clus_j(k),1):bIdx(clus_j(k),2)), 'Color', [1 0 1 0.15])
             plot(nose_ref_x(j)-151-fll_x(bIdx(clus_j(k),1):bIdx(clus_j(k),2)), nose_ref_y(j)+fll_y(bIdx(clus_j(k),1):bIdx(clus_j(k),2)), 'Color', [0 1 1 0.15])
         end
@@ -105,12 +105,221 @@ end
 
 for i = 1:length(label_map)
     figure(i);
-    axis([0, 300, 0, 300])
+    % axis([0, 300, 0, 300])
     ax = gca;
 %     exportgraphics(ax, append('Y:\nick\behavior\grooming\figures', label_map(i),'.eps'), 'ContentType', 'vector')
-    exportgraphics(ax, append('Y:\nick\behavior\grooming\figures\', label_map(i),'.png'), 'Resolution', 300)
+    % exportgraphics(ax, append('Y:\nick\behavior\grooming\figures\', label_map(i),'.png'), 'Resolution', 300)
+    saveas(ax, fix_path(append('Y:\nick\behavior\grooming\figures\',label_map(i), '.pdf')))
 
 end
 
+%% get data for behavior event quantifications
+
+fileID = fopen('expt1_datalist.txt','r');
+
+formatSpec = '%s';
+data_list = textscan(fileID, formatSpec);
+current_mouse = ''; 
+addpath('C:\Users\user\Documents\Nick\grooming\deprecated')
+
+% Notes on 2p data
+% ETR2 and ETR3 had corrupted videos for spontaneous trials, so we will
+% just use evoked videos
+%
+% ECL3, IDR3, and RR3 have 3 days of spontaneous behavior - use last 2 days
+% for the timeline plot. The spontaneous data may not have Boris labelling.
+% Use the snippets data instead. Also these mice have longer baselines in
+% the evoked trials. (5mins in these mice vs 30s in the 1p mice). 
+% They don't do any grooming anyway so should be comparable
+%
+% ECL3 20240729 corrupted synchronization between brain and behavior. Can't
+% use the brain data with grooming together but grooming alone should be ok
+
+mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; 
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; 
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'; 
+    '/media/user/teamshare/nick/behavior/grooming/2p/ECL3_thy1/20240722/';
+    '/media/user/teamshare/nick/behavior/grooming/2p/ECL3_thy1/20240724/';
+    '/media/user/teamshare/nick/behavior/grooming/2p/ECL3_thy1/20240726/';
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; 
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802';
+    '/media/user/teamshare/nick/behavior/grooming/2p/IDR3_tTA6s/20240722/';
+    '/media/user/teamshare/nick/behavior/grooming/2p/IDR3_tTA6s/20240724/';
+    '/media/user/teamshare/nick/behavior/grooming/2p/IDR3_tTA6s/20240726/';
+    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240729';
+    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240731';
+    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240802';
+    '/media/user/teamshare/nick/behavior/grooming/2p/RR3_tTA8s/20240722/';
+    '/media/user/teamshare/nick/behavior/grooming/2p/RR3_tTA8s/20240724/';
+    '/media/user/teamshare/nick/behavior/grooming/2p/RR3_tTA8s/20240726/';
+    'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
+    'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
+
+data_list{1} = [data_list{1}; mp_list];
+for i = 1:size(data_list{1},1)
+    data_list{1}{i} = fix_path(data_list{1}{i});
+end
 
 
+% make behavior event raster
+spon_index = [1,2,8,9,14,15,20,21,29:31,35:37,41:43];
+evoked_index = ones(size(data_list{1}));
+evoked_index(spon_index) = 0;
+evoked_index = find(evoked_index);
+
+% The following videos had issues upon acquisition where they are about 1
+% minute shorter than the rest. This will make it difficult to visualize
+% them in the raster since they are not properly aligned. Exclude from
+% visualization, but we will keep them in the quanitification
+exclude_for_raster = [26, 32, 42];
+
+%%
+
+aggregation_sz = 3;
+
+N = length(data_list{1});
+
+num_episodes = zeros(N, 1);
+
+
+% use the Boris labels (old script) since we don't care about the type of
+% grooming behavior here - just interested in episodes
+for j = 1:N
+    data_dir = data_list{1}{j};
+    timestamp_file = [data_dir, filesep, getAllFiles(data_dir, '_trim.txt')];
+    [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
+    [~, mouse_id, ~] = fileparts(mouse_root_dir);
+    [expt_root_dir, ~, ~] = fileparts(mouse_root_dir);
+    snippets_dir = [data_dir, filesep, 'snippets'];
+
+    timestamps = readmatrix(timestamp_file);
+    first_trial(j) = find(timestamps(:,3),1);
+
+    if ~isempty(getAllFiles(data_dir, '.tsv'))
+        boris_file = [data_dir, filesep, getAllFiles(data_dir, '.tsv')];
+        [events, snippets, b_table] = read_boris(boris_file);
+
+        % consolidate lick events
+        lick_idx = contains(events.Properties.VariableNames, 'Lick');
+        lick_events = events(:,lick_idx);
+        lick_events = any(table2array(lick_events),2);
+        
+        % remove lick and point events from event matrix
+        idx = contains(events.Properties.VariableNames, 'Lick') | ...
+            contains(events.Properties.VariableNames, 'Drop') | ...
+            contains(events.Properties.VariableNames, 'Video') | ...
+            contains(events.Properties.VariableNames, 'Flail') ;
+        stroke_events = removevars(events, idx);
+        bmat = any(table2array(stroke_events),2);
+        % snippets = arr2idx(bmat);
+    else 
+        
+        [snippets, labels] = parse_snippets(snippets_dir);
+
+        % remove licks
+        snippets(strcmpi(labels, 'lick')) = [];
+        bmat = idx2arr(catcell(1, snippets));
+
+    end
+
+
+    % num_events(j) = cellfun(@(data) size(data, 1), snippets);
+    if isempty(bmat)
+        event_raster{j} = 0;
+        num_episodes(j) = 0;
+    else
+        [event_raster{j}, idx] = aggregate(bmat, aggregation_sz);
+        num_episodes(j) = size(idx,1);
+    end
+    
+end
+
+
+%% align to max length trial, since some have longer baseline
+
+tlen = cellfun(@(x) size(x, 1), event_raster);
+[tlen, I] = max(tlen);
+
+clear raster_mat
+
+% align everything to latest first trial
+tstart = max(first_trial);
+
+raster_mat = zeros(length(data_list{1})-length(exclude_for_raster), tlen);
+count = 1;
+for i = 1:length(spon_index)
+    if any(exclude_for_raster==i)
+        continue
+    end
+    iStart = first_trial(spon_index(i));
+    iRaster = event_raster{spon_index(i)};
+    if length(iRaster) == 1
+        raster_mat(count, :) = 0;
+    else
+        raster_mat(count, tstart-(iStart-1):tstart+length(iRaster)-iStart) = iRaster;
+    end
+    count = count + 1;
+end
+figure, imagesc(1-raster_mat), colormap gray
+%%
+for i = 1:length(evoked_index)
+    if any(exclude_for_raster==i)
+        continue
+    end
+    iStart = first_trial(evoked_index(i));
+    iRaster = event_raster{evoked_index(i)};
+    if length(iRaster) == 1
+        raster_mat(count, :) = 0;
+    else
+        raster_mat(count, tstart-(iStart-1):tstart+length(iRaster)-iStart) = iRaster;
+    end
+    count = count + 1;
+end
+figure, imagesc(1-raster_mat), colormap gray
+
+%%
+
+tlen = cellfun(@(x) size(x, 1), event_raster);
+tlen = min(tlen(tlen>1));
+
+% add event rasters from the back since the baseline durations are variable
+% for some experiments
+clear raster_mat
+
+for i  = 1:length(event_raster)
+    if length(event_raster{i}) == 1
+        raster_mat(i,:) = zeros(1, tlen);
+    else
+        raster_mat(i,:) = event_raster{i}(end-tlen+1:end);
+    end
+end
+
+
+%%
+
+figure,
+imagesc(1-[raster_mat(spon_index,:); raster_mat(evoked_index,:)])
+colormap gray, 
+axis off
+y = [length(spon_index)+0.5, length(spon_index)+0.5, size(raster_mat,1)+0.5, size(raster_mat,1)+0.5];
+patch([0 size(raster_mat,2) size(raster_mat,2) 0], y, [0.3010 0.7450 0.9330], 'FaceAlpha', 0.1, 'EdgeColor', 'none')
+
+%%
+
+figure
+num_spon_events = num_episodes(spon_index);
+num_evoked_events = num_episodes(evoked_index);
+[h,p] = ttest2(num_spon_events, num_evoked_events);
+
+size_diff = length(num_evoked_events) - length(num_spon_events);
+num_spon_events = cat(1, num_spon_events, nan(size_diff, 1));
+data2plot = [num_spon_events, num_evoked_events];
+
+boxplot(data2plot, 'colors', 'kk', 'Labels',{'Spontaneous','Evoked'}, 'Symbol', '');
+ylabel('# Grooming episodes')
+hold on, swarmchart(ones(size(num_spon_events))+0.3, num_spon_events, 'ko', 'XJitterWidth', 0.25)
+swarmchart(ones(size(num_evoked_events))+1.3, num_evoked_events, 'ko', 'XJitterWidth', 0.25)
+ax = gca;
+ax.FontSize = 12;
+title(['p=', num2str(p)])
