@@ -178,11 +178,11 @@ evoked_index = ones(size(data_list{1}));
 evoked_index(spon_index) = 0;
 evoked_index = find(evoked_index);
 
-% The following videos had issues upon acquisition where they are about 1
-% minute shorter than the rest. This will make it difficult to visualize
-% them in the raster since they are not properly aligned. Exclude from
-% visualization, but we will keep them in the quanitification
-exclude_for_raster = [26, 32, 42];
+% % The following videos had issues upon acquisition where they are about 1
+% % minute shorter than the rest. This will make it difficult to visualize
+% % them in the raster since they are not properly aligned. Exclude from
+% % visualization, but we will keep them in the quanitification
+% exclude_for_raster = [26, 32, 42];
 
 %%
 
@@ -246,60 +246,69 @@ for j = 1:N
 end
 
 
-%% align to max length trial, since some have longer baseline
+% %% align all trials
+% 
+
+% % that should all remain the same
+% tlen = cellfun(@(x) size(x, 1), event_raster);
+% [tlen, I] = median(tlen);
+% 
+% 
+% clear raster_mat
+% 
+% % align everything to latest first trial
+% tstart = max(first_trial);
+% 
+% raster_mat = zeros(length(data_list{1})-length(exclude_for_raster), tlen);
+% count = 1;
+% for i = 1:length(spon_index)
+%     if any(exclude_for_raster==i)
+%         continue
+%     end
+%     iStart = first_trial(spon_index(i));
+%     iRaster = event_raster{spon_index(i)};
+%     if length(iRaster) == 1
+%         raster_mat(count, :) = 0;
+%     else
+%         raster_mat(count, tstart-(iStart-1):tstart+length(iRaster)-iStart) = iRaster;
+%     end
+%     count = count + 1;
+% end
+% figure, imagesc(1-raster_mat), colormap gray
+% %%
+% for i = 1:length(evoked_index)
+%     if any(exclude_for_raster==i)
+%         continue
+%     end
+%     iStart = first_trial(evoked_index(i));
+%     iRaster = event_raster{evoked_index(i)};
+%     if length(iRaster) == 1
+%         raster_mat(count, :) = 0;
+%     else
+%         raster_mat(count, tstart-(iStart-1):tstart+length(iRaster)-iStart) = iRaster;
+%     end
+%     count = count + 1;
+% end
+% figure, imagesc(1-raster_mat), colormap gray
+
+%% Align all trials
+
+% the last cohort of 2p data mice have 5 minute baseline periods rather
+% than 30s baseline periods like all the other mice. Use the 30s period, so
+% the raster is comparable across all animals. Align them by the end, and
+% they will line up better
 
 tlen = cellfun(@(x) size(x, 1), event_raster);
-[tlen, I] = max(tlen);
+tlen = median(tlen);
 
-clear raster_mat
 
-% align everything to latest first trial
-tstart = max(first_trial);
-
-raster_mat = zeros(length(data_list{1})-length(exclude_for_raster), tlen);
-count = 1;
-for i = 1:length(spon_index)
-    if any(exclude_for_raster==i)
-        continue
-    end
-    iStart = first_trial(spon_index(i));
-    iRaster = event_raster{spon_index(i)};
-    if length(iRaster) == 1
-        raster_mat(count, :) = 0;
-    else
-        raster_mat(count, tstart-(iStart-1):tstart+length(iRaster)-iStart) = iRaster;
-    end
-    count = count + 1;
-end
-figure, imagesc(1-raster_mat), colormap gray
-%%
-for i = 1:length(evoked_index)
-    if any(exclude_for_raster==i)
-        continue
-    end
-    iStart = first_trial(evoked_index(i));
-    iRaster = event_raster{evoked_index(i)};
-    if length(iRaster) == 1
-        raster_mat(count, :) = 0;
-    else
-        raster_mat(count, tstart-(iStart-1):tstart+length(iRaster)-iStart) = iRaster;
-    end
-    count = count + 1;
-end
-figure, imagesc(1-raster_mat), colormap gray
-
-%%
-
-tlen = cellfun(@(x) size(x, 1), event_raster);
-tlen = min(tlen(tlen>1));
-
-% add event rasters from the back since the baseline durations are variable
-% for some experiments
 clear raster_mat
 
 for i  = 1:length(event_raster)
-    if length(event_raster{i}) == 1
+    if length(event_raster{i}) == 1 % no grooming instances in the session
         raster_mat(i,:) = zeros(1, tlen);
+    elseif length(event_raster{i}) < tlen
+        raster_mat(i,:) = [zeros(tlen-length(event_raster{i}),1); event_raster{i}];
     else
         raster_mat(i,:) = event_raster{i}(end-tlen+1:end);
     end
@@ -309,11 +318,27 @@ end
 %%
 
 figure,
+subplot(2,1,1)
 imagesc(1-[raster_mat(spon_index,:); raster_mat(evoked_index,:)])
 colormap gray, 
 axis off
 y = [length(spon_index)+0.5, length(spon_index)+0.5, size(raster_mat,1)+0.5, size(raster_mat,1)+0.5];
 patch([0 size(raster_mat,2) size(raster_mat,2) 0], y, [0.3010 0.7450 0.9330], 'FaceAlpha', 0.1, 'EdgeColor', 'none')
+% hold on
+
+p_evoked = smoothdata(mean(raster_mat(evoked_index,:)));
+p_spon = smoothdata(mean(raster_mat(spon_index,:)));
+t = xt(p_evoked, fs);
+subplot(2,1,2), hold on
+plot(t, p_evoked, 'LineWidth', 2)
+plot(t, p_spon, 'k', 'LineWidth', 2)
+
+drop = 30:60:t(end);
+for i = 1:length(drop)
+    vline(drop, 'k:')
+end
+axis tight
+
 
 %%
 

@@ -1,8 +1,6 @@
 
 %% 
-addpath('C:\Users\user\Documents\Nick\ridgeModel');
-addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
-addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
+
 addpath('C:\Users\user\Documents\Nick\grooming\utils')
 addpath('C:\Users\user\Documents\Nick\grooming\utils\layoutCode')
 

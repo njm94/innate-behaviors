@@ -170,7 +170,7 @@ yticklabels(states)
 ylabel('From', 'FontSize', 14)
 xlabel('To', 'FontSize', 14)
 
-% ax = gca;
+% ax = gcf;
 % exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.png']), 'Resolution', 300)
 % saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.svg']))
 %%
