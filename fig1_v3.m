@@ -5,8 +5,8 @@ load(fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat'
 % map dendrogram labels to behaviors - Note this is subject to change based
 % on the ordering of the output labels from the dendrogram in python
 % script. Double check this.
-label_map = ["Right", "Left", "Left Asymmetric", ...
-    "Elliptical Asymmetric", "Right Asymmetric", "Elliptical"];
+label_map = ["Right", "Left", "Left Asymmetric", "Elliptical Left", ... 
+    "Elliptical Right", "Right Asymmetric", "Elliptical"];
 
 figure, hold on, 
 % show UMAP embedding
@@ -18,8 +18,8 @@ for i = 1:length(labs)
 end
 ax = gca;
 
-exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','UMAP', '.png']), 'Resolution', 300)
-saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','UMAP', '.svg']))
+% exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','UMAP', '.png']), 'Resolution', 300)
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','UMAP', '.svg']))
 
 %%
 
@@ -48,7 +48,7 @@ for i = 1:length(label_map)
     % brighter than the others, so adjustment is a bit different
     img = log(double(img(nose_ref_y(i)-100:nose_ref_y(i)+200, nose_ref_x(i)-150:nose_ref_x(i) + 150)));
     img = 255*img./max(img(:));
-    if strcmpi(label_map(i), 'Elliptical Asymmetric')
+    if strcmpi(label_map(i), 'Elliptical Left') | strcmpi(label_map(i), 'Elliptical Right')
         img(img<130) = 130;
     else
         img(img<100) = 100;
@@ -115,8 +115,7 @@ for i = 1:length(label_map)
     % axis([0, 300, 0, 300])
     ax = gca;
 %     exportgraphics(ax, append('Y:\nick\behavior\grooming\figures', label_map(i),'.eps'), 'ContentType', 'vector')
-    % exportgraphics(ax, append('Y:\nick\behavior\grooming\figures\', label_map(i),'.png'), 'Resolution', 300)
-    % saveas(ax, fix_path(append('Y:\nick\behavior\grooming\figures\',label_map(i), '.pdf')))
+    exportgraphics(ax, fix_path(append('Y:\nick\behavior\grooming\figures\', label_map(i),'.png')), 'Resolution', 300)
 
 end
 
@@ -240,52 +239,6 @@ for j = 1:N
     end
     
 end
-
-
-% %% align all trials
-% 
-
-% % that should all remain the same
-% tlen = cellfun(@(x) size(x, 1), event_raster);
-% [tlen, I] = median(tlen);
-% 
-% 
-% clear raster_mat
-% 
-% % align everything to latest first trial
-% tstart = max(first_trial);
-% 
-% raster_mat = zeros(length(data_list{1})-length(exclude_for_raster), tlen);
-% count = 1;
-% for i = 1:length(spon_index)
-%     if any(exclude_for_raster==i)
-%         continue
-%     end
-%     iStart = first_trial(spon_index(i));
-%     iRaster = event_raster{spon_index(i)};
-%     if length(iRaster) == 1
-%         raster_mat(count, :) = 0;
-%     else
-%         raster_mat(count, tstart-(iStart-1):tstart+length(iRaster)-iStart) = iRaster;
-%     end
-%     count = count + 1;
-% end
-% figure, imagesc(1-raster_mat), colormap gray
-% %%
-% for i = 1:length(evoked_index)
-%     if any(exclude_for_raster==i)
-%         continue
-%     end
-%     iStart = first_trial(evoked_index(i));
-%     iRaster = event_raster{evoked_index(i)};
-%     if length(iRaster) == 1
-%         raster_mat(count, :) = 0;
-%     else
-%         raster_mat(count, tstart-(iStart-1):tstart+length(iRaster)-iStart) = iRaster;
-%     end
-%     count = count + 1;
-% end
-% figure, imagesc(1-raster_mat), colormap gray
 
 %% Align all trials
 
@@ -413,3 +366,6 @@ ax.FontSize = 12;
 ax = gca;
 exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'rel_freq', '.png']), 'Resolution', 300)
 saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','rel_freq', '.svg']))
+
+%%
+

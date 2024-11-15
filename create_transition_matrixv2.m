@@ -30,7 +30,7 @@ mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
-cluster_data = fix_path('Y:\nick\behavior\grooming\20241112141427_behavior_clustering.mat');
+cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
 % data_list{1} = mp_list;
 
 fs = 90 ;
@@ -46,8 +46,15 @@ right_idx = [3:6,10:12,16:18,22:24];
 spontaneous = [1,2,8,9,14,15,20,21];
 evoked = [3:7,10:13,16:19,22:25];
 
-states = ["Stationary", "Elliptical", "Asymmetric", ...
-    "Elliptical Asymmetric", "Unilateral"];
+% states = ["Stationary", "Elliptical", "Asymmetric", ...
+%     "Elliptical Right", "Elliptical Left", "Unilateral"];
+
+% states = ["Stationary", "Elliptical", "Right Asymmetric", "Left Asymmetric" ...
+%     "Elliptical Right", "Elliptical Left", "Unilateral"];
+
+states = ["Stationary", "Elliptical", "Right Asymmetric", "Left Asymmetric" ...
+    "Elliptical Right", "Elliptical Left", "Right", "Left"];
+
 
 aggregation_sz = 3;
 
@@ -157,7 +164,7 @@ xlabel('To', 'FontSize', 14)
 
 pmat = tmat ./ sum(tmat,2);
 
-B = median(pmat, 3, 'omitnan');
+B = mean(pmat, 3, 'omitnan');
 subplot(1,2,2), imagesc(B)
 colormap(flipud(colormap('gray'))), 
 c=colorbar;
@@ -229,7 +236,7 @@ end
 pgraph = digraph(dat);
 
 figure('Position', [395 75 1092 833]), 
-plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*10, ...
+plot(pgraph, 'MarkerSize', 30, 'LineWidth', pgraph.Edges.Weight*20, ...
     'NodeColor', cols, 'NodeFontSize', 15, ...
     'EdgeColor', 'k', 'ArrowSize', 15, ...
     'NodeLabel',states, ...
@@ -237,17 +244,23 @@ plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*10, ...
 axis off
 
 
-ax = gca;
-exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.png']), 'Resolution', 300)
-saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.svg']))
+% ax = gca;
+% exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.png']), 'Resolution', 300)
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.svg']))
 %% 
 function [y,x] = set_xy_states(last_state, current_state, state_order)
         stat_idx = find(strcmpi(state_order, 'Stationary'));
         ellip_idx = find(strcmpi(state_order, 'Elliptical'));
-        assym_idx = find(strcmpi(state_order, 'Asymmetric'));
+        % assym_idx = find(strcmpi(state_order, 'Asymmetric'));
+        right_assym_idx = find(strcmpi(state_order, 'Right Asymmetric'));
+        left_assym_idx = find(strcmpi(state_order, 'Left Asymmetric'));
         bilat_idx = find(strcmpi(state_order, 'Bilateral'));
-        ellip_assym_idx = find(strcmpi(state_order, 'Elliptical Asymmetric'));
+        ellip_right_idx = find(strcmpi(state_order, 'Elliptical Right'));
+        ellip_left_idx = find(strcmpi(state_order, 'Elliptical Left'));
+        % ellip_assym_idx = find(strcmpi(state_order, 'Elliptical Asymmetric'));
         uni_idx = find(strcmpi(state_order, 'Unilateral'));
+        right_idx = find(strcmpi(state_order, 'Right'));
+        left_idx = find(strcmpi(state_order, 'Left'));
 
             switch last_state
                 case 'Stationary'
@@ -255,17 +268,25 @@ function [y,x] = set_xy_states(last_state, current_state, state_order)
                 case 'Elliptical'
                     y = ellip_idx;
                 case 'Right Asymmetric' 
-                    y = assym_idx;
+                    % y = assym_idx;
+                    y = right_assym_idx;
                 case 'Left Asymmetric'
-                    y = assym_idx;
-                case 'Elliptical Asymmetric'
-                    y = ellip_assym_idx;
+                    % y = assym_idx;
+                    y = left_assym_idx;
+                case 'Elliptical Right'
+                    % y = ellip_assym_idx;
+                    y = ellip_right_idx;
+                case 'Elliptical Left'
+                    % y = ellip_assym_idx;
+                    y = ellip_left_idx;
                 case 'Large Bilateral'
                     y = bilat_idx;
                 case 'Right' 
-                    y = uni_idx;
+                    % y = uni_idx;
+                    y = right_idx;
                 case 'Left'
-                    y = uni_idx;
+                    % y = uni_idx;
+                    y = left_idx;
             end
 
 
@@ -275,17 +296,25 @@ function [y,x] = set_xy_states(last_state, current_state, state_order)
                 case 'Elliptical'
                     x = ellip_idx;
                 case 'Right Asymmetric' 
-                    x = assym_idx;
+                    % x = assym_idx;
+                    x = right_assym_idx;
                 case 'Left Asymmetric'
-                    x = assym_idx;
-                case 'Elliptical Asymmetric'
-                    x = ellip_assym_idx;
+                    % x = assym_idx;
+                    x = left_assym_idx;
+                case 'Elliptical Left'
+                    % x = ellip_assym_idx;
+                    x = ellip_left_idx;
+                case 'Elliptical Right'
+                    % x = ellip_assym_idx;
+                    x = ellip_right_idx;
                 case 'Large Bilateral'
                     x = bilat_idx;
                 case 'Right' 
-                    x = uni_idx;
+                    % x = uni_idx;
+                    x = right_idx;
                 case'Left'
-                    x = uni_idx;
+                    % x = uni_idx;
+                    x = left_idx;
             end
 end
 
