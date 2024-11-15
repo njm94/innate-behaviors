@@ -1,39 +1,39 @@
 clear, clc, close all
-addpath('C:\Users\user\Documents\Nick\grooming\utils')
+addpath(fix_path('C:\Users\user\Documents\Nick\grooming\utils'))
 data_root = 'Y:\nick\behavior\grooming\1p';
 mice = {'ECR2_thy1', 'GER2_ai94', 'HYL3_tTA', 'IBL2_tTA'};
 
 for j = 1:length(mice)
-    load([data_root, filesep, mice{j}, filesep, 'mask.mat'])
-    dff_path = [data_root, filesep, mice{j}, filesep, 'outputs'];
+    load(fix_path([data_root, filesep, mice{j}, filesep, 'mask.mat']))
+    dff_path = fix_path([data_root, filesep, mice{j}, filesep, 'outputs']);
     dff_fig = getAllFiles(dff_path, '_dFF.fig');
     % If there are multiple versions, use the most recent one
     if size(dff_fig,1) > 1
         dff_fig = sort(dff_fig);
-        dff_fig = dff_fig{1};
+        dff_fig = dff_fig{end};
     end
     h = openfig([dff_path, filesep, dff_fig]);
     for i = 1:length(h.Children)
         switch(h.Children(i).Title.String)
-            case 'flr_move' 
+            case 'RightMove' 
                 rightmove(:,:,j) = h.Children(i).Children(end).CData;
-            case 'fll_move' 
+            case 'LeftMove' 
                 leftmove(:,:,j) = h.Children(i).Children(end).CData;
             case 'largebilateral'
                 bilateral(:,:,j) = h.Children(i).Children(end).CData;
-            case 'elliptical'
+            case 'Elliptical'
                 elliptical(:,:,j) = h.Children(i).Children(end).CData;
             case 'Elliptical Asymmetric'
                 ellip_asymm(:,:,j) = h.Children(i).Children(end).CData;
-            case 'largeleft'
+            case 'Left Asymmetric'
                 largeleft(:,:,j) = h.Children(i).Children(end).CData;
-            case 'largeright'
+            case 'Right Asymmetric'
                 largeright(:,:,j) = h.Children(i).Children(end).CData;
-            case 'left'
+            case 'Left'
                 left(:,:,j) = h.Children(i).Children(end).CData;
-            case 'right'
+            case 'Right'
                 right(:,:,j) = h.Children(i).Children(end).CData;
-            case 'lick'
+            case 'Lick'
                 lick(:,:,j) = h.Children(i).Children(end).CData;
             otherwise
                 continue
@@ -46,16 +46,6 @@ end
 
 %%
 
-figure
-for i = 1:4
-subplot(3,4,i)
-imagesc(leftlick(:,:,i))
-colorbar
-subplot(3,4,i+4), imagesc(lick(:,:,i));
-colorbar
-subplot(3,4,i+8), imagesc(left(:,:,i));
-colorbar
-end
 
 %% overlay contours from diff mice
 clc
@@ -64,8 +54,8 @@ clc
 load('allenDorsalMap.mat');
 clear nanmask
 for j = 1:length(mice)
-    load([data_root, filesep, mice{j}, filesep, 'mask.mat'])
-    atlas_tform = load([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']);
+    load(fix_path([data_root, filesep, mice{j}, filesep, 'mask.mat']))
+    atlas_tform = load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
     warpmask = imwarp(mask, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
 %     nanmask(:,:,j) = warpmask;
     nanmask(:,:,j) = mask;
@@ -79,14 +69,14 @@ nanmask(nanmask==0) = nan;
 %%
 clc, clear a v
 tmp = [];
-load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
+load(fix_path('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat'));
 
-thresh = 90;
+thresh = 95;
 figure, axis off, hold on
 for j = 1:length(mice)
-    atlas_tform = load([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']);
+    atlas_tform = load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
 
-    vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "bilateral"];
+    vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft"];%, "ellip_asymm"];
          
     for i = 1:length(vars)    
         test = eval(vars(i));
@@ -94,13 +84,12 @@ for j = 1:length(mice)
 %         test = test.*nanmask(:,:,j);
         test = imwarp(test, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
 
-
         v = prctile(test(:), thresh);
         tmp = [tmp v];
 %         disp(v)
         a{i}(:,:,j) = test >= v;
 
-        subplot(1,length(vars), i), axis off, hold on
+        subplot(2,round(length(vars)/2), i), axis off, hold on
 % subplot(1,1,1)
         for p = 1:length(dorsalMaps.edgeOutline)
             plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k');
@@ -125,7 +114,8 @@ for i = 1:length(vars)
     for j = 1:length(mice)
         for k = 1:length(mice)
             if k > j
-                similarity(trialcount, i) = dice(a{i}(:,:,j), a{i}(:,:,k));
+                dsim(trialcount, i) = dice(a{i}(:,:,j), a{i}(:,:,k));
+                jsim(trialcount, i) = jaccard(a{i}(:,:,j), a{i}(:,:,k));
                 trialcount = trialcount + 1;
             end
         end
@@ -135,10 +125,10 @@ end
 
 
 
-[p,tbl,stats] = anova1(similarity);
+[p,tbl,stats] = anova1(dsim);
 [c,m,h,gnames] = multcompare(stats);
 
-figure, boxplot(similarity, 'Colors', 'k'),
+figure, boxplot(dsim, 'Colors', 'k'),
 xticklabels(["Lick", "Right", "Left", "Elliptical", "Right Asymmetric", ...
     "Left Asymmetric", "Bilateral"])
 ylabel('Pairwise Dice Similarity Coefficient')
@@ -147,6 +137,23 @@ ax.FontSize = 12;
 
 title(['One-Way ANOVA, p = ', num2str(p, 2)])
 
+
+%%
+% Create a table with the data, labeling each behavior
+tbl = array2table(dsim, 'VariableNames', {'Lick', 'Right', 'Left', 'Elliptical', 'RightAsymmetric', 'LeftAsymmetric'});%, 'EllipticalAsymmetric'}); 
+
+% Define the repeated measures model
+rm = fitrm(tbl, 'Lick-LeftAsymmetric ~ 1', 'WithinDesign', table([1:size(dsim,2)]', 'VariableNames', {'Behavior'}));
+
+% Run repeated measures ANOVA
+ranovaResults = ranova(rm);
+
+% Display the results
+disp(ranovaResults);
+
+% If you want to conduct post hoc tests, you can use the multcompare function
+% for pairwise comparisons between behaviors:
+stats = multcompare(rm, 'Behavior');
 
 
 

@@ -387,20 +387,7 @@ featureMat = zscore([behavior_duration, l_paw_xrange, l_paw_yrange, fll_ypos_sta
 
 
 
-%%
 disp('Saving')
 timenow = char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss'));
 save(['/media/user/teamshare/nick/behavior/grooming/', timenow, '_umap_test.mat'], 'featureMat', 'bFilepath', 'behavior_label', 'behavior_index')
-
-
-
-
-
-
-
-
-
-
-
-
 

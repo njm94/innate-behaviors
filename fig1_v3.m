@@ -1,15 +1,12 @@
 % This code will read the clustered behaviors and generate figure 1
 addpath('/home/user/Documents/grooming/utils')
-load(fix_path('Y:\nick\behavior\grooming\20241112141427_behavior_clustering.mat'))
-
+load(fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat'))
 
 % map dendrogram labels to behaviors - Note this is subject to change based
 % on the ordering of the output labels from the dendrogram in python
 % script. Double check this.
 label_map = ["Right", "Left", "Left Asymmetric", ...
     "Elliptical Asymmetric", "Right Asymmetric", "Elliptical"];
-
-
 
 figure, hold on, 
 % show UMAP embedding
@@ -21,8 +18,8 @@ for i = 1:length(labs)
 end
 ax = gca;
 
-% exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','UMAP', '.png']), 'Resolution', 300)
-% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','UMAP', '.svg']))
+exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','UMAP', '.png']), 'Resolution', 300)
+saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','UMAP', '.svg']))
 
 %%
 
@@ -130,7 +127,7 @@ fileID = fopen('expt1_datalist.txt','r');
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 current_mouse = ''; 
-addpath('C:\Users\user\Documents\Nick\grooming\deprecated')
+% addpath('C:\Users\user\Documents\Nick\grooming\deprecated')
 
 % Notes on 2p data
 % ETR2 and ETR3 had corrupted videos for spontaneous trials, so we will
@@ -233,7 +230,6 @@ for j = 1:N
 
     end
 
-
     % num_events(j) = cellfun(@(data) size(data, 1), snippets);
     if isempty(bmat)
         event_raster{j} = 0;
@@ -316,9 +312,9 @@ end
 
 
 %%
-
-figure,
-subplot(2,1,1)
+close all, clc
+figure%('Position', [380 458 860 406]),
+% subplot(2,1,1)
 imagesc(1-[raster_mat(spon_index,:); raster_mat(evoked_index,:)])
 colormap gray, 
 axis off
@@ -326,20 +322,31 @@ y = [length(spon_index)+0.5, length(spon_index)+0.5, size(raster_mat,1)+0.5, siz
 patch([0 size(raster_mat,2) size(raster_mat,2) 0], y, [0.3010 0.7450 0.9330], 'FaceAlpha', 0.1, 'EdgeColor', 'none')
 % hold on
 
+ax = gca;
+% set(gcf, 'PaperPositionMode', 'auto')
+% set(ax,'renderer','painters');
+
+% exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'raster', '.png']), 'Resolution', 300)
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','raster1', '.svg']))
+%%
 p_evoked = smoothdata(mean(raster_mat(evoked_index,:)));
 p_spon = smoothdata(mean(raster_mat(spon_index,:)));
 t = xt(p_evoked, fs);
-subplot(2,1,2), hold on
+figure, hold on
 plot(t, p_evoked, 'LineWidth', 2)
 plot(t, p_spon, 'k', 'LineWidth', 2)
 
-drop = 30:60:t(end);
-for i = 1:length(drop)
-    vline(drop, 'k:')
-end
+% drop = 30:60:t(end);
+% for i = 1:length(drop)
+%     vline(drop, 'k:')
+% end
 axis tight
+xlabel('Time (s)')
+ylabel('Probability')
 
-
+ax = gca;
+exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'psth', '.png']), 'Resolution', 300)
+saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','psth', '.svg']))
 %%
 
 figure
@@ -358,3 +365,51 @@ swarmchart(ones(size(num_evoked_events))+1.3, num_evoked_events, 'ko', 'XJitterW
 ax = gca;
 ax.FontSize = 12;
 title(['p=', num2str(p)])
+
+% ax = gca;
+% exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'num_events_sponvsevoked', '.png']), 'Resolution', 300)
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','num_events_sponvsevoked', '.svg']))
+
+%%
+
+grouped_label_map = ["Elliptical", "Asymmetric", "Unilateral", "Elliptical Asymmetric"];
+
+grouped_labels = zeros(size(dendrogram_labels));
+grouped_labels(dendrogram_labels==find(strcmp(label_map, 'Elliptical'))) = find(strcmp(grouped_label_map, 'Elliptical'));
+grouped_labels(dendrogram_labels==find(strcmp(label_map, 'Right Asymmetric')) | dendrogram_labels==find(strcmp(label_map, 'Left Asymmetric'))) = find(strcmp(grouped_label_map, 'Asymmetric'));
+grouped_labels(dendrogram_labels==find(strcmp(label_map, 'Right')) | dendrogram_labels==find(strcmp(label_map, 'Left'))) = find(strcmp(grouped_label_map, 'Unilateral'));
+grouped_labels(dendrogram_labels==find(strcmp(label_map, 'Elliptical Asymmetric'))) = find(strcmp(grouped_label_map, 'Elliptical Asymmetric'));
+
+
+
+all_spon_index = zeros(size(dendrogram_labels));
+bFileCell = cellstr(bFiles);
+for i = 1:length(data_list{1})
+    if any(spon_index == i)
+        all_spon_index(contains(bFileCell, data_list{1}{i})) = 1;
+    end   
+end
+all_evoked_index = 1-all_spon_index;
+
+
+spon_stats = tabulate(grouped_labels(logical(all_spon_index)));
+evoked_stats = tabulate(grouped_labels(logical(all_evoked_index)));
+
+figure('Position', [675 453 293 413]), 
+b=bar([spon_stats(:,3) evoked_stats(:,3)]);
+b(1).FaceColor = 'k';
+b(2).FaceColor =  [0.3010 0.7450 0.9330];
+
+hold on
+% errorbar((1:4)-0.15, mean(all_spon_relfreq,2), std(all_spon_relfreq,[],2)./sqrt(size(all_spon_relfreq,2)), 'k.')
+% errorbar((1:4)+0.15, mean(all_evoked_relfreq,2), std(all_evoked_relfreq,[],2)./sqrt(size(all_evoked_relfreq,2)), 'k.')
+xticklabels(grouped_label_map)
+ylabel('Relative Frequency')
+legend(["Spontaneous", "Evoked"], 'Location', 'NorthEast', 'Box', 'off')
+ylim([0 100])
+ax = gca;
+ax.FontSize = 12;
+
+ax = gca;
+exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'rel_freq', '.png']), 'Resolution', 300)
+saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','rel_freq', '.svg']))

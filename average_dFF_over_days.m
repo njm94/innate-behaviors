@@ -30,14 +30,14 @@ ibl2_idx = 20:25;
 
 save_average_across_days = true;
 
-load('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat');
+load(fix_path('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat'));
 %%
 % spon_behavior_frames = cell(1,14);
 % evoked_behavior_frames = cell(1,14);
 bFrames = cell(1,14);
-for j = ibl2_idx %23:length(data_list{1})+1
+for j = thy1_idx %23:length(data_list{1})+1
     try
-        data_dir = data_list{1}{j};
+        data_dir = fix_path(data_list{1}{j});
 
         if isunix % working on linux computer - modify paths
             data_dir = strrep(data_dir, '\', '/');
@@ -72,7 +72,7 @@ for j = ibl2_idx %23:length(data_list{1})+1
 %             else
 %                 if isempty(evoked_behavior_frames{i})
 %                     evoked_behavior_frames{i} = behavior_frames{i};
-%                 else
+%                 else, "bilateral"
 %                     evoked_behavior_frames{i} = cat(3, evoked_behavior_frames{i}, behavior_frames{i});
 %                 end
 %             end
@@ -98,7 +98,6 @@ for i = 1:length(bvars)
     subplot(4,4,i)
     if ~isempty(bFrames{i})
         mean_image = mask.*mean(bFrames{i},3)';
-    1+1
         mean_image = imwarp(mean_image, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
         imagesc(mean_image)
         title(bvars(i)), colorbar, xticks([]),  yticks([])
