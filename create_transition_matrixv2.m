@@ -163,7 +163,7 @@ xlabel('To', 'FontSize', 14)
 
 
 pmat = tmat ./ sum(tmat,2);
-
+pmat(isnan(pmat)) = 0;
 B = mean(pmat, 3, 'omitnan');
 subplot(1,2,2), imagesc(B)
 colormap(flipud(colormap('gray'))), 
@@ -236,7 +236,7 @@ end
 pgraph = digraph(dat);
 
 figure('Position', [395 75 1092 833]), 
-plot(pgraph, 'MarkerSize', 30, 'LineWidth', pgraph.Edges.Weight*20, ...
+plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*20, ...
     'NodeColor', cols, 'NodeFontSize', 15, ...
     'EdgeColor', 'k', 'ArrowSize', 15, ...
     'NodeLabel',states, ...

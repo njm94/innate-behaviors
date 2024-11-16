@@ -68,43 +68,167 @@ evoked_index = find(evoked_index);
 
 %%
 % get the drop info from boris file to determine if left vs right trial
+trial_type = cell(1, length(data_list{1}));
 include_boris = true; 
-for i = 5%1:size(data_list{1},1)
+for i = 1:size(data_list{1},1)
     data_dir = data_list{1}{i};
-    if ~isempty(getAllFiles(data_dir, '.tsv'))
-        boris_file = [data_dir, filesep, getAllFiles(data_dir, '.tsv')];
-        [events, snippets, b_table, video_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file, include_boris);
-        gadadg
-        if isempty(events) % no grooming behaviors
-            continue
-        end
-
-        if contains(events.Properties.VariableNames, 'DropRight')
-            num_drops_right = sum(events.DropRight);
-        else
-            num_drops_right = 0;
-        end
-
-        if contains(events.Properties.VariableNames, 'DropLeft')
-            num_drops_left = sum(events.DropLeft);
-        else
-            num_drops_left = 0;
-        end
-
-        if num_drops_right > num_drops_left
-            trial_type = 'right';
-        elseif num_drops_left > num_drops_right
-            trial_type = 'left';
-        elseif num_drops_right == num_drops_left
-            if num_drops_right + num_drops_left == 0
-                trial_type = 'spon';
-            else
-                error('Check this trial')
+    if any(i == spon_index)
+        trial_type{i} = 'spon';
+    else
+        if ~isempty(getAllFiles(data_dir, '.tsv'))
+            boris_file = [data_dir, filesep, getAllFiles(data_dir, '.tsv')];
+            [events, snippets, b_table, video_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file, include_boris);
+    
+            if isempty(events) % no grooming behaviors or drops
+                error('No events')
             end
-        end
+    
+            if any(contains(events.Properties.VariableNames, 'DropRight'))
+                num_drops_right = sum(events.DropRight);
+            else
+                num_drops_right = 0;
+            end
+    
+            if any(contains(events.Properties.VariableNames, 'DropLeft'))
+                num_drops_left = sum(events.DropLeft);
+            else
+                num_drops_left = 0;
+            end
+    
+            if num_drops_right > num_drops_left
+                trial_type{i} = 'right';
+            elseif num_drops_left > num_drops_right
+                trial_type{i} = 'left';
+            elseif num_drops_right == num_drops_left
+                disp(['Check this trial: ', num2str(i)])
+                disp(['Manually determined to be right. Add drop labels in BORIS later'])
+                trial_type{i} = 'right';
+%                 continue
+            end
+    
+        else % no boris file - use snippets
+            disp('No Boris file')
+            snippets_dir = [data_dir, filesep, 'snippets'];
+            [snippets, ~] = parse_snippets(snippets_dir);
 
-    else % no boris file - use snippets
-        disp('No Boris file')
-        [snippets, labels] = parse_snippets(snippets_dir);
+        end
     end
+end
+
+%% get index for right/left trials corresponding to cluster assignments
+load(cluster_data);
+bFiles = fix_path(cellstr(bFiles));
+
+all_right = zeros(length(bFiles),1);
+all_left = zeros(length(bFiles),1);
+
+count_right = 1;
+count_left = 1;
+for i = 1:length(data_list{1})
+    data_dir = fix_path(data_list{1}{i});
+
+    matching_sessions = contains(bFiles, data_dir)';
+    iTrial_type = trial_type{i};
+    if strcmp(iTrial_type, 'right')
+        all_right = all_right | matching_sessions;
+        num_gR_dR(count_right) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Right'))));
+        num_gRA_dR(count_right) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Right Asymmetric'))));
+        num_gRE_dR(count_right) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Elliptical Right'))));
+
+        num_gL_dR(count_right) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Left'))));
+        num_gLA_dR(count_right) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Left Asymmetric'))));
+        num_gLE_dR(count_right) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Elliptical Left'))));
+
+
+        count_right = count_right + 1;
+    elseif strcmp(iTrial_type, 'left')
+        all_left = all_left | matching_sessions;
+
+        num_gR_dL(count_left) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Right'))));
+        num_gRA_dL(count_left) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Right Asymmetric'))));
+        num_gRE_dL(count_left) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Elliptical Right'))));
+
+        num_gL_dL(count_left) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Left'))));
+        num_gLA_dL(count_left) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Left Asymmetric'))));
+        num_gLE_dL(count_left) = numel(dendrogram_labels(matching_sessions & dendrogram_labels == find(strcmp(label_map, 'Elliptical Left'))));
+
+        count_left = count_left + 1;
+    end
+end
+
+%%
+close all
+
+
+figure
+boxplot([num_gR_dR' num_gL_dR'], 'colors', 'k', 'symbol', '')
+hold on
+hline(0, 'k--')
+swarmchart([ones(size(num_gR_dR))-0.25 1.25+ones(size(num_gR_dR))], [num_gR_dR num_gL_dR], [], 'k', 'XJitterWidth', 0.25)
+[~,p] = ttest(num_gR_dR, num_gL_dR);
+title(num2str(p))
+ylabel('Right stimulus')
+xticklabels({'Right', 'Left'})
+axis([.5 2.5 -5 150])
+
+figure
+boxplot([num_gRA_dR' num_gLA_dR'], 'colors', 'k', 'symbol', '')
+hold on
+hline(0, 'k--')
+swarmchart([ones(size(num_gRA_dR))-0.25 1.25+ones(size(num_gRA_dR))], [num_gRA_dR num_gLA_dR], [], 'k', 'XJitterWidth', 0.25)
+[~,p] = ttest(num_gRA_dR, num_gLA_dR);
+title(num2str(p))
+xticklabels({'Right Asymmetric', 'Left Asymmetric'})
+ylabel('Right stimulus')
+axis([.5 2.5 -5 150])
+
+figure
+boxplot([num_gRE_dR' num_gLE_dR'], 'colors', 'k', 'symbol', '')
+hold on
+hline(0, 'k--')
+swarmchart([ones(size(num_gRE_dR))-0.25 1.25+ones(size(num_gRE_dR))], [num_gRE_dR num_gLE_dR], [], 'k', 'XJitterWidth', 0.25)
+[~,p] = ttest(num_gRE_dR, num_gLE_dR);
+title(num2str(p))
+xticklabels({'Elliptical Right', 'Elliptical Left'})
+ylabel('Right stimulus')
+axis([.5 2.5 -5 150])
+
+figure
+boxplot([num_gR_dL' num_gL_dL'], 'colors', 'k', 'symbol', '')
+hold on
+swarmchart([ones(size(num_gR_dL))-0.25 1.25+ones(size(num_gR_dL))], [num_gR_dL num_gL_dL], [], 'k', 'XJitterWidth', 0.25)
+hline(0, 'k--')
+[~,p] = ttest(num_gR_dL, num_gL_dL);
+title(num2str(p))
+xticklabels({'Right', 'Left'})
+ylabel('Left stimulus')
+axis([.5 2.5 -5 150])
+
+figure
+boxplot([num_gRA_dL' num_gLA_dL'], 'colors', 'k', 'symbol', '')
+hold on
+swarmchart([ones(size(num_gRA_dL))-0.25 1.25+ones(size(num_gRA_dL))], [num_gRA_dL num_gLA_dL], [], 'k', 'XJitterWidth', 0.25)
+[~,p] = ttest(num_gRA_dL, num_gLA_dL);
+hline(0, 'k--')
+title(num2str(p))
+xticklabels({'Right Asymmetric', 'Left Asymmetric'})
+ylabel('Left stimulus')
+axis([.5 2.5 -5 150])
+
+figure
+boxplot([num_gRE_dL' num_gLE_dL'], 'colors', 'k', 'symbol', '')
+hold on
+hline(0, 'k--')
+swarmchart([ones(size(num_gRE_dL))-0.25 1.25+ones(size(num_gRE_dL))], [num_gRE_dL num_gLE_dL], [], 'k', 'XJitterWidth', 0.25)
+[h,p] = ttest(num_gRE_dL, num_gLE_dL);
+title(num2str(p))
+xticklabels({'Elliptical Right', 'Elliptical Left'})
+ylabel('Left stimulus')
+axis([.5 2.5 -5 150])
+
+%%
+data_plots = {'DropRightUnilateral', 'DropRightAsymmetric', 'DropRightEllipAsymm', 'DropLeftUnilateral', 'DropLeftAsymmetric', 'DropLeftEllipAsymm'};
+for i = 1:6
+    ax = figure(i);
+    saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\',data_plots{i}, '.svg']))
 end
