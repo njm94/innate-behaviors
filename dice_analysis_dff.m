@@ -23,8 +23,10 @@ for j = 1:length(mice)
                 bilateral(:,:,j) = h.Children(i).Children(end).CData;
             case 'Elliptical'
                 elliptical(:,:,j) = h.Children(i).Children(end).CData;
-            case 'Elliptical Asymmetric'
-                ellip_asymm(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical Right'
+                ellip_right(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical Left'
+                ellip_left(:,:,j) = h.Children(i).Children(end).CData;
             case 'Left Asymmetric'
                 largeleft(:,:,j) = h.Children(i).Children(end).CData;
             case 'Right Asymmetric'
@@ -57,8 +59,8 @@ for j = 1:length(mice)
     load(fix_path([data_root, filesep, mice{j}, filesep, 'mask.mat']))
     atlas_tform = load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
     warpmask = imwarp(mask, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
-%     nanmask(:,:,j) = warpmask;
-    nanmask(:,:,j) = mask;
+    nanmask(:,:,j) = warpmask;
+    % nanmask(:,:,j) = mask;
 end
 nanmask(nanmask==0) = nan;
 
@@ -67,32 +69,47 @@ nanmask(nanmask==0) = nan;
 
 
 %%
-clc, clear a v
+clc, clear a v, close all
 tmp = [];
 load(fix_path('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat'));
+example_mouse = 4;
 
-thresh = 95;
-figure, axis off, hold on
+thresh = 70;
+% figure, axis off, hold on
 for j = 1:length(mice)
     atlas_tform = load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
 
-    vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft"];%, "ellip_asymm"];
+    vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
+
          
     for i = 1:length(vars)    
+        
         test = eval(vars(i));
-        test = test(:,:,j) .* nanmask(:,:,j);
+        test = test(:,:,j);% .* nanmask(:,:,j);
 %         test = test.*nanmask(:,:,j);
-        test = imwarp(test, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+        test = nanmask(:,:,j).*imwarp(test, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+        % if j == example_mouse
+        %     h=figure; imagesc(test), hold on, colorbar, axis equal off
+        %     for p = 1:length(dorsalMaps.edgeOutline)
+        %         plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'w', 'LineWidth', 1);
+        %     end
+        %     % ax = gcf;
+        %     exportgraphics(h, fix_path(['Y:\nick\behavior\grooming\figures\', char(vars(i)), '_dff.png']), 'Resolution', 300)
+        % 
+        % end
 
         v = prctile(test(:), thresh);
         tmp = [tmp v];
 %         disp(v)
         a{i}(:,:,j) = test >= v;
 
-        subplot(2,round(length(vars)/2), i), axis off, hold on
+        % subplot(2,round(length(vars)/2), i), axis off, hold on
+        figure(i), hold on
 % subplot(1,1,1)
         for p = 1:length(dorsalMaps.edgeOutline)
-            plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k');
+            plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
+            xticks([])
+            yticks([])
         end
             if v > 0
                 contourf(a{i}(:,:,j).*j, [j-0.1 j-0.1], 'FaceAlpha', 0.25)
@@ -107,6 +124,15 @@ for j = 1:length(mice)
     end
 %     legend(labs, 'Location', 'Best')
 end
+
+%%
+% for i = 1:length(vars)
+%     ax = figure(i);
+%     box on
+%     exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', char(vars(i)), '_dff_contours.png']), 'Resolution', 300)
+% 
+% end
+
 
 %% compute pairwise dice
 for i = 1:length(vars)
@@ -140,10 +166,10 @@ title(['One-Way ANOVA, p = ', num2str(p, 2)])
 
 %%
 % Create a table with the data, labeling each behavior
-tbl = array2table(dsim, 'VariableNames', {'Lick', 'Right', 'Left', 'Elliptical', 'RightAsymmetric', 'LeftAsymmetric'});%, 'EllipticalAsymmetric'}); 
+tbl = array2table(dsim, 'VariableNames', {'Lick', 'Right', 'Left', 'Elliptical', 'RightAsymmetric', 'LeftAsymmetric', 'EllipticalRight', 'EllipticalLeft'}); 
 
 % Define the repeated measures model
-rm = fitrm(tbl, 'Lick-LeftAsymmetric ~ 1', 'WithinDesign', table([1:size(dsim,2)]', 'VariableNames', {'Behavior'}));
+rm = fitrm(tbl, 'Lick-EllipticalLeft ~ 1', 'WithinDesign', table([1:size(dsim,2)]', 'VariableNames', {'Behavior'}));
 
 % Run repeated measures ANOVA
 ranovaResults = ranova(rm);

@@ -13,6 +13,8 @@ function [events, b_idx, t, video_end, cluster_labels] = get_labels_from_cluster
 %       events          (Binary table [trial_length x num_behaviors])
 %       b_idx           (Cell array of event indices [trial_length x 1])
 %       t               (Boris raw table)
+%       video_end       (Index of video end from BORIS label)
+%       cluster_labels  (Hierarchical cluster label)
 %
 % Usage: 
 %       [events, b_idx, t] = read_boris(boris_tsv);

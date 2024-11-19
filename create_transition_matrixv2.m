@@ -7,7 +7,7 @@ addpath('C:\Users\user\Documents\Nick\grooming\utils')
 addpath('C:\Users\user\Documents\Nick\grooming\utils\layoutCode')
 
 
-clc, clear
+clc, clear, %close all
 fileID = fopen('expt1_datalist.txt','r');
 
 formatSpec = '%s';
@@ -52,9 +52,14 @@ evoked = [3:7,10:13,16:19,22:25];
 % states = ["Stationary", "Elliptical", "Right Asymmetric", "Left Asymmetric" ...
 %     "Elliptical Right", "Elliptical Left", "Unilateral"];
 
-states = ["Stationary", "Elliptical", "Right Asymmetric", "Left Asymmetric" ...
-    "Elliptical Right", "Elliptical Left", "Right", "Left"];
+states = ["Start", "Elliptical", "Right Asymmetric", "Left Asymmetric" ...
+    "Elliptical Right", "Elliptical Left", "Right", "Left", "Stop"];
+% states = states(randperm(length(states)));
+states = ["Start", "Right", "Left","Elliptical", "Right Asymmetric", "Left Asymmetric" ...
+"Elliptical Right", "Elliptical Left", "Stop"];
 
+% states = ["Start", "Unilateral","Elliptical", "Right Asymmetric", "Left Asymmetric" ...
+% "Elliptical Right", "Elliptical Left", "Stop"];
 
 aggregation_sz = 3;
 
@@ -113,7 +118,7 @@ for j = 1:N
     for ii = 1:size(idx,1)
         disp(['EPISODE ', num2str(ii)])
         % define last event to be STATIONARY event
-        last_event = 'Stationary';
+        last_event = 'Start';
         last_event_idx = idx(ii,1);
 
         counter = 0;
@@ -121,6 +126,9 @@ for j = 1:N
         while last_event_idx < idx(ii, 2) || last_event_idx == idx(ii,1)
 %             disp(size(tmp_snippets))
             [~, tmp_idx] = min(abs(tmp_snippets(:,1)-last_event_idx));       
+            if isempty(tmp_idx)
+                break
+            end
             current_event = tmp_labels{tmp_idx};
 
             [y,x] = set_xy_states(last_event, current_event, states);
@@ -137,7 +145,7 @@ for j = 1:N
             counter = counter + 1;
 %             disp(size(tmp_snippets));
         end
-        current_event = 'Stationary';
+        current_event = 'Stop';
         [y,x] = set_xy_states(last_event, current_event, states);
         tmat(y,x,j) = tmat(y,x,j) + 1;
 
@@ -148,18 +156,25 @@ end
 %% Create conditional probability matrix from transition matrix
 
 figure('Position', [161 368 1261 495])
+% figure('Position', [821 363 606 488])
 
-subplot(1,2,1), imagesc(mean(tmat,3))
+
+subplot(1,2,1), 
+imagesc(mean(tmat,3, 'omitnan'))
 colormap(flipud(colormap('gray'))), 
 c=colorbar;
 c.Label.String = 'Count';
 xticks(1:length(states))
 yticks(1:length(states))
+xticklabels([])
+yticklabels([])
 xticklabels(states)
 yticklabels(states)
 title('Transitions', 'FontSize', 16)
 ylabel('From', 'FontSize', 14)
 xlabel('To', 'FontSize', 14)
+% axis off
+box on
 
 
 pmat = tmat ./ sum(tmat,2);
@@ -168,18 +183,20 @@ B = mean(pmat, 3, 'omitnan');
 subplot(1,2,2), imagesc(B)
 colormap(flipud(colormap('gray'))), 
 c=colorbar;
-c.Label.String = 'Probability';
-title('Transition probability', 'FontSize', 16)
-xticks(1:length(states))
-yticks(1:length(states))
-xticklabels(states)
-yticklabels(states)
-ylabel('From', 'FontSize', 14)
-xlabel('To', 'FontSize', 14)
+% c.Label.String = 'Probability';
+% title('Transition probability', 'FontSize', 16)
+% xticks(1:length(states))
+% yticks(1:length(states))
+xticklabels([])
+yticklabels([])
+% ylabel('From', 'FontSize', 14)
+% xlabel('To', 'FontSize', 14)
 
 % ax = gcf;
+% % saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.svg']))
+% % axis off
 % exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.png']), 'Resolution', 300)
-% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.svg']))
+
 %%
 
 
@@ -213,7 +230,8 @@ yticklabels(states)
 
 %%
 % dat = B(2:6, 2:6, 1);
-dat = B;
+% dat = B;
+dat = mean(tmat,3, 'omitnan');
 
 [M,Q]=community_louvain(dat);
 
@@ -233,23 +251,52 @@ for i = 1:length(M)
         cols(i,:) = col4;
     end
 end
-pgraph = digraph(dat);
+pgraph = digraph(dat, 'omitselfloops');
 
-figure('Position', [395 75 1092 833]), 
-plot(pgraph, 'MarkerSize', 15, 'LineWidth', pgraph.Edges.Weight*20, ...
-    'NodeColor', cols, 'NodeFontSize', 15, ...
-    'EdgeColor', 'k', 'ArrowSize', 15, ...
+% make edge weight proportional to probability between transitions. If we
+% use the number here, the lines get way too big
+pmat = tmat ./ sum(tmat,2);
+pmat(isnan(pmat)) = 0;
+prob_graph = digraph(mean(pmat, 3, 'omitnan'), 'omitselfloops');
+
+figure('Position', [843 70 649 826]), 
+plot(pgraph, 'MarkerSize', 20,  'LineWidth', prob_graph.Edges.Weight*20, ...
+    'NodeColor', cols, ...'NodeFontSize', 15, ...
+    'EdgeColor', 'k', 'EdgeAlpha', 1, 'ArrowSize', 10, ...
     'NodeLabel',states, ...
-    'Layout', 'force', 'WeightEffect', 'inverse')
-axis off
+    'Layout', 'force' )%'layered','Sources', 1, 'Sinks', length(states));%, 'WeightEffect', 'inverse')
+% axis off
 
 
+figure('Position', [843 70 649 826]), 
+plot(pgraph, 'MarkerSize', 20, ... 'LineWidth', prob_graph.Edges.Weight*20, ...
+    'NodeColor', cols, ...'NodeFontSize', 15, ...
+    'EdgeColor', 'k', 'EdgeAlpha', 1, 'ArrowSize', 10, ...
+    'NodeLabel',states, ...
+    'Layout', 'layered', 'Sources', 1, 'Sinks', length(states));%, 'WeightEffect', 'inverse')
+% 
 % ax = gca;
 % exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.png']), 'Resolution', 300)
 % saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.svg']))
+
+%% probably delete this
+num_iter = 1000;
+for i = 1:num_iter
+nodeOrder(i,:) = randperm(length(states));
+crossings(i) = countEdgeCrossings(pgraph, nodeOrder(i,:));
+end
+countEdgeCrossings(pgraph, 1:length(states))
+
+
+
+%% this too
+
+
+test = [centrality(pgraph, 'outdegree'), centrality(pgraph, 'indegree')]
+
 %% 
 function [y,x] = set_xy_states(last_state, current_state, state_order)
-        stat_idx = find(strcmpi(state_order, 'Stationary'));
+        start_idx = find(strcmpi(state_order, 'Start'));
         ellip_idx = find(strcmpi(state_order, 'Elliptical'));
         % assym_idx = find(strcmpi(state_order, 'Asymmetric'));
         right_assym_idx = find(strcmpi(state_order, 'Right Asymmetric'));
@@ -261,10 +308,11 @@ function [y,x] = set_xy_states(last_state, current_state, state_order)
         uni_idx = find(strcmpi(state_order, 'Unilateral'));
         right_idx = find(strcmpi(state_order, 'Right'));
         left_idx = find(strcmpi(state_order, 'Left'));
+        stop_idx =  find(strcmpi(state_order, 'Stop'));
 
             switch last_state
-                case 'Stationary'
-                    y = stat_idx;
+                case 'Start'
+                    y = start_idx;
                 case 'Elliptical'
                     y = ellip_idx;
                 case 'Right Asymmetric' 
@@ -287,12 +335,14 @@ function [y,x] = set_xy_states(last_state, current_state, state_order)
                 case 'Left'
                     % y = uni_idx;
                     y = left_idx;
+                case 'Stop'
+                    y = stop_idx;
             end
 
 
             switch current_state
-                case 'Stationary'
-                    x = stat_idx;
+                case 'Start'
+                    x = start_idx;
                 case 'Elliptical'
                     x = ellip_idx;
                 case 'Right Asymmetric' 
@@ -312,10 +362,29 @@ function [y,x] = set_xy_states(last_state, current_state, state_order)
                 case 'Right' 
                     % x = uni_idx;
                     x = right_idx;
-                case'Left'
+                case 'Left'
                     % x = uni_idx;
                     x = left_idx;
+                case 'Stop'
+                    x = stop_idx;
             end
 end
 
 
+
+function crossings = countEdgeCrossings(G, nodeOrder)
+    edges = G.Edges.EndNodes;
+    crossings = 0;
+    for i = 1:height(edges)
+        for j = i+1:height(edges)
+            % Get node indices for the two edges
+            edge1 = edges(i, :);
+            edge2 = edges(j, :);
+            % Check if the edges cross based on node order
+            if (nodeOrder(edge1(1)) < nodeOrder(edge2(1)) && nodeOrder(edge1(2)) > nodeOrder(edge2(2))) || ...
+               (nodeOrder(edge1(1)) > nodeOrder(edge2(1)) && nodeOrder(edge1(2)) < nodeOrder(edge2(2)))
+                crossings = crossings + 1;
+            end
+        end
+    end
+end
