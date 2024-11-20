@@ -1,4 +1,4 @@
-function uboxplot(varargin)
+function tmp = uboxplot(varargin)
 % boxplot of unequal sizes. fill in with nans. must be column vectors input
 
 N = 1;
