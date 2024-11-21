@@ -74,7 +74,7 @@ tmp = [];
 load(fix_path('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat'));
 example_mouse = 4;
 
-thresh = 70;
+thresh = 90;
 % figure, axis off, hold on
 for j = 1:length(mice)
     atlas_tform = load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
@@ -88,38 +88,38 @@ for j = 1:length(mice)
         test = test(:,:,j);% .* nanmask(:,:,j);
 %         test = test.*nanmask(:,:,j);
         test = nanmask(:,:,j).*imwarp(test, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
-        % if j == example_mouse
-        %     h=figure; imagesc(test), hold on, colorbar, axis equal off
-        %     for p = 1:length(dorsalMaps.edgeOutline)
-        %         plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'w', 'LineWidth', 1);
-        %     end
-        %     % ax = gcf;
-        %     exportgraphics(h, fix_path(['Y:\nick\behavior\grooming\figures\', char(vars(i)), '_dff.png']), 'Resolution', 300)
-        % 
-        % end
+        if j == example_mouse
+            h=figure; imagesc(test), hold on, axis equal off, caxis([0 3]), %colormap(flipud(colormap('gray')))
+            for p = 1:length(dorsalMaps.edgeOutline)
+                plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
+            end
+            % ax = gcf;
+            % exportgraphics(h, fix_path(['Y:\nick\behavior\grooming\figures\', char(vars(i)), '_dff.png']), 'Resolution', 300)
 
-        v = prctile(test(:), thresh);
-        tmp = [tmp v];
-%         disp(v)
-        a{i}(:,:,j) = test >= v;
+        end
+
+%         v = prctile(test(:), thresh);
+%         tmp = [tmp v];
+% %         disp(v)
+%         a{i}(:,:,j) = test >= v;
 
         % subplot(2,round(length(vars)/2), i), axis off, hold on
-        figure(i), hold on
-% subplot(1,1,1)
-        for p = 1:length(dorsalMaps.edgeOutline)
-            plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
-            xticks([])
-            yticks([])
-        end
-            if v > 0
-                contourf(a{i}(:,:,j).*j, [j-0.1 j-0.1], 'FaceAlpha', 0.25)
-    
-                title(vars(i));
-            else
-                disp('v is not greater than 0')
-                disp(vars(i))
-            end
-            set(gca, 'YDir', 'reverse');
+%         figure(i), hold on
+% % subplot(1,1,1)
+%         for p = 1:length(dorsalMaps.edgeOutline)
+%             plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
+%             xticks([])
+%             yticks([])
+%         end
+%             if v > 0
+%                 contourf(a{i}(:,:,j).*j, [j-0.1 j-0.1], 'FaceAlpha', 0.25)
+% 
+%                 title(vars(i));
+%             else
+%                 disp('v is not greater than 0')
+%                 disp(vars(i))
+%             end
+%             set(gca, 'YDir', 'reverse');
 %         end
     end
 %     legend(labs, 'Location', 'Best')

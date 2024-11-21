@@ -96,45 +96,13 @@ largeleft(largeleft ==0) = nan;
 elliptical(elliptical==0)=nan;
 lick(lick==0)=nan;
 
-%%
-close all
-vars = ["right", "left", "ellip_left", "ellip_right", "largeright", "largeleft", "elliptical", "lick"];
-thresh = 80;
-figure
-for i = 1:length(vars)
-    behavior_var = eval(vars(i));
-    bcount = 1;
-    for j = 1:size(behavior_var,3)
-        tmp = behavior_var(:,:,j);
-        % if no behaviors in the session, continue
-        if isnan(mean(tmp, [1 2], 'omitnan')), continue; end
-        v = prctile(tmp(:), thresh);
-        binary_map{i}(:,:,bcount) = tmp >= v;
-        
-
-        subplot(2,round(length(vars)/2), i), axis off, hold on, set(gca, 'YDir', 'reverse');
-        for p = 1:length(dorsalMaps.edgeOutline)
-            plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
-            xticks([])
-            yticks([])
-        end
-        if v > 0
-            contourf(binary_map{i}(:,:,bcount).*bcount, [bcount-0.1 bcount-0.1], 'FaceAlpha', 0.25)
-
-            title(vars(i));
-        else
-            disp('v is not greater than 0')
-            disp(vars(i))
-        end
-        bcount = bcount+1;
-    end
-end
 
 %%
-clear avg_signal binary_map
+clear avg_signal binary_map labs
 % close all
 vars = ["right", "left", "ellip_left", "ellip_right", "largeright", "largeleft", "elliptical", "lick"];
 thresh = 90;
+labcount = 1;
 figure
 for i = 1:length(vars)
     behavior_var = eval(vars(i));
@@ -143,11 +111,14 @@ for i = 1:length(vars)
         tmp = behavior_var(:,:,j);
         % if no behaviors in the session, continue
         if isnan(mean(tmp, [1 2], 'omitnan')), continue; end
-%         avg_signal{i}(bcount, 1) = mean(tmp(:));
+
         avg_signal{i}(bcount, 1) = mean(tmp, [1 2], 'omitnan');
-%         avg_signal{i}(bcount, 1) = tmp(round(y),round(x));
+
         v = prctile(tmp(:), thresh);
         binary_map{i}(:,:,bcount) = tmp >= v;
+        data_map{i}(:,:,bcount) = tmp;
+        labs{labcount} = vars(i);
+        labcount = labcount + 1;
         bcount = bcount+1;
     end
     subplot(2,round(length(vars)/2), i),
@@ -164,18 +135,21 @@ for i = 1:length(vars)
 end
 
 
+
 %%
 ax = gcf;
 saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','dFF_90p', '.svg']))
 %%
 
-[p,tbl,stats] = anova1(dsim);
-[c,m,h,gnames] = multcompare(stats);
+
 
 clc
 figure
 avg_dff = uboxplot(avg_signal{1}, avg_signal{2}, avg_signal{3}, avg_signal{4}, avg_signal{5}, avg_signal{6}, avg_signal{7}, avg_signal{8});
 close()
+[p,tbl,stats] = anova1(avg_dff);
+[c,m,h,gnames] = multcompare(stats);
+
 figure, boxplot(avg_dff, 'Colors', 'k'),
 xticklabels(vars)
 ylabel('Average \DeltaF/F_0')
@@ -184,7 +158,7 @@ ax.FontSize = 12;
 
 title(['One-Way ANOVA, p = ', num2str(p, 2)])
 %%
-Z = linkage(dicemat)
+
 %% compute pairwise dice
 test = catcell(3, binary_map);
 dicemat = zeros(size(test,3), size(test,3));
@@ -192,13 +166,43 @@ dicemat = zeros(size(test,3), size(test,3));
 for i = 1:size(test,3)
 %     disp(i)
     for j = 1:size(test,3)
-%         if j>=i, continue; end
+        dicemat(j,i) = dice(test(:,:,j), test(:,:,i));
 %         disp(j)
 %         if isnan(test(i)) || isnan(test(j)), continue; end
-        dicemat(j,i) = dice(test(:,:,j), test(:,:,i));
+        
     end
 end
 
+%% deprecated
+
+% get the pairwise dice values from within each behavior (squares along the
+% diagonal)
+tmp_dicemat = tril(dicemat, -1);
+tmp_dicemat(tmp_dicemat == 0) = nan;
+
+count = 1;
+dice_by_behavior = cell(size(vars));
+for i = 1:length(binary_map)
+    subset_dicemat = tmp_dicemat(count:count+size(binary_map{i},3)-1,count:count+size(binary_map{i},3)-1);
+    disp(size(subset_dicemat))
+    dice_by_behavior{i} = subset_dicemat(:);
+    count = count + size(binary_map{i},3);
+end
+
+dsim = uboxplot(dice_by_behavior{1}, dice_by_behavior{2}, ...
+    dice_by_behavior{3},dice_by_behavior{4}, dice_by_behavior{5}, ...
+    dice_by_behavior{6}, dice_by_behavior{7}, dice_by_behavior{8});
+
+[p,tbl,stats] = anova1(dsim);
+[c,m,h,gnames] = multcompare(stats);
+
+figure, boxplot(dsim, 'Colors', 'k'),
+xticklabels(vars)
+ylabel('Pairwise Dice Similarity Coefficient')
+ax = gca;
+ax.FontSize = 12;
+
+title(['One-Way ANOVA, p = ', num2str(p, 2)])
 
 %%
 figure,
@@ -224,7 +228,21 @@ yticklabels(vars)
 
 %%
 
+%%
 
+test = catcell(3, binary_map);
+% test(isnan(test)) = 0;
+test = reshape(test, size(test,1)*size(test,2), [])';
+Z = linkage(test, 'average', 'euclidean');
+
+
+figure
+[H, T, outperm] = dendrogram(Z);  % Plot the dendrogram
+% [H, T, outperm] = dendrogram(Z,'Labels', labs, 'ColorThreshold', cutoff);  % Plot the dendrogram
+% ylabel('Distance (1-correlation)')
+xticks([])
+
+%%
 exportgraphics()
 %% compute pairwise dice
 for i = 1:length(vars)
