@@ -66,64 +66,106 @@ nanmask(nanmask==0) = nan;
 
 
 
+%%
+clear all_behavior_maps
+thresh = 80;
+vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
+figure, axis off, hold on
+for j = 1:length(mice)
+    load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
+    for i = 1:length(vars)
+        
+        behavior_map = eval(vars(i));
+        
+        behavior_map = behavior_map(:,:,j);
+        behavior_map = nanmask(:,:,j).*imwarp(behavior_map, tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+        all_behavior_maps{i}(:,:,j) = behavior_map;
+        v = prctile(behavior_map(:), thresh);
+        binary_maps{i}(:,:,j) = behavior_map >= v;
 
+        subplot(2,round(length(vars)/2), i), axis off, hold on
+        for p = 1:length(dorsalMaps.edgeOutline)
+            plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
+            xticks([])
+            yticks([])
+        end
+            if v > 0
+                contourf(binary_maps{i}(:,:,j).*j, [j-0.1 j-0.1], 'FaceAlpha', 0.25)
+
+                title(vars(i));
+            else
+                disp('v is not greater than 0')
+                disp(vars(i))
+            end
+            set(gca, 'YDir', 'reverse');
+    end
+end
 
 %%
-clc, clear a v, close all
-tmp = [];
-load(fix_path('Y:\nick\2p\code\utils\allen_map\allenDorsalMap.mat'));
-example_mouse = 4;
 
-thresh = 90;
-% figure, axis off, hold on
-for j = 1:length(mice)
-    atlas_tform = load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
-
-    vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
-
-         
-    for i = 1:length(vars)    
-        
-        test = eval(vars(i));
-        test = test(:,:,j);% .* nanmask(:,:,j);
-%         test = test.*nanmask(:,:,j);
-        test = nanmask(:,:,j).*imwarp(test, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
-        if j == example_mouse
-            h=figure; imagesc(test), hold on, axis equal off, caxis([0 3]), %colormap(flipud(colormap('gray')))
-            for p = 1:length(dorsalMaps.edgeOutline)
-                plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
-            end
-            % ax = gcf;
-            % exportgraphics(h, fix_path(['Y:\nick\behavior\grooming\figures\', char(vars(i)), '_dff.png']), 'Resolution', 300)
-
-        end
-
-%         v = prctile(test(:), thresh);
-%         tmp = [tmp v];
-% %         disp(v)
-%         a{i}(:,:,j) = test >= v;
-
-        % subplot(2,round(length(vars)/2), i), axis off, hold on
-%         figure(i), hold on
-% % subplot(1,1,1)
-%         for p = 1:length(dorsalMaps.edgeOutline)
-%             plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
-%             xticks([])
-%             yticks([])
-%         end
-%             if v > 0
-%                 contourf(a{i}(:,:,j).*j, [j-0.1 j-0.1], 'FaceAlpha', 0.25)
-% 
-%                 title(vars(i));
-%             else
-%                 disp('v is not greater than 0')
-%                 disp(vars(i))
-%             end
-%             set(gca, 'YDir', 'reverse');
-%         end
+all_maps = catcell(3, binary_maps);
+% all_maps = catcell(3, all_behavior_maps);
+% newnanmask = 1-isnan(mean(all_maps,3));
+% newnanmask(newnanmask==0) = nan;
+dicemat = zeros(size(all_maps,3), size(all_maps,3));
+for i = 1:size(all_maps,3)
+    for j = 1:size(all_maps,3)
+        dicemat(j,i) = dice(all_maps(:,:,j), all_maps(:,:,i));
+        % im1 = all_maps(:,:,j).*newnanmask;
+        % im1 = (im1-min(im1(:)))./(max(im1(:))-min(im1(:)));
+        % im1(isnan(im1)) = 0;
+        % im2 = all_maps(:,:,i).*newnanmask;
+        % im2 = (im2-min(im2(:)))./(max(im2(:))-min(im2(:)));
+        % im2(isnan(im2)) = 0;
+        % dicemat(j,i) = ssim(im1, im2, 'exponents', [1 1 1]);
     end
-%     legend(labs, 'Location', 'Best')
 end
+
+figure, 
+imagesc(dicemat), 
+% caxis([0 1]), 
+% colormap gray
+colormap(flipud(colormap(gray)))
+colorbar
+
+
+%% compare dice similarity matrix within behavior vs between behavior
+clear within_subset between_subset
+% within behavior
+N = length(mice);
+for i = 1:length(vars)
+    widx = (i-1)*N;
+    tmp = dicemat(widx+(1:N),widx+(1:N));
+    tmp(logical(triu(tmp))) = nan;
+    within_subset(:,i) = tmp(~isnan(tmp));
+
+    tmp = dicemat(widx+(1:N), :);
+    tmp(:, widx+(1:N)) = nan;
+    between_subset(:,i) = tmp(~isnan(tmp));
+end
+
+figure, 
+for i = 1:length(vars)
+    subplot(length(vars), 1, i)
+    histogram(between_subset(:,i), 20), hold on
+    vline(mean(within_subset(:,i)), 'k-')
+    xlim([0 1])
+    title(vars(i))
+end
+
+
+% figure, 
+for i = 1:length(vars)
+    % subplot(length(vars), 1, i)
+    % histogram(between_subset(:,i), 20), hold on
+    tmp = mean(within_subset(:,i));
+    my_p(i) = mean(tmp>between_subset(:,i));
+    % vline(mean(within_subset(:,i)), 'k-')
+    % xlim([0 1])
+    % title(vars(i))
+end
+
+
 
 %%
 % for i = 1:length(vars)

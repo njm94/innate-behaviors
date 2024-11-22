@@ -1,10 +1,16 @@
 
 clear, close all, clc
 
-addpath(fix_path('C:\Users\user\Documents\Nick\ridgeModel'))
-addpath(fix_path('C:\Users\user\Documents\Nick\ridgeModel\widefield'))
-addpath(fix_path('C:\Users\user\Documents\Nick\ridgeModel\smallStuff'))
-addpath(fix_path('C:\Users\user\Documents\Nick\grooming\utils'))
+
+% cd('/media/user/teamshare/nick/behavior/grooming/code/')
+addpath('/media/user/teamshare/nick/behavior/grooming/code/ridgeModel')
+addpath('/media/user/teamshare/nick/behavior/grooming/code/ridgeModel/widefield')
+addpath('/media/user/teamshare/nick/behavior/grooming/code/ridgeModel/smallStuff')
+
+% addpath(fix_path('C:\Users\user\Documents\Nick\ridgeModel'))
+% addpath(fix_path('C:\Users\user\Documents\Nick\ridgeModel\widefield'))
+% addpath(fix_path('C:\Users\user\Documents\Nick\ridgeModel\smallStuff'))
+% addpath(fix_path('C:\Users\user\Documents\Nick\grooming\utils'))
 
 %%
 
@@ -27,13 +33,13 @@ behaviors = {'Audio', 'Drop Left', 'Drop Right', 'Drop Center', 'Lick', ...
 
 grooming_behaviors = {'Elliptical', 'Elliptical Right', ...
     'Elliptical Left', 'Left', 'Left Asymmetric', 'Right', ...
-    'Right Asymmetric', 'Large Bilateral'};
+    'Right Asymmetric'};
 
-% expts_to_analyze = ;
+
 thy1_idx = 1:7;
 ai94_idx = 8:13;
 camk_idx = 14:25;
-
+% expts_to_analyze = [thy1_idx, camk_idx];
 
 % grooming labels from unsupervised clustering
 cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
@@ -43,7 +49,8 @@ include_boris = true;
 
 %%
 
-for j = ai94_idx(1):ai94_idx(end)+1%:20%_file1:length(data_list)+1
+for j = 14:length(data_list)+1
+    if any(ai94_idx == j), continue; end
      try
         data_dir = data_list{j};
         disp(['Starting ' data_dir])
@@ -124,7 +131,7 @@ for j = ai94_idx(1):ai94_idx(end)+1%:20%_file1:length(data_list)+1
             
             fullMat = modelCorr(Vmaster,Vfull,Umaster) .^2;
 
-            break
+            % break
 
             disp('Running reduced models')
             reducedMat = [];
@@ -164,7 +171,7 @@ for j = ai94_idx(1):ai94_idx(end)+1%:20%_file1:length(data_list)+1
 
         
             savefig(gcf, [fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), '_summary.fig'])
-            break
+            % break
 
             % all mice completed - break the loop
             if j == length(data_list{1})+1, break; end
@@ -172,7 +179,7 @@ for j = ai94_idx(1):ai94_idx(end)+1%:20%_file1:length(data_list)+1
         count = 1;
         disp('Loading master basis set')
         load([mouse_root_dir filesep 'Umaster.mat'])
-        clear Vmaster left right elliptical large_left large_right largebilateral lick_regressor fll_move flr_move audio_tone drop_left drop_right
+        clear Vmaster left right elliptical large_left large_right largebilateral lick_regressor fll_move flr_move audio_tone drop_left drop_right grooming_regressors
         current_mouse = mouse_id;
 
         fPath = [mouse_root_dir filesep 'outputs' filesep];

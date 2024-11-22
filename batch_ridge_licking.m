@@ -216,8 +216,8 @@ end
 %%
 
 fullLabels
-visual = true;
-cBetaRight = check_beta('Timer', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, [], visual);
+visual = false;
+cBetaRight = check_beta('Right Asymmetric', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, [], visual);
 
 %%
 
