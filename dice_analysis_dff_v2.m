@@ -37,6 +37,7 @@ for j = 1:length(data_list{1})
     % ignore spontaneous trials
     if spon_index(j), continue; end
 
+
     mouse_root = fileparts(data_list{1}{j});
     load([mouse_root, filesep, 'mask.mat'])
     load([mouse_root, filesep, 'atlas_tform.mat'])
@@ -80,6 +81,9 @@ for j = 1:length(data_list{1})
     end
 
     close(h)
+
+
+
 
 
 
@@ -201,6 +205,61 @@ for i = 1:size(test,3)
         
     end
 end
+%%
+
+figure, imagesc(dicemat), colormap(flipud(colormap(gray)))
+
+%% pull out individual mice and look at similarity
+
+vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", ...
+    "ellip_right", "ellip_left"];
+ecr2 = [];
+
+for i = 1:length(vars)
+    tmp = eval(vars(i));
+    ecr2 = cat(3, ecr2, tmp(:,:,1:7));
+end
+
+nanidx = isnan(squeeze(mean(ecr2, [1 2], 'omitnan')));
+num_behaviors = 
+ecr2(:,:,nanidx) = [];
+
+%%
+dicemat = zeros(size(ecr2,3),size(ecr2,3));
+for i =1 :size(ecr2,3)
+    for j = 1:size(ecr2,3)
+        im1 = ecr2(:,:,i);
+        im2 = ecr2(:,:,j);
+
+        v = prctile(im1(:), 80);
+        im1 = im1>v;
+
+        v = prctile(im2(:), 80);
+        im2 = im2>v;
+        dicemat(j,i) = dice(im1, im2);
+    end
+end
+
+%%
+
+figure, 
+imagesc(dicemat), hold on
+for i = 1:length(vars)-1
+    hline(5*(i)+0.5, 'r-')
+    vline(5*(i)+0.5, 'r-')
+end
+xticks(2.5:5:size(dicemat,1))
+yticks(2.5:5:size(dicemat,1))
+xticklabels(vars)
+yticklabels(vars)
+% caxis([0 1]), 
+% colormap gray
+colormap(flipud(colormap(gray)))
+c = colorbar;
+c.Label.String = 'Dice Similarity Coefficient';
+title('DFF binary')
+
+
 
 %% deprecated
 
@@ -306,16 +365,43 @@ mice = {'ECR2_thy1', 'GER2_ai94', 'HYL3_tTA', 'IBL2_tTA'};
 for j = 1:length(mice)
     load([data_root, filesep, mice{j}, filesep, 'mask.mat'])
     dff_path = [data_root, filesep, mice{j}, filesep, 'outputs'];
-    h = openfig([dff_path, filesep, getAllFiles(dff_path, 'ridge_summary.fig')]);
-    rightmove(:,:,j) = h.Children(2).Children.CData;
-    leftmove(:,:,j) = h.Children(4).Children.CData;
-    left(:,:,j) = h.Children(10).Children.CData;
-    right(:,:,j) = h.Children(8).Children.CData;
-    lick(:,:,j) = h.Children(6).Children.CData;
-    elliptical(:,:,j) = h.Children(18).Children.CData;
-    largeleft(:,:,j) = h.Children(16).Children.CData;
-    largeright(:,:,j) = h.Children(14).Children.CData;
-    bilateral(:,:,j) = h.Children(12).Children.CData;
+    ridge_fig = getAllFiles(dff_path, 'summary.fig');
+    % If there are multiple versions, use the most recent one
+    if size(ridge_fig,1) > 1
+        ridge_fig = sort(ridge_fig);
+        ridge_fig = ridge_fig{end};
+    end
+    disp(ridge_fig)
+
+    h = openfig([dff_path, filesep, ridge_fig]);
+    for i = 1:length(h.Children)
+        switch(h.Children(i).Title.String)
+            case 'RightMove' 
+                rightmove(:,:,j) = h.Children(i).Children(end).CData;
+            case 'LeftMove' 
+                leftmove(:,:,j) = h.Children(i).Children(end).CData;
+            case 'largebilateral'
+                bilateral(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical'
+                elliptical(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical Right'
+                ellip_right(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical Left'
+                ellip_left(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Left Asymmetric'
+                largeleft(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Right Asymmetric'
+                largeright(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Left'
+                left(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Right'
+                right(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Lick'
+                lick(:,:,j) = h.Children(i).Children(end).CData;
+            otherwise
+                continue
+        end
+    end
     close(h)
 end
 
@@ -339,9 +425,9 @@ nanmask(nanmask==0) = nan;
 
 
 %%
-clear all_behavior_maps
+clear all_behavior_maps, close all
 thresh = 80;
-vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft"];
+vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
 figure, axis off, hold on
 for j = 1:length(mice)
     load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
@@ -374,21 +460,21 @@ for j = 1:length(mice)
 end
 
 %%
-all_maps = catcell(3, binary_maps);
-% all_maps = catcell(3, all_behavior_maps);
-% newnanmask = 1-isnan(mean(all_maps,3));
-% newnanmask(newnanmask==0) = nan;
+% all_maps = catcell(3, binary_maps);
+all_maps = catcell(3, all_behavior_maps);
+newnanmask = 1-isnan(mean(all_maps,3));
+newnanmask(newnanmask==0) = nan;
 dicemat = zeros(size(all_maps,3), size(all_maps,3));
 for i = 1:size(all_maps,3)
     for j = 1:size(all_maps,3)
-        dicemat(j,i) = dice(all_maps(:,:,j), all_maps(:,:,i));
-        % im1 = all_maps(:,:,j).*newnanmask;
-        % im1 = (im1-min(im1(:)))./(max(im1(:))-min(im1(:)));
-        % im1(isnan(im1)) = 0;
-        % im2 = all_maps(:,:,i).*newnanmask;
-        % im2 = (im2-min(im2(:)))./(max(im2(:))-min(im2(:)));
-        % im2(isnan(im2)) = 0;
-        % dicemat(j,i) = ssim(im1, im2, 'exponents', [1 1 1]);
+%         dicemat(j,i) = dice(all_maps(:,:,j), all_maps(:,:,i));
+        im1 = all_maps(:,:,j).*newnanmask;
+        im1 = (im1-min(im1(:)))./(max(im1(:))-min(im1(:)));
+        im1(isnan(im1)) = 0;
+        im2 = all_maps(:,:,i).*newnanmask;
+        im2 = (im2-min(im2(:)))./(max(im2(:))-min(im2(:)));
+        im2(isnan(im2)) = 0;
+        dicemat(j,i) = ssim(im1, im2, 'exponents', [1 1 1]);
     end
 end
 
