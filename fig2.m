@@ -7,7 +7,7 @@ addpath('C:\Users\user\Documents\Nick\grooming\utils')
 addpath('C:\Users\user\Documents\Nick\grooming\utils\layoutCode')
 
 
-clc, clear, %close all
+clc, clear, close all
 fileID = fopen('expt1_datalist.txt','r');
 
 formatSpec = '%s';
@@ -79,6 +79,8 @@ N = length(data_list{1});
 tmat = zeros(numel(states), numel(states), N);
 episode_durations = cell(1, N);
 
+eth_example = 22;
+eth_counter = 1;
 for j = 1:N
     data_dir = fix_path(data_list{1}{j});
     timestamp_file = [data_dir, filesep, getAllFiles(data_dir, '_trim.txt')];
@@ -156,8 +158,32 @@ for j = 1:N
         tmat(y,x,j) = tmat(y,x,j) + 1;
 
         disp([num2str(counter), ' events found'])
+        if counter > 50
+            if eth_counter == eth_example
+                data2plot = events(idx(ii,1):idx(ii,2),:);
+                plot_ethogram(data2plot, states, fs)
+            end
+            eth_counter = eth_counter+1;
+        end
     end
 end
+
+%% save the ethogram example
+
+ax = gcf;
+saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','ethogram', '.svg']))
+
+
+%%
+
+episode_dur = catcell(1, episode_durations);
+
+figure, 
+histogram(episode_dur, 50)
+set(gca, 'YScale', 'log')
+ax = gcf;
+saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','episode_duration', '.svg']))
+
 
 %% Create conditional probability matrix from transition matrix
 
@@ -170,15 +196,16 @@ imagesc(mean(tmat,3, 'omitnan'))
 colormap(flipud(colormap('gray'))), 
 c=colorbar;
 c.Label.String = 'Count';
+c.FontSize = 12;
 xticks(1:length(states))
 yticks(1:length(states))
 xticklabels([])
 yticklabels([])
 xticklabels(states)
 yticklabels(states)
-title('Transitions', 'FontSize', 16)
-ylabel('From', 'FontSize', 14)
-xlabel('To', 'FontSize', 14)
+title('Transitions A->B', 'FontSize', 16)
+ylabel('State A', 'FontSize', 14)
+xlabel('State B', 'FontSize', 14)
 % axis off
 box on
 
@@ -189,17 +216,19 @@ B = mean(pmat, 3, 'omitnan');
 subplot(1,2,2), imagesc(B)
 colormap(flipud(colormap('gray'))), 
 c=colorbar;
-% c.Label.String = 'Probability';
-% title('Transition probability', 'FontSize', 16)
-% xticks(1:length(states))
-% yticks(1:length(states))
-xticklabels([])
-yticklabels([])
-% ylabel('From', 'FontSize', 14)
-% xlabel('To', 'FontSize', 14)
+c.Label.String = 'Probability';
+c.FontSize = 12;
+title('Transition probability P(B|A)', 'FontSize', 16)
+xticks(1:length(states))
+yticks(1:length(states))
+xticklabels(states)
+yticklabels(states)
+ylabel('State A', 'FontSize', 14)
+xlabel('State B', 'FontSize', 14)
 
-% ax = gcf;
-% % saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.svg']))
+ax = gcf;
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.pdf']))
+exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.pdf']), 'ContentType', 'vector')
 % % axis off
 % exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.png']), 'Resolution', 300)
 
@@ -236,9 +265,9 @@ plot(pgraph, 'MarkerSize', 20, 'LineWidth', pgraph.Edges.Weight*15, ...
     'NodeLabel','', ...
     'Layout', 'layered', 'Sources', 1, 'Sinks', length(states));%, 'WeightEffect', 'inverse')
 % 
-% ax = gca;
+ax = gca;
 % exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.png']), 'Resolution', 300)
-% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.svg']))
+saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.svg']))
 
 
 trueM = M;

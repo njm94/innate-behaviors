@@ -51,18 +51,27 @@ end
 
 %%  plot example mouse dff
 vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
-figure
+% figure('Position', [82 474 1811 128])
+example_mask(example_mask==0)=nan;
 for i = 1:length(vars)
-    
+    figure
     tmp = eval(vars(i));
-    subplot(1,length(vars), i)
-    imagesc(example_mask.*tmp(:,:,example_mouse));
+    
+    % subplot(1,length(vars), i)
+    pcolor(example_mask.*tmp(:,:,example_mouse));
+    shading interp
+    set(gca, 'YDir', 'reverse');
+    axis off, box off
+    % imagesc(example_mask.*tmp(:,:,example_mouse));
     xticks([])
     yticks([])
-%     caxis([0 2.5])
-    title(vars(i))
-%     colorbar
+    caxis([0 2.5])
+    % title(vars(i))
+    % colorbar
+    % saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), '_example.pdf']))
+    % exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), '_example.png']), 'Resolution', 300)
 end
+
 
 %% overlay contours from diff mice
 clc
@@ -85,7 +94,7 @@ nanmask(nanmask==0) = nan;
 clear all_behavior_maps
 thresh = 80;
 vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
-figure, axis off, hold on
+% figure, axis off, hold on
 for j = 1:length(mice)
     load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
     for i = 1:length(vars)
@@ -98,7 +107,8 @@ for j = 1:length(mice)
         v = prctile(behavior_map(:), thresh);
         binary_maps{i}(:,:,j) = behavior_map >= v;
 
-        subplot(1,round(length(vars)), i), axis off, hold on
+        % subplot(1,round(length(vars)), i), axis off, hold on
+        figure(i), axis off, hold on
         for p = 1:length(dorsalMaps.edgeOutline)
             plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
             xticks([])
@@ -107,14 +117,20 @@ for j = 1:length(mice)
             if v > 0
                 contourf(binary_maps{i}(:,:,j).*j, [j-0.1 j-0.1], 'FaceAlpha', 0.25)
 
-                title(vars(i));
+                % title(vars(i));
             else
                 disp('v is not greater than 0')
                 disp(vars(i))
             end
             set(gca, 'YDir', 'reverse');
     end
+    
 end
+
+% for i = 1:length(vars)
+%     figure(i)
+%     exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), '_contours.png']), 'Resolution', 300)
+% end
 
 %%
 
@@ -135,18 +151,21 @@ for i = 1:length(vars)-1
 end
 xticks(2.5:length(mice):size(dicemat,1))
 yticks(2.5:length(mice):size(dicemat,1))
-xticklabels(vars)
-yticklabels(vars)
+xticklabels([])
+yticklabels([])
+% xticklabels(vars)
+% yticklabels(vars)
 % caxis([0 1]), 
 % colormap gray
 colormap(flipud(colormap(gray)))
-c = colorbar;
-c.Label.String = 'Dice Similarity Coefficient';
-title('DFF binary')
+% c = colorbar;
+% c.Label.String = 'Dice Similarity Coefficient';
+% title('DFF binary')
 
+%%
 
-
-
+figure, axis off, colorbar; colormap(flipud(colormap(gray)))
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\','dicedffcolorbar', '.png']), 'Resolution', 300)
 
 
 %% check the betas for an example mouse
@@ -246,14 +265,27 @@ end
 nanmask(nanmask==0) = nan;
 
 
+%% plot the example mouse maps
+example_mask(example_mask==0)=nan;
+for i = 1:length(vars)
+    tmp = eval(vars(i));
+    figure, 
+    pcolor(tmp(:,:,example_mouse).*example_mask), shading interp
+    caxis([0 0.05])
+    axis off
+    box off
+    set(gca, 'YDir', 'reverse');
+    exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), 'expvar_example.png']), 'Resolution', 300)
+end
 
 
 
 %%
+close all
 clear all_behavior_maps, %close all
 thresh = 80;
 vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
-figure, axis off, hold on
+% figure, axis off, hold on
 for j = 1:length(mice)
     load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
     for i = 1:length(vars)
@@ -266,7 +298,8 @@ for j = 1:length(mice)
         v = prctile(behavior_map(:), thresh);
         binary_maps{i}(:,:,j) = behavior_map >= v;
 
-        subplot(1,round(length(vars)), i), axis off, hold on
+        % subplot(1,round(length(vars)), i), axis off, hold on
+        figure(i), axis off, hold on
         for p = 1:length(dorsalMaps.edgeOutline)
             plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
             xticks([])
@@ -275,13 +308,19 @@ for j = 1:length(mice)
             if v > 0
                 contourf(binary_maps{i}(:,:,j).*j, [j-0.1 j-0.1], 'FaceAlpha', 0.25)
 
-                title(vars(i));
+                % title(vars(i));
             else
                 disp('v is not greater than 0')
                 disp(vars(i))
             end
             set(gca, 'YDir', 'reverse');
     end
+end
+%%
+
+for i = 1:length(vars)
+    figure(i)
+    exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), 'expvar_contours.png']), 'Resolution', 300)
 end
 
 %%
@@ -301,15 +340,16 @@ for i = 1:length(vars)-1
 end
 xticks(2.5:length(mice):size(dicemat,1))
 yticks(2.5:length(mice):size(dicemat,1))
-xticklabels(vars)
-yticklabels(vars)
+xticklabels([])
+yticklabels([])
 % caxis([0 1]), 
 % colormap gray
 colormap(flipud(colormap(gray)))
-c = colorbar;
-c.Label.String = 'Dice Similarity Coefficient';
-title('Unique explained variance')
+% c = colorbar;
+% c.Label.String = 'Dice Similarity Coefficient';
+% title('Unique explained variance')
 
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\','diceexpvar', '.png']), 'Resolution', 300)
 
 
 

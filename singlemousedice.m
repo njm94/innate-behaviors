@@ -1,7 +1,7 @@
 % dice on individual mice
 
 
-clc, clear
+clc, clear, close all
 
 addpath('/home/user/Documents/grooming/utils')
 addpath('C:\Users\user\Documents\Nick\grooming\utils')
@@ -103,10 +103,14 @@ for ii = 1:length(mice)
     % close all
     vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", ...
         "ellip_right", "ellip_left"];
-    thresh = 90;
+    thresh = 80;
     labcount = 1;
     
-    figure(1)
+    figure(1);
+    row_idx = 1:4:32;
+    % if ii == 1
+    %     t = tiledlayout(h1, length(vars), length(mice));
+    % end
     for i = 1:length(vars)
         behavior_var = eval(vars(i));
         bcount = 1;
@@ -124,12 +128,13 @@ for ii = 1:length(mice)
             labcount = labcount + 1;
             bcount = bcount+1;
         end
-        subplot(length(mice), length(vars), length(vars)*(ii-1)+i),
+        
+        subplot(length(vars), length(mice), row_idx(i)+(ii-1)),
         imagesc(mean(binary_map{i},3))
         clim([0 1]), colormap(bluewhitered())
     
         axis off, hold on, set(gca, 'YDir', 'reverse');
-        title(vars(i));
+        % title(vars(i));
         for p = 1:length(dorsalMaps.edgeOutline)
             plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
             xticks([])
@@ -151,6 +156,7 @@ for ii = 1:length(mice)
     %%
     
     figure(2), 
+    % row_idx = (ii*2)-1:(ii*2);
     subplot(length(mice), 1, ii)
     imagesc(dicemat), hold on
     colormap(flipud(colormap(gray)))
@@ -164,12 +170,12 @@ for ii = 1:length(mice)
     xticks(cumsum(cellfun(@(x) size(x, 3), binary_map))-2)
     yticks(cumsum(cellfun(@(x) size(x, 3), binary_map))-2)
 
-    xticklabels(vars)
-    yticklabels(vars)
+    xticklabels([])
+    yticklabels([])
     colormap(flipud(colormap(gray)))
-    c = colorbar;
-    c.Label.String = 'Dice Similarity Coefficient';
-    title('DFF binary')
+    % c = colorbar;
+    % c.Label.String = 'Dice Similarity Coefficient';
+    % title('DFF binary')
 end
 
 %%

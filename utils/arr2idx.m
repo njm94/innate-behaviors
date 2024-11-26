@@ -4,10 +4,10 @@ function idx = arr2idx(arr)
 if M > 1 && N > 1, error('Array must be of size 1xN'); end
 if M>N, arr = arr'; end
 
-
+arr = [0 arr 0];
 d = diff(arr);
-start = find(d==1)+1;
-stop = find(d==-1);
+start = find(d==1);
+stop = find(d==-1)-1;
 
 
 if start(1) > stop(1), start = [1 start]; end
