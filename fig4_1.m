@@ -42,3 +42,61 @@ end
 set(gca, 'YDir', 'reverse');
 ax = gca;
 saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'AllenAtlas', '.svg']))
+
+%%
+
+h = openfig('Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240729\arm1\roi_1\bin2x2x1\ROI_aligned.fig')
+%%
+ax2 = h.Children(2).Children.CData;
+ax3 = h.Children(3).Children.CData;
+
+%%
+
+mask_ax2 = ax2>1;
+
+
+se = strel('disk', 3);
+boundary_ax2 = imdilate(edge(mask_ax2), se);
+
+
+
+figure, imagesc(ax3), colormap gray
+freezeColors()
+green = cat(3, zeros(size(ax3)), ones(size(ax3)), zeros(size(ax3)));
+hold on 
+h = imshow(green); 
+hold off 
+set(h, 'AlphaData', 65535.*boundary_ax2) 
+
+ax = gca;
+exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'roi2linear_example.png']), 'Resolution', 300)
+
+%%
+close all
+h = openfig('Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240729\arm1\linear_aligned.fig');
+
+ax2 = h.Children(2).Children.CData;
+ax3 = h.Children(3).Children.CData;
+
+
+mask_ax2 = ax2>1;
+se = strel('disk', 10);
+mask_ax2 = imclose(mask_ax2, se);
+
+
+se = strel('disk', 3);
+boundary_ax2 = imdilate(edge(mask_ax2), se);
+
+
+
+figure, imagesc(ax3), colormap gray
+freezeColors()
+green = cat(3, zeros(size(ax3)), ones(size(ax3)), zeros(size(ax3)));
+hold on 
+h = imshow(green); 
+hold off 
+set(h, 'AlphaData', 65535.*boundary_ax2) 
+
+ax = gca;
+exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'linear2widefield_example.png']), 'Resolution', 300)
+
