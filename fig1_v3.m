@@ -1,5 +1,6 @@
 % This code will read the clustered behaviors and generate figure 1
 addpath('/home/user/Documents/grooming/utils')
+addpath('C:\Users\user\Documents\Nick\grooming\utils')
 load(fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat'))
 
 % map dendrogram labels to behaviors - Note this is subject to change based
@@ -282,6 +283,7 @@ ax = gca;
 % exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'raster', '.png']), 'Resolution', 300)
 % saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','raster1', '.svg']))
 %%
+fs = 90;
 p_evoked = smoothdata(mean(raster_mat(evoked_index,:)));
 p_spon = smoothdata(mean(raster_mat(spon_index,:)));
 t = xt(p_evoked, fs);
@@ -297,9 +299,9 @@ axis tight
 xlabel('Time (s)')
 ylabel('Probability')
 
-ax = gca;
-exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'psth', '.png']), 'Resolution', 300)
-saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','psth', '.svg']))
+% ax = gca;
+% exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'psth', '.png']), 'Resolution', 300)
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','psth', '.svg']))
 %%
 
 figure
@@ -331,7 +333,7 @@ grouped_labels = zeros(size(dendrogram_labels));
 grouped_labels(dendrogram_labels==find(strcmp(label_map, 'Elliptical'))) = find(strcmp(grouped_label_map, 'Elliptical'));
 grouped_labels(dendrogram_labels==find(strcmp(label_map, 'Right Asymmetric')) | dendrogram_labels==find(strcmp(label_map, 'Left Asymmetric'))) = find(strcmp(grouped_label_map, 'Asymmetric'));
 grouped_labels(dendrogram_labels==find(strcmp(label_map, 'Right')) | dendrogram_labels==find(strcmp(label_map, 'Left'))) = find(strcmp(grouped_label_map, 'Unilateral'));
-grouped_labels(dendrogram_labels==find(strcmp(label_map, 'Elliptical Asymmetric'))) = find(strcmp(grouped_label_map, 'Elliptical Asymmetric'));
+grouped_labels(dendrogram_labels==find(strcmp(label_map, 'Elliptical Right')) | dendrogram_labels==find(strcmp(label_map, 'Elliptical Left'))) = find(strcmp(grouped_label_map, 'Elliptical Asymmetric'));
 
 
 
@@ -363,9 +365,9 @@ ylim([0 100])
 ax = gca;
 ax.FontSize = 12;
 
-ax = gca;
-exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'rel_freq', '.png']), 'Resolution', 300)
-saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','rel_freq', '.svg']))
+% ax = gca;
+% exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\', 'rel_freq', '.png']), 'Resolution', 300)
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','rel_freq', '.svg']))
 
 %%
 

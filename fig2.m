@@ -414,22 +414,3 @@ function [y,x] = set_xy_states(last_state, current_state, state_order)
                     x = stop_idx;
             end
 end
-
-
-
-function crossings = countEdgeCrossings(G, nodeOrder)
-    edges = G.Edges.EndNodes;
-    crossings = 0;
-    for i = 1:height(edges)
-        for j = i+1:height(edges)
-            % Get node indices for the two edges
-            edge1 = edges(i, :);
-            edge2 = edges(j, :);
-            % Check if the edges cross based on node order
-            if (nodeOrder(edge1(1)) < nodeOrder(edge2(1)) && nodeOrder(edge1(2)) > nodeOrder(edge2(2))) || ...
-               (nodeOrder(edge1(1)) > nodeOrder(edge2(1)) && nodeOrder(edge1(2)) < nodeOrder(edge2(2)))
-                crossings = crossings + 1;
-            end
-        end
-    end
-end
