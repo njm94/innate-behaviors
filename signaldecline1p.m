@@ -350,7 +350,7 @@ clear mat_global sort_idx all_global all_dur
 counter = 1;
 all_dur = [];
 all_groom = {};
-for i = 1:length(global_signal)-1
+for i = 1:length(global_signal)
     if ~isempty(global_signal{i})
         for j = 1:length(global_signal{i})
             if ~isempty(global_signal{i}{j})
@@ -377,21 +377,23 @@ joyPlot(mat_global', t, 2, 'FaceColor', 'w', 'FaceAlpha', 1)
 
 
 %%
-
+t_pre = t<-1;
 t_on = abs(t)<=1;
 t_early = t>1 & t<=5;
-t_late = t>5;
+% t_late = t>5 & ;
 
+dff_pre = mean(mat_global(:, t_pre), 2, 'omitnan');
 dff_on = mean(mat_global(:, t_on), 2, 'omitnan');
 dff_early = mean(mat_global(:,t_early), 2, 'omitnan');
-dff_late = mean(mat_global(:,t_late), 2, 'omitnan');
+% dff_late = mean(mat_global(:,t_late), 2, 'omitnan');
+% dff_post
 
-plot_data = [dff_on, dff_early, dff_late];
+plot_data = [dff_pre, dff_on, dff_early, dff_late];
 figure, boxplot(plot_data, 'Colors', 'k', 'Symbol', '')
 hold on
-swarmchart(repmat([1 2 3], size(dff_on,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
+swarmchart(repmat([1 2 3 4], size(dff_on,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
 ylabel('Mean cortical \DeltaF/F_0 (\sigma)')
-xticklabels({'Onset [-1, 1]', 'Early [1, 5]', 'Late [5, end]'})
+xticklabels({'Pre [-4, -1]', 'Onset [-1, 1]', 'Early [1, 5]', 'Late [5, end]'})
 ax = gca;
 ax.FontSize = 14;
 
@@ -399,12 +401,12 @@ ax.FontSize = 14;
 % [p,~,stats] = anova1([dff_on, dff_early, dff_late])
 % [c,m,h,gnames] = multcompare(stats);
 
-
+clc
 % Create a table with the data
-tbl = array2table(plot_data, 'VariableNames', {'Onset', 'Early', 'Late'});
+tbl = array2table(plot_data, 'VariableNames', {'Pre', 'Onset', 'Early', 'Late'});
 
 % Define the repeated measures model
-rm = fitrm(tbl, 'Onset-Late ~ 1', 'WithinDesign', [1 2 3]'); % 3 time periods
+rm = fitrm(tbl, 'Pre-Late ~ 1', 'WithinDesign', [1 2 3 4]'); % 3 time periods
 
 % Run repeated-measures ANOVA
 ranova_results = ranova(rm);
