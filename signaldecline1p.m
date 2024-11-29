@@ -296,55 +296,8 @@ figure, imagesc(mean(test_post(:,:,25:end) - test_pre(:,:,25:end),3))
 colorbar
 colormap(bluewhitered())
 %%
-%%
-grooming_bout = 3;
-w = 15;
-nanmask = mask;
-nanmask(nanmask==0) = nan;
-dFF_crop = dFF(:,:,idx(grooming_bout,1)-w*fs:idx(grooming_bout,2)+w*fs);
-dFF_crop = dFF_crop .* nanmask;
 
 
-
-t = xt(dFF_crop, fs, 3)-w;
-
-figure, plot(t, squeeze(nanmean(dFF_crop, [1 2])), 'k', 'LineWidth', 1)
-hold on
-
-for i = 1:size(groom_events,2)
-    tmp = table2array(groom_events(:,i));
-    tmp = tmp(idx(grooming_bout,1)-w*fs:idx(grooming_bout,2)+w*fs);
-    if any(tmp)
-        if strcmpi(groom_events.Properties.VariableNames{i}, 'Right') || strcmpi(groom_events.Properties.VariableNames{i}, 'Left')
-            col = 'm';
-        else
-            col = 'c';
-        end
-        patchplot(t(arr2idx(tmp)), [-2 3], col, 0.1)
-    end
-    % patchplot(t([w*fs size(dFF_crop,3)-(w*fs)]), [-2 3], 'c', 0.1)
-end
-axis tight
-
-xlabel('Time (s)')
-ylabel('\DeltaF/F_0 (\sigma)')
-
-%%
-
-%%
-
-figure
-pp = diff(behaviors{4},1,2);
-for i = 1:size(behaviors{4},1)
-    subplot(1,3,i)
-    tmp = mean(dFF(:,:,behaviors{4}(i,1):behaviors{4}(i,2)),3);
-    imagesc(tmp)
-    title(num2str(pp(i)))
-    yticks([])
-    xticks([])
-end
-
-%%
 clear mat_global sort_idx all_global all_dur
 
 counter = 1;
