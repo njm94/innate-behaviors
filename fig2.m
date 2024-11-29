@@ -58,11 +58,12 @@ evoked = [3:7,10:13,16:19,22:25];
 % states = ["Stationary", "Elliptical", "Right Asymmetric", "Left Asymmetric" ...
 %     "Elliptical Right", "Elliptical Left", "Unilateral"];
 
-states = ["Start", "Elliptical", "Right Asymmetric", "Left Asymmetric" ...
-    "Elliptical Right", "Elliptical Left", "Right", "Left", "Stop"];
+
 % states = states(randperm(length(states)));
 states = ["Start", "Right", "Left","Elliptical", "Right Asymmetric", "Left Asymmetric" ...
 "Elliptical Right", "Elliptical Left", "Stop"];
+eth_states = [states, "Lick", "Drop"];
+prop_comp_matrix = zeros(4, 7);
 
 % states = ["Start", "Unilateral","Elliptical", "Right Asymmetric", "Left Asymmetric" ...
 % "Elliptical Right", "Elliptical Left", "Stop"];
@@ -73,13 +74,15 @@ aggregation_sz = 3;
 data_list{1} = [data_list{1}; mp_list];
 % data_list{1} = mp_list;
 
+include_boris = true;
+
 %%
 N = length(data_list{1});
 
 tmat = zeros(numel(states), numel(states), N);
 episode_durations = cell(1, N);
 
-eth_example = 22;
+eth_example = [1, 9, 21, 25, 41];
 eth_counter = 1;
 for j = 1:N
     data_dir = fix_path(data_list{1}{j});
@@ -92,12 +95,18 @@ for j = 1:N
     
     if ~isempty(getAllFiles(data_dir, '.tsv'))
         boris_file = [data_dir, filesep, getAllFiles(data_dir, '.tsv')];
-        [events, snippets, b_table, video_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file);
+        [events, snippets, b_table, video_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file, include_boris);
         if isempty(events) % no grooming behaviors
             continue
         end
         labels = events.Properties.VariableNames;
-        bmat = any(table2array(events),2);
+
+        idx = contains(events.Properties.VariableNames, 'Lick') | ...
+        contains(events.Properties.VariableNames, 'Drop') | ...
+        contains(events.Properties.VariableNames, 'Video') | ...
+        contains(events.Properties.VariableNames, 'Flail') ;
+        groom_events = removevars(events, idx);
+        bmat = any(table2array(groom_events),2);
  
     else 
         continue
@@ -116,11 +125,6 @@ for j = 1:N
     
     % create a labels matrix of same size as snippets to keep track of
     % which behavior is happening
-%     tmp_labels = cell(1, length(labels));
-%     for jj = 1:length(labels)
-%         tmp_labels{jj} = repmat(labels(jj), size(snippets{jj},1), 1);
-%     end
-%     tmp_labels = catcell(1, tmp_labels);
     tmp_labels = cluster_labels;
 
     for ii = 1:size(idx,1)
@@ -128,6 +132,23 @@ for j = 1:N
         % define last event to be STATIONARY event
         last_event = 'Start';
         last_event_idx = idx(ii,1);
+
+        % use this to populate the proportial composition matrix
+        if episode_durations{j}(ii) <= 1
+            prop_comp_dur_idx = 1;
+        elseif episode_durations{j}(ii) <= 2
+            prop_comp_dur_idx = 2;
+        elseif episode_durations{j}(ii) <= 4
+            prop_comp_dur_idx = 3;
+        elseif episode_durations{j}(ii) <= 8
+            prop_comp_dur_idx = 4;
+        elseif episode_durations{j}(ii) <= 16
+            prop_comp_dur_idx = 5;
+        elseif episode_durations{j}(ii) <= 32
+            prop_comp_dur_idx = 6;
+        else
+            prop_comp_dur_idx = 7;
+        end
 
         counter = 0;
 
@@ -138,6 +159,22 @@ for j = 1:N
                 break
             end
             current_event = tmp_labels{tmp_idx};
+            switch current_event
+                case 'Right'
+                    prop_comp_matrix(1, prop_comp_dur_idx) = prop_comp_matrix(1, prop_comp_dur_idx) + 1;
+                case 'Left'
+                    prop_comp_matrix(1, prop_comp_dur_idx) = prop_comp_matrix(1, prop_comp_dur_idx) + 1;
+                case 'Elliptical'
+                    prop_comp_matrix(2, prop_comp_dur_idx) = prop_comp_matrix(2, prop_comp_dur_idx) + 1;
+                case 'Right Asymmetric'
+                    prop_comp_matrix(3, prop_comp_dur_idx) = prop_comp_matrix(3, prop_comp_dur_idx) + 1;
+                case 'Left Asymmetric'
+                    prop_comp_matrix(3, prop_comp_dur_idx) = prop_comp_matrix(3, prop_comp_dur_idx) + 1;
+                case 'Elliptical Right'
+                    prop_comp_matrix(4, prop_comp_dur_idx) = prop_comp_matrix(4, prop_comp_dur_idx) + 1;
+                case 'Elliptical Left'
+                    prop_comp_matrix(4, prop_comp_dur_idx) = prop_comp_matrix(4, prop_comp_dur_idx) + 1;
+            end
 
             [y,x] = set_xy_states(last_event, current_event, states);
 
@@ -158,10 +195,11 @@ for j = 1:N
         tmat(y,x,j) = tmat(y,x,j) + 1;
 
         disp([num2str(counter), ' events found'])
-        if counter > 50
-            if eth_counter == eth_example
+        if episode_durations{j}(ii) > 10
+            if any(eth_counter == eth_example)
+                figure
                 data2plot = events(idx(ii,1):idx(ii,2),:);
-                plot_ethogram(data2plot, states, fs)
+                plot_ethogram(data2plot, eth_states, fs)
             end
             eth_counter = eth_counter+1;
         end
@@ -170,11 +208,14 @@ end
 
 %% save the ethogram example
 
-ax = gcf;
-saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','ethogram', '.svg']))
+for i = 1:length(eth_example)
+ax = figure(i);
+axis([0 40 ylim])
+saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','ethogram_ex', num2str(i), '.svg']))
+end
 
 
-%%
+%% episode duration statistics
 
 episode_dur = catcell(1, episode_durations);
 
@@ -185,6 +226,16 @@ ax = gcf;
 saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','episode_duration', '.svg']))
 
 
+%% proportional composition statistics
+
+
+figure, bar((prop_comp_matrix ./ sum(prop_comp_matrix))', 'stacked')
+legend({'Unilateral', 'Elliptical', 'Asymmetric', 'Ellip Asym'})
+ylabel('Proportional composition')
+xticklabels({'0-1', '1-2', '2-4', '4-8', '8-16', '16-32', '>32'})
+xlabel('Episode duration (s)')
+ax = gcf;
+saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','prop_composition', '.svg']))
 %% Create conditional probability matrix from transition matrix
 
 figure('Position', [161 368 1261 495])
