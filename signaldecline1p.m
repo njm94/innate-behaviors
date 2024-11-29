@@ -98,12 +98,20 @@ for j = 1:length(data_list{1})+1
 
     
     % remove point events from event matrix
-    idx = contains(events.Properties.VariableNames, 'Drop') | ...
+    % idx = contains(events.Properties.VariableNames, 'Drop') | ...
+    %     contains(events.Properties.VariableNames, 'Video') | ...
+    %     contains(events.Properties.VariableNames, 'Flail') ;
+    idx = contains(events.Properties.VariableNames, 'Lick') | ...
+        contains(events.Properties.VariableNames, 'Drop') | ...
         contains(events.Properties.VariableNames, 'Video') | ...
         contains(events.Properties.VariableNames, 'Flail') ;
     groom_events = removevars(events, idx);
     labels = groom_events.Properties.VariableNames;
 
+    idx = contains(events.Properties.VariableNames, 'Video') | ...
+        contains(events.Properties.VariableNames, 'Flail') ;
+    eth_events = removevars(events, idx);
+    
     bmat = any(table2array(groom_events),2);
     [episodes, idx] = aggregate(bmat, aggregation_sz);
     episode_durations = diff(idx, 1, 2)/fs;
@@ -181,31 +189,33 @@ for j = 1:length(data_list{1})+1
         % episodes
 
         tmp_idx(i,:) = [idx(i,1)-round(blen*fs), idx(i,2)+round(blen*fs)];
-        try dFF_crop = dFF(:,:,tmp_idx(i,1):tmp_idx(i,2));
+        try 
+            dFF_crop = dFF(:,:,tmp_idx(i,1):tmp_idx(i,2));
+    
+            % get into atlas coords
+            dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
+            ts = getTimeseries(dFF_crop, seeds, 2);
+    
+            % set windows
+            prewin = 1:round(blen*fs);
+            earlywin = round(blen*fs)+1:2*round(blen*fs);
+            latewin = size(ts,1)-2*round(blen*fs):size(ts,1)-round(blen*fs);
+            postwin = size(ts,1)-round(blen*fs)+1:size(ts,1);
+    
+            % pre_corrmat{j}(:,:,i) = corrcoef(ts(prewin, :));
+            % early_corrmat{j}(:,:,i) = corrcoef(ts(earlywin, :));
+            % late_corrmat{j}(:,:,i) = corrcoef(ts(latewin, :));
+            % post_corrmat{j}(:,:,i) = corrcoef(ts(postwin, :));
+    
+            global_signal{j}{i,:} = squeeze(mean(dFF_crop, [1 2], 'omitnan'));
+            roi_signal{j}{i} = ts;
+    
+    
+            % find a period of time that is equal in length with no activity
+            groom_dur{j}(i) = size(ts,1)*fs - 2*round(blen*fs);
 
-        %%
-
-        % get into atlas coords
-        dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
-        ts = getTimeseries(dFF_crop, seeds, 2);
-
-        % set windows
-        prewin = 1:round(blen*fs);
-        earlywin = round(blen*fs)+1:2*round(blen*fs);
-        latewin = size(ts,1)-2*round(blen*fs):size(ts,1)-round(blen*fs);
-        postwin = size(ts,1)-round(blen*fs)+1:size(ts,1);
-
-        % pre_corrmat{j}(:,:,i) = corrcoef(ts(prewin, :));
-        % early_corrmat{j}(:,:,i) = corrcoef(ts(earlywin, :));
-        % late_corrmat{j}(:,:,i) = corrcoef(ts(latewin, :));
-        % post_corrmat{j}(:,:,i) = corrcoef(ts(postwin, :));
-
-        global_signal{j}{i,:} = squeeze(mean(dFF_crop, [1 2], 'omitnan'));
-        roi_signal{j}{i} = ts;
-
-
-        % find a period of time that is equal in length with no activity
-        groom_dur{j}(i) = size(ts,1)*fs - 2*round(blen*fs);
+            % get behavior ethogram data
+            eth_states{j}{i} = eth_events(tmp_idx(i,1):tmp_idx(i,2), :);
 
         catch
             continue
@@ -218,6 +228,35 @@ for j = 1:length(data_list{1})+1
 end
 
 
+%% 
+states = ["Start", "Right", "Left", "Elliptical", ...
+    "Right Asymmetric", "Left Asymmetric", ...
+    "Elliptical Right", "Elliptical Left", "Stop", "Lick", "Drop"];
+close all
+ex_idx = [16 1; 5 1; 17 4; 19 2];
+for i = 1:size(ex_idx,1)
+    plot_ethogram(eth_states{ex_idx(i,1)}{ex_idx(i,2)}, states, fs);
+    axis([5 60, ylim])
+end
+
+
+
+
+
+
+
+%%
+% clc
+didx = 7;
+sidx = 2;
+states = ["Start", "Right", "Left", "Elliptical", ...
+    "Right Asymmetric", "Left Asymmetric", ...
+    "Elliptical Right", "Elliptical Left", "Stop", "Lick", "Drop"];
+plot_ethogram(eth_states{didx}{sidx}, states, fs)
+t = xt(global_signal{didx}{sidx},fs,1);
+hold on, plot(xt(global_signal{didx}{sidx},fs,1), global_signal{didx}{sidx}-2, 'k')
+line([0 t(end)], [-2 -2], 'Color', [0 0 0], 'LineWidth', 1, 'LineStyle', '--')
+axis tight
 
 %%
 
@@ -295,41 +334,6 @@ iii = 5;
 figure, imagesc(mean(test_post(:,:,25:end) - test_pre(:,:,25:end),3))
 colorbar
 colormap(bluewhitered())
-%%
-%%
-grooming_bout = 3;
-w = 15;
-nanmask = mask;
-nanmask(nanmask==0) = nan;
-dFF_crop = dFF(:,:,idx(grooming_bout,1)-w*fs:idx(grooming_bout,2)+w*fs);
-dFF_crop = dFF_crop .* nanmask;
-
-
-
-t = xt(dFF_crop, fs, 3)-w;
-
-figure, plot(t, squeeze(nanmean(dFF_crop, [1 2])), 'k', 'LineWidth', 1)
-hold on
-
-for i = 1:size(groom_events,2)
-    tmp = table2array(groom_events(:,i));
-    tmp = tmp(idx(grooming_bout,1)-w*fs:idx(grooming_bout,2)+w*fs);
-    if any(tmp)
-        if strcmpi(groom_events.Properties.VariableNames{i}, 'Right') || strcmpi(groom_events.Properties.VariableNames{i}, 'Left')
-            col = 'm';
-        else
-            col = 'c';
-        end
-        patchplot(t(arr2idx(tmp)), [-2 3], col, 0.1)
-    end
-    % patchplot(t([w*fs size(dFF_crop,3)-(w*fs)]), [-2 3], 'c', 0.1)
-end
-axis tight
-
-xlabel('Time (s)')
-ylabel('\DeltaF/F_0 (\sigma)')
-
-%%
 
 %%
 
@@ -375,18 +379,55 @@ joyPlot(mat_global', t, 2, 'FaceColor', 'w', 'FaceAlpha', 1)
 % hold on
 % vline(0, 'r-')
 
+%%
+
+% append a row and column of zeros since pcolor ignores the last row and column
+figure, hold on
+t = xt([mat_global(1,:), 0], fs, 2)-5;
+num_ep = size(mat_global,1)+1:-1:1;
+pcolor(t, num_ep, padarray(mat_global, [1, 1], 0, 'post')), 
+colormap(bluewhitered())
+shading flat
+caxis([-2 8])
+line([40 50], [50 50], 'Color', [0 0 0], 'LineWidth', 2)
+xticklabels([])
+yticklabels([])
+% set(gca, 'YDir', 'reverse')
+axis([t(1) t(end) 1 size(mat_global,1)+1])
+line([0 0], [0 size(mat_global,1)+1], 'Color', [0 0 0], 'LineWidth', 2)
+% colorbar
+p50 = prctile(all_dur, 50);
+line([t(p50) t(p50)], [0 size(mat_global,1)+1], 'Color', [0 0 0], 'LineWidth', 2, 'LineStyle', '--')
+box on
+xticks([])
+yticks([])
+
+% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_all.png']), 'Resolution', 300)
+%%
+figure, axis off, colorbar, caxis([-2 8]), colormap(bluewhitered())
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_colorbar.png']), 'Resolution', 300)
+%%
+
+figure, hold on
+shadedErrorBar(t(1:p50), mean(mat_global(:,1:p50), 'omitnan'), std(mat_global(:,1:p50), 'omitnan'), 'k', 1)
+line([0 0], ylim, 'Color', [0 0 0], 'LineWidth', 2)
+
+xticklabels([])
+yticklabels([])
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_average.png']), 'Resolution', 300)
 
 %%
+t = xt(mat_global, fs, 2)-5;
 t_pre = t<-1;
 t_on = abs(t)<=1;
 t_early = t>1 & t<=5;
-% t_late = t>5 & ;
+t_late = t>5;
 
 dff_pre = mean(mat_global(:, t_pre), 2, 'omitnan');
 dff_on = mean(mat_global(:, t_on), 2, 'omitnan');
 dff_early = mean(mat_global(:,t_early), 2, 'omitnan');
-% dff_late = mean(mat_global(:,t_late), 2, 'omitnan');
-% dff_post
+dff_late = mean(mat_global(:,t_late), 2, 'omitnan');
+
 
 plot_data = [dff_pre, dff_on, dff_early, dff_late];
 figure, boxplot(plot_data, 'Colors', 'k', 'Symbol', '')
@@ -418,12 +459,14 @@ disp(ranova_results);
 pairwise_results = multcompare(rm, 'Time', 'ComparisonType', 'bonferroni');
 disp(pairwise_results);
 
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'long_groom_binnedstates.svg']))
+
 %%
 clear p
 for i = 1:length(all_global)
     
     X = all_global{i}(round(blen*fs):end);
-    t = xt(X, fs, 2);
+    t = xt(X, fs, 1);
     p(i,:) = polyfit(t, X, 1);
     
     % figure, plot(t, X)
@@ -455,6 +498,48 @@ if h == 1
 else
     disp('The mean is not significantly less than zero.');
 end
+
+saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'long_groom_slope.svg']))
 %%
 save('/media/user/teamshare/nick/behavior/grooming/1p/outputs/long_groom_global_5spre.mat', 'all_global')
+%%
+load(fix_path('/media/user/teamshare/nick/behavior/grooming/1p/ECR2_thy1/mask.mat'))
+load(fix_path('/media/user/teamshare/nick/behavior/grooming/1p/ECR2_thy1/atlas_tform.mat'))
+h = openfig(fix_path('/media/user/teamshare/nick/behavior/grooming/1p/ECR2_thy1/atlas_aligned.fig'));
 
+mask = imwarp(mask, tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+mask(mask==0) = nan;
+
+for i = 1:length(h.Children.Children)
+    if strcmp(h.Children.Children(i).Type, 'line')
+        h.Children.Children(i).LineWidth = 2;
+        h.Children.Children(i).Color = [1 1 1];
+    else
+        h.Children.Children(i).CData = h.Children.Children(i).CData .* uint16(mask);
+        set(h.Children.Children(i), 'AlphaData', ~isnan(mask))
+    end
+end
+
+rois = {'MOS_1-L', 'SSP-ul-L', 'SSP-bfd-L', 'MOP_1-L', 'VIS-p-L', 'RSP_2-L'};
+hold on
+for i = 1:length(rois)
+    tmp = seeds(strcmp(labels, rois(i)),:);
+    plot(tmp(1), tmp(2), '.', 'MarkerSize', 30)
+end
+
+%%
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'example1pimage.png']), 'Resolution', 300)
+
+%%
+
+
+rois = {'MOS_2-L', 'SSP-ul-L', 'SSP-bfd-L', 'VIS-p-L', 'RSP_1-L', 'PTLp-L'};
+
+
+figure, hold on 
+for i = 1:size(rois,2)
+    ex_rois = roi_signal{4}{1}(:, contains(labels, rois(i)));
+    plot(xt(ex_rois, fs, 1)-5, ex_rois)%-i*2)
+end
+legend(rois, 'Location', 'Best')
+vline(0, 'k-')

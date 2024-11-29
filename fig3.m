@@ -92,7 +92,7 @@ nanmask(nanmask==0) = nan;
 
 %%
 clear all_behavior_maps
-thresh = 80;
+thresh = 70;
 vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
 % figure, axis off, hold on
 for j = 1:length(mice)
@@ -131,6 +131,22 @@ end
 %     figure(i)
 %     exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), '_contours.png']), 'Resolution', 300)
 % end
+
+%%
+test = {binary_maps{1}, catcell(3,binary_maps{2:3}), binary_maps{4}, catcell(3,binary_maps{5:6}), catcell(3, binary_maps{7:8})}
+%%
+figure, hold on
+for i = 1:length(test)
+    ap = [];
+    for j = 1:size(test,3)
+        [row, ~] = find(test{i}(:,:,j));
+        ap = [ap; row(:)];
+    end
+    subplot(5,1,i)
+    histogram(ap)
+    axis([100 500 ylim])
+end
+legend({'Lick', 'Uni', 'Ellip', 'Asym', 'Ellip Asym'})
 
 %%
 
