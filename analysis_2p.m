@@ -8,7 +8,7 @@ formatSpec = '%s';
 %     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
 %     };
 
-mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925';
+mp_list = {%'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925';
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903';
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
@@ -138,6 +138,27 @@ for i = 1:length(mp_list)
     Bmean = cat(2, Bmean, mean(Nresample(:, logical(flrthresh)),2));
     Bmean = cat(2, Bmean, mean(Nresample(:, logical(fllthresh)),2));
     labs = [labs, 'FLR', 'FLL'];
+
+    %%
+    figure, hold on
+    for j = 1:size(event_table,2)
+        tmp = corr(event_table(:,j), Nresample');
+        plot(sort(tmp))
+    end
+    legend(labs, 'Location', 'Best')
+
+
+
+    figure, hold on
+    for j = 1:size(event_table,2)
+%         subplot(size(event_table,2),1,j)
+        [tmp, I] = sort(corr(event_table(:,j), Nresample'));
+        plot(Nresample(I(end),:)')
+        title(labs)
+    end
+
+
+    %%
 
     % Do the hierarchical clustering
     dmetric = 'correlation';

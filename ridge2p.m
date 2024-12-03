@@ -126,24 +126,25 @@ reg_type = [reg_type 3 3];
 regLabels = [regLabels, 'FLR', 'FLL'];
 
 %%
-% concatenate 2 STIMULUS variable types for audio tone and valve opening
-bmat = [audio valve bmat(1:vid_end, :)];
-reg_type = [2 2 reg_type];
-regLabels = ['audio', 'valve', regLabels];
+% % concatenate 2 STIMULUS variable types for audio tone and valve opening
+% bmat = [audio valve bmat(1:vid_end, :)];
+% reg_type = [2 2 reg_type];
+% regLabels = ['audio', 'valve', regLabels];
 
 %%
 
 % bmat2 = reshape(bmat, [size(bmat,1), 1, size(bmat,2)]);
 [dMat, regIdx] = makeDesignMatrix(bmat, reg_type, bopts);
+fullR = dMat;
 
 % regLabels = events.Properties.VariableNames(2:end-1);
 
 
-[~, activity_timer] = start_timer(any(behaviors,2), 2, fs);
-activity_timer = activity_timer ./ fs;
-fullR = [dMat, activity_timer];
-regIdx = [regIdx; max(regIdx)+1];
-regLabels = [regLabels, 'Timer'];
+% [~, activity_timer] = start_timer(any(behaviors,2), 2, fs);
+% activity_timer = activity_timer ./ fs;
+% fullR = [dMat, activity_timer];
+% regIdx = [regIdx; max(regIdx)+1];
+% regLabels = [regLabels, 'Timer'];
 
 
 % add forelimb movements to the design matrix as continuous variables
@@ -214,9 +215,6 @@ for j =1:length(regLabels)
 
 %             mux = mean(test(I,0.5*fs+1:end),2);
             response_snr = max(test(:,0.5*fs+1:end), [], 2) ./ mu0;
-
-%             t = (mux-mu0)./std0;
-
 
         end
     catch
