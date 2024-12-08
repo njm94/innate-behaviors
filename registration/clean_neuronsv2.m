@@ -8,7 +8,7 @@ disp('[+] Finished loading consolidated neuron data')
 % group left hemisphere
 %%
 clc
-[N, nloc] = nclean(resampled_data, iscell, n_loc);
+[X, nloc] = nclean(resampled_data, iscell, n_loc);
 
 %% Clean up stat array
 
@@ -28,10 +28,10 @@ cstat = cstat(good_idx);
 % save([experiment_path, 'Fcascade.mat'], 'dF_traces')
 
 %%
-N = zscore(N, [], 2);
+X = zscore(X, [], 2);
 
 
-save([experiment_path, 'Fclean.mat'], 'N', 'nloc', 'fs', 'cstat', 'tforms', '-v7.3')
+save([experiment_path, 'Fclean.mat'], 'X', 'nloc', 'fs', 'cstat', 'tforms', '-v7.3')
 
 function [N, nloc] = nclean(data, iscell, n_loc)
 % Input:

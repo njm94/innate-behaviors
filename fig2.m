@@ -223,7 +223,7 @@ figure,
 histogram(episode_dur, 50)
 set(gca, 'YScale', 'log')
 ax = gcf;
-saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','episode_duration', '.svg']))
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','episode_duration', '.svg']))
 
 
 %% proportional composition statistics
@@ -235,7 +235,7 @@ ylabel('Proportional composition')
 xticklabels({'0-1', '1-2', '2-4', '4-8', '8-16', '16-32', '>32'})
 xlabel('Episode duration (s)')
 ax = gcf;
-saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','prop_composition', '.svg']))
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','prop_composition', '.svg']))
 %% Create conditional probability matrix from transition matrix
 
 figure('Position', [161 368 1261 495])
@@ -279,7 +279,7 @@ xlabel('State B', 'FontSize', 14)
 
 ax = gcf;
 % saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.pdf']))
-exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.pdf']), 'ContentType', 'vector')
+% exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.pdf']), 'ContentType', 'vector')
 % % axis off
 % exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', '.png']), 'Resolution', 300)
 
@@ -287,7 +287,7 @@ exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','TPmatrices', 
 %%
 % dat = B(2:6, 2:6, 1);
 % dat = B;
-dat = mean(pmat,3, 'omitnan');
+dat = mean(tmat,3, 'omitnan');
 
 [M,Q]=community_louvain(dat);
 
@@ -318,7 +318,7 @@ plot(pgraph, 'MarkerSize', 20, 'LineWidth', pgraph.Edges.Weight*15, ...
 % 
 ax = gca;
 % exportgraphics(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.png']), 'Resolution', 300)
-saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.svg']))
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','network', '.svg']))
 
 
 trueM = M;
@@ -338,7 +338,7 @@ p8 = nanmean(pmat(:,:,idr3_idx), 3);
 
 figure
 idat = {'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'};
-idat = {'p4', 'p5', 'p6'};
+% idat = {'p4', 'p5', 'p6'};
 for i = 1:length(idat)
     tmp =eval(idat{i});
     subplot(2,length(idat),i)

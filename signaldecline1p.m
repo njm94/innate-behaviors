@@ -247,16 +247,30 @@ end
 
 %%
 % clc
+% 7 2
+% 4 1
 didx = 7;
 sidx = 2;
+figure('Position', [186 304 1399 562])
 states = ["Start", "Right", "Left", "Elliptical", ...
     "Right Asymmetric", "Left Asymmetric", ...
     "Elliptical Right", "Elliptical Left", "Stop", "Lick", "Drop"];
 plot_ethogram(eth_states{didx}{sidx}, states, fs)
+offset = 3.5;
 t = xt(global_signal{didx}{sidx},fs,1);
-hold on, plot(xt(global_signal{didx}{sidx},fs,1), global_signal{didx}{sidx}-2, 'k')
-line([0 t(end)], [-2 -2], 'Color', [0 0 0], 'LineWidth', 1, 'LineStyle', '--')
+hold on, plot(xt(global_signal{didx}{sidx},fs,1), global_signal{didx}{sidx}-offset, 'k')
+
+% calculate slope of line excluding baseline period before and after
+t_slope = t(round(blen*fs):end-round(blen*fs));
+ex_slope = polyfit(t_slope, global_signal{didx}{sidx}(round(blen*fs):end-round(blen*fs)), 1);
+plot(t_slope, t_slope.*ex_slope(1)-offset+ex_slope(2), 'r-')
+line([0 t(end)], [-offset -offset], 'Color', [0 0 0], 'LineWidth', 1)
+% line([1 1], [-1.5 -0.5], 'Color', [0 0 0], 'LineWidth', 2)
 axis tight
+yticks(-5.5:8.5)
+yticklabels('auto')
+
+saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'groom_episode_dff.svg']))
 
 %%
 
@@ -467,7 +481,7 @@ for i = 1:length(all_global)
     
     X = all_global{i}(round(blen*fs):end);
     t = xt(X, fs, 1);
-    p(i,:) = polyfit(t, X, 1);
+    avg_slope(i,:) = polyfit(t, X, 1);
     
     % figure, plot(t, X)
     % f = fit(t,X,'exp1')
@@ -477,16 +491,16 @@ for i = 1:length(all_global)
     % disp(p)
 end
 close all
-figure, boxplot(p(:,1), 'Colors', 'k', 'Symbol', '')
+figure, boxplot(avg_slope(:,1), 'Colors', 'k', 'Symbol', '')
 hold on, hline(0, 'k--')
-swarmchart(ones(size(p,1),1), p(:,1), 'k', 'XJitterWidth', 0.5)
+swarmchart(ones(size(avg_slope,1),1), avg_slope(:,1), 'k', 'XJitterWidth', 0.5)
 ylabel('Slope of best-fit line')
 xticks([])
 ax = gca; 
 ax.FontSize = 14;
 
 
-[h, p, ci, stats] = ttest(p(:,1), 0, 'Tail', 'left');
+[h, p, ci, stats] = ttest(avg_slope(:,1), 0, 'Tail', 'left');
 
 % Display results
 disp(['p-value: ', num2str(p)]);
@@ -499,7 +513,7 @@ else
     disp('The mean is not significantly less than zero.');
 end
 
-saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'long_groom_slope.svg']))
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'long_groom_slope.svg']))
 %%
 save('/media/user/teamshare/nick/behavior/grooming/1p/outputs/long_groom_global_5spre.mat', 'all_global')
 %%
@@ -520,12 +534,15 @@ for i = 1:length(h.Children.Children)
     end
 end
 
-rois = {'MOS_1-L', 'SSP-ul-L', 'SSP-bfd-L', 'MOP_1-L', 'VIS-p-L', 'RSP_2-L'};
-hold on
-for i = 1:length(rois)
-    tmp = seeds(strcmp(labels, rois(i)),:);
-    plot(tmp(1), tmp(2), '.', 'MarkerSize', 30)
-end
+scalebar_length = 2000/dorsalMaps.desiredPixelSize;
+line([400 400+scalebar_length], [520 520], 'Color', [0 0 0], 'LineWidth', 2)
+
+% rois = {'MOS_1-L', 'SSP-ul-L', 'SSP-bfd-L', 'MOP_1-L', 'VIS-p-L', 'RSP_2-L'};
+% hold on
+% for i = 1:length(rois)
+%     tmp = seeds(strcmp(labels, rois(i)),:);
+%     plot(tmp(1), tmp(2), '.', 'MarkerSize', 30)
+% end
 
 %%
 exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'example1pimage.png']), 'Resolution', 300)

@@ -50,7 +50,6 @@ include_boris = true;
 %%
 
 for j = 14:length(data_list)+1
-    if any(ai94_idx == j), continue; end
      try
         data_dir = data_list{j};
         disp(['Starting ' data_dir])
