@@ -19,26 +19,25 @@ mp_list = {%'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925';
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
-mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
-    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
-    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'; ...
-    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
-    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
-    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802';
-    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240729';
-    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240731';
-    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240802';
-    'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
-    'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
+% mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
+%     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
+%     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'; ...
+%     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
+%     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
+%     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802';
+%     'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240729';
+%     'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240731';
+%     'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240802';
+%     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
+%     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
-data_list = fix_path(mp_list);
+data_list = mp_list;
 current_mouse = '';
 cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
 
 
 addpath(genpath('C:\Users\user\Documents\Nick\grooming\utils'))
-load(fix_path('/home/user/Documents/grooming/utils/allen_map/allenDorsalMap.mat'))
-% load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
+load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
 
 
 include_boris = true;
@@ -55,17 +54,14 @@ end
 all_possible_labs = {'FLR', 'FLL', 'Left', 'Right', 'Elliptical', 'Left Asymmetric', 'Right Asymmetric', 'Elliptical Right', 'Elliptical Left'};
 consolidated_labs = {'FL', 'Unilateral', 'Elliptical', 'Asymmetric', 'Ellip-Asymm'};
 total_neurons = 0;
-for i = 1:length(data_list)
+for i = 1:length(mp_list)
     
-    mouse_root = fileparts(data_list{i});
+    mouse_root = fileparts(mp_list{i});
     
     if ~strcmp(mouse_root, current_mouse)
-        load([mouse_root, filesep, 'dalsa', filesep, 'atlas_tform.mat'])
+        load([mouse_root, filesep, 'dalsa\atlas_tform.mat'])
     end
 
-<<<<<<< HEAD
-    load([data_list{i}, filesep, 'Nresample.mat'])
-=======
     boris_file = [mp_list{i}, filesep, getAllFiles(mp_list{i}, 'events.tsv')];
 
 
@@ -91,7 +87,6 @@ for i = 1:length(data_list)
 %%
 
     load([mp_list{i}, filesep, 'Nresample.mat'])
->>>>>>> c4dbce1c617690cbf6b12c9d9815bfd10a716bc8
     clear x3 y3
     for j = 1:length(cstat)
         x0 = double(cstat{j}.med(2));
@@ -109,19 +104,11 @@ for i = 1:length(data_list)
 
     %%
     % Load BORIS file
-<<<<<<< HEAD
-    [events, b_idx, ~] = read_boris([data_list{i}, filesep, getAllFiles(data_list{i}, 'events.tsv')]);
-
-    % load DLC tracks
-    vel = readmatrix([data_list{i}, filesep, getAllFiles(data_list{i}, '_vel.csv')]);
-    vid_end = find(events.("Video End"));
-=======
 %     [events, b_idx, ~] = read_boris([mp_list{i}, filesep, getAllFiles(mp_list{i}, 'events.tsv')]);
     [events, b_idx, ~, vid_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file, include_boris);
 
     % load DLC tracks
     vel = readmatrix([mp_list{i}, filesep, getAllFiles(mp_list{i}, '_vel.csv')]);
->>>>>>> c4dbce1c617690cbf6b12c9d9815bfd10a716bc8
     vel = vel(1:vid_end,:);
     flrv = sum(vel(:,4:5).^2, 2).^0.5;
     fllv = sum(vel(:,7:8).^2, 2).^0.5;
@@ -232,19 +219,11 @@ for i = 1:length(data_list)
         end
     end
 
-<<<<<<< HEAD
-    % for j = 1:length(consolidated_labs)
-    %     if 
-    %     end
-    % end
-    % sim_matrix(:,:,i) = 1-squareform(pdist(tmp_Bmean, dmetric));
-=======
     for j = 1:length(consolidated_labs)
 %         if 
 %         end
     end
     sim_matrix(:,:,i) = 1-squareform(pdist(tmp_Bmean, dmetric));
->>>>>>> c4dbce1c617690cbf6b12c9d9815bfd10a716bc8
 
 
 
