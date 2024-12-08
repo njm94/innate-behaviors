@@ -8,7 +8,10 @@ formatSpec = '%s';
 %     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
 %     };
 
-mp_list = {'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
+mp_list = {%'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925';
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903';
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
+    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802';
     'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240729';
     'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240731';
@@ -30,11 +33,15 @@ mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
 
 data_list = fix_path(mp_list);
 current_mouse = '';
+cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
+
 
 addpath(genpath('C:\Users\user\Documents\Nick\grooming\utils'))
 load(fix_path('/home/user/Documents/grooming/utils/allen_map/allenDorsalMap.mat'))
 % load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
 
+
+include_boris = true;
 %%
 
 % Plot the Allen Atlas
@@ -45,8 +52,8 @@ for p = 1:length(dorsalMaps.edgeOutline)-2 % -2 to ignore olfactory bulbs
 end
 %%
 
-all_possible_labs = {'FLR', 'FLL', 'Left', 'Right', 'Elliptical', 'Left Asymmetric', 'Right Asymmetric', 'Elliptical Asymmetric', 'Large Bilateral'};
-consolidated_labs = {'FL', 'Unilateral', 'Elliptical', 'Asymmetric', 'Ellip-Asymm', 'Bilateral'};
+all_possible_labs = {'FLR', 'FLL', 'Left', 'Right', 'Elliptical', 'Left Asymmetric', 'Right Asymmetric', 'Elliptical Right', 'Elliptical Left'};
+consolidated_labs = {'FL', 'Unilateral', 'Elliptical', 'Asymmetric', 'Ellip-Asymm'};
 total_neurons = 0;
 for i = 1:length(data_list)
     
@@ -56,7 +63,35 @@ for i = 1:length(data_list)
         load([mouse_root, filesep, 'dalsa', filesep, 'atlas_tform.mat'])
     end
 
+<<<<<<< HEAD
     load([data_list{i}, filesep, 'Nresample.mat'])
+=======
+    boris_file = [mp_list{i}, filesep, getAllFiles(mp_list{i}, 'events.tsv')];
+
+
+
+    if ~isfile([mp_list{i}, filesep, 'Nresample.mat'])
+        load([mp_list{i}, filesep, getAllFiles(mp_list{i}, 'Fclean.mat')]);
+        
+        [events, b_idx, ~, vid_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file, include_boris);
+
+        try Nresample = resample(N, vid_end, size(N, 2), 'Dimension', 2);
+        catch
+            disp('Data too big. Splitting into halves and resampling each half separately')
+            Nresample = resamplee(N', size(events,1), size(N,2))';
+        end
+    
+        save([mp_list{i}, filesep, 'Nresample.mat'], 'Nresample', 'nloc', 'fs', 'cstat', 'tforms', '-v7.3')
+    else
+        disp('Loading resampled neuron data')
+        load([mp_list{i}, filesep, 'Nresample.mat'])
+    end
+
+
+%%
+
+    load([mp_list{i}, filesep, 'Nresample.mat'])
+>>>>>>> c4dbce1c617690cbf6b12c9d9815bfd10a716bc8
     clear x3 y3
     for j = 1:length(cstat)
         x0 = double(cstat{j}.med(2));
@@ -74,11 +109,19 @@ for i = 1:length(data_list)
 
     %%
     % Load BORIS file
+<<<<<<< HEAD
     [events, b_idx, ~] = read_boris([data_list{i}, filesep, getAllFiles(data_list{i}, 'events.tsv')]);
 
     % load DLC tracks
     vel = readmatrix([data_list{i}, filesep, getAllFiles(data_list{i}, '_vel.csv')]);
     vid_end = find(events.("Video End"));
+=======
+%     [events, b_idx, ~] = read_boris([mp_list{i}, filesep, getAllFiles(mp_list{i}, 'events.tsv')]);
+    [events, b_idx, ~, vid_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file, include_boris);
+
+    % load DLC tracks
+    vel = readmatrix([mp_list{i}, filesep, getAllFiles(mp_list{i}, '_vel.csv')]);
+>>>>>>> c4dbce1c617690cbf6b12c9d9815bfd10a716bc8
     vel = vel(1:vid_end,:);
     flrv = sum(vel(:,4:5).^2, 2).^0.5;
     fllv = sum(vel(:,7:8).^2, 2).^0.5;
@@ -109,14 +152,33 @@ for i = 1:length(data_list)
     Bmean = cat(2, Bmean, mean(Nresample(:, logical(fllthresh)),2));
     labs = [labs, 'FLR', 'FLL'];
 
+    %%
+    figure, hold on
+    for j = 1:size(event_table,2)
+        tmp = corr(event_table(:,j), Nresample');
+        plot(sort(tmp))
+    end
+    legend(labs, 'Location', 'Best')
+
+
+
+    figure, hold on
+    for j = 1:size(event_table,2)
+%         subplot(size(event_table,2),1,j)
+        [tmp, I] = sort(corr(event_table(:,j), Nresample'));
+        plot(Nresample(I(end),:)')
+        title(labs)
+    end
+
+
+    %%
+
     % Do the hierarchical clustering
-    dmetric = 'cosine';
+    dmetric = 'correlation';
     Z = linkage(Bmean', 'average', dmetric);
 
     figure, subplot(3,2,1)
-    cutoff = 0.3;
     [H, T, outperm] = dendrogram(Z,'Labels', labs);  % Plot the dendrogram
-    % [H, T, outperm] = dendrogram(Z,'Labels', labs, 'ColorThreshold', cutoff);  % Plot the dendrogram
     ylabel(['Distance (',dmetric,')'])
     xticks([])
         
@@ -170,13 +232,54 @@ for i = 1:length(data_list)
         end
     end
 
+<<<<<<< HEAD
     % for j = 1:length(consolidated_labs)
     %     if 
     %     end
     % end
     % sim_matrix(:,:,i) = 1-squareform(pdist(tmp_Bmean, dmetric));
+=======
+    for j = 1:length(consolidated_labs)
+%         if 
+%         end
+    end
+    sim_matrix(:,:,i) = 1-squareform(pdist(tmp_Bmean, dmetric));
+>>>>>>> c4dbce1c617690cbf6b12c9d9815bfd10a716bc8
+
+
+
+end
 
 
 %%
 
+
+dat = mean(sim_matrix,3,'omitnan');
+
+
+[M,Q]=community_louvain(dat);
+
+cols = zeros(length(M), 3);
+col1 = [0 0.4470 0.7410];
+col2 = [0.8500 0.3250 0.0980];
+col3 = [0.9290 0.6940 0.1250];
+col4 = [0.4940 0.1840 0.5560];
+for i = 1:length(M)
+    if M(i) == 1
+        cols(i,:) = col1;
+    elseif M(i) == 2
+        cols(i,:) = col2;
+    elseif M(i) == 3
+        cols(i,:) = col3;
+    else
+        cols(i,:) = col4;
+    end
 end
+pgraph = digraph(dat, 'omitselfloops');
+
+figure('Position', [843 70 649 826]), 
+plot(pgraph, 'MarkerSize', 20, 'LineWidth', 1, ... pgraph.Edges.Weight*15, ...
+    'NodeColor', cols, ...'NodeFontSize', 15, ...
+    'EdgeColor', 'k', 'EdgeAlpha', 1, 'ArrowSize', 15, ...
+    'NodeLabel',all_possible_labs, ...
+    'Layout', 'force', 'WeightEffect', 'inverse')

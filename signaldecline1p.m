@@ -363,6 +363,7 @@ for i = 1:size(behaviors{4},1)
 end
 
 %%
+
 clear mat_global sort_idx all_global all_dur
 
 counter = 1;
