@@ -8,7 +8,7 @@ formatSpec = '%s';
 %     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
 %     };
 
-mp_list = {%'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925';
+mp_list = {% 'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; % brain behavior alignment is off for this one
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903';
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
@@ -18,6 +18,8 @@ mp_list = {%'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925';
     'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240802';
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
+
+example_mouse = 3;
 
 % mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
 %     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
@@ -31,14 +33,16 @@ mp_list = {%'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925';
 %     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
 %     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
-data_list = mp_list;
+mp_list = fix_path(mp_list);
 current_mouse = '';
 cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
 
 
-addpath(genpath('C:\Users\user\Documents\Nick\grooming\utils'))
-load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
-
+addpath(genpath('/home/user/Documents/grooming/utils'))
+try load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
+catch
+    load('/home/user/Documents/grooming/utils/allen_map/allenDorsalMap.mat');
+end
 
 include_boris = true;
 %%
@@ -54,12 +58,12 @@ end
 all_possible_labs = {'FLR', 'FLL', 'Left', 'Right', 'Elliptical', 'Left Asymmetric', 'Right Asymmetric', 'Elliptical Right', 'Elliptical Left'};
 consolidated_labs = {'FL', 'Unilateral', 'Elliptical', 'Asymmetric', 'Ellip-Asymm'};
 total_neurons = 0;
-for i = 1:length(mp_list)
+for i = 3%:length(mp_list)
     
     mouse_root = fileparts(mp_list{i});
     
     if ~strcmp(mouse_root, current_mouse)
-        load([mouse_root, filesep, 'dalsa\atlas_tform.mat'])
+        load([mouse_root, filesep, 'dalsa', filesep, 'atlas_tform.mat'])
     end
 
     boris_file = [mp_list{i}, filesep, getAllFiles(mp_list{i}, 'events.tsv')];
@@ -148,13 +152,43 @@ for i = 1:length(mp_list)
     legend(labs, 'Location', 'Best')
 
 
+% 
+%     figure, hold on
+%     for j = 1:size(event_table,2)
+% %         subplot(size(event_table,2),1,j)
+%         [tmp, I] = sort(corr(event_table(:,j), Nresample'));
+%         plot(Nresample(I(end),:)')
+%         title(labs)
+%     end
+    if true%i == example_mouse
+        uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'], 1)
+        hold on
+        scatter(x3, y3, 10, 'MarkerFaceColor', [1, 0.6, 0], 'MarkerEdgeColor', 'k', 'LineWidth', 0.5)
+        axis equal off
 
-    figure, hold on
-    for j = 1:size(event_table,2)
-%         subplot(size(event_table,2),1,j)
-        [tmp, I] = sort(corr(event_table(:,j), Nresample'));
-        plot(Nresample(I(end),:)')
-        title(labs)
+        load([mp_list{i}, filesep, 'rastermap_order.mat'])
+        
+        h2 = figure('Position', [180 251 1458 536]); hold on
+        
+        imagesc(imadjust(Nresample(isort+1,:))), colormap(flipud(colormap(gray)))
+        % offset = size(Nresample,1);
+        states = {'Start', 'Right', 'Left', 'Elliptical', ...
+            'Right Asymmetric', 'Left Asymmetric', ...
+            'Elliptical Right', 'Elliptical Left', 'Stop', 'Lick'};
+        plot_ethogram(events, states, 1, size(Nresample,1), 50)
+        axis tight
+        line([1 90*60], [-50 -50], 'Color', [0 0 0], 'LineWidth', 2)
+        vline([6.4253    7.5989]*1e4, 'r-')
+        axis off
+        % exportgraphics(h2, fix_path(['Y:\nick\behavior\grooming\figures\example_mouse_ethogram_raster.png']), 'Resolution', 300)
+
+        % axis([64253    75989 ylim])
+        % line([64253 64253 + 90*10], [-50 -50], 'Color', [0 0 0], 'LineWidth', 2)
+        % exportgraphics(h2, fix_path(['Y:\nick\behavior\grooming\figures\example_mouse_ethogram_raster_zoom.png']), 'Resolution', 300)
+
+
+        
+      
     end
 
 
@@ -164,10 +198,12 @@ for i = 1:length(mp_list)
     dmetric = 'correlation';
     Z = linkage(Bmean', 'average', dmetric);
 
-    figure, subplot(3,2,1)
+    figure, 
+    subplot(3,2,1)
     [H, T, outperm] = dendrogram(Z,'Labels', labs);  % Plot the dendrogram
-    ylabel(['Distance (',dmetric,')'])
+    % ylabel(['Distance (',dmetric,')'])
     xticks([])
+    % saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\','dendrogram.svg']))
         
     % sort neurons by anatomical location
     label_column = ones(size(Bmean,1), 2);
@@ -193,18 +229,26 @@ for i = 1:length(mp_list)
     % label_column
     
     subplot(3,2,[3,5])
+    % figure
     imagesc(Bmean(I, outperm)),
     xticks(1:length(labs))
+    xticklabels([])
+    yticklabels([])
     xticklabels(labs(outperm))
-    % c=colorbar;
-    % c.Label.String = 'Z-score';
+    c=colorbar;
+    c.Label.String = 'Z-score';
     caxis([-1 3])
     colormap(bluewhitered())
     ylabel('Neuron')
+    % exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\','neuronheatmap.png']), 'Resolution', 300)
     freezeColors
     % 
-    subplot(3,2,[4, 6]), imagesc(label_column), colormap default, axis off
 
+    subplot(3,2,[4, 6]), 
+    % figure
+    imagesc(label_column), colormap default, axis off
+    % exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\','heatmapregionlabel.png']), 'Resolution', 300)
+% 
 
     % Not all possible behaviors are observed in each session. To compare
     % across sessions, map the relationships between neuronal population
@@ -232,23 +276,77 @@ end
 
 %%
 
+figure(1)
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\all_neurons_on_atlas.png']), 'Resolution', 300)
 
-dat = mean(sim_matrix,3,'omitnan');
+
+%%
+close all
+clear Mtmp
+count = 1;
+for jj = 1:size(sim_matrix,3)
+    dat = sim_matrix(:,:,jj);
+    if any(isnan(dat)), continue; end
+    tmp_dat(:,:,count) = dat;
+    disp(mp_list(jj))
+    % dat(isnan(dat)) = 0;
+% dat = mean(sim_matrix,3,'omitnan');
 
 
-[M,Q]=community_louvain(dat);
+    [M,Q]=community_louvain(dat, [], [], 'negative_asym');
+    
+    figure, imagesc(dat);
+    colorbar
+    xticklabels(all_possible_labs)
+    yticklabels(all_possible_labs)
+    title(num2str(M'))
+    xlabel(mp_list{jj})
+    Mtmp(:,count) = M;
+    
 
-cols = zeros(length(M), 3);
-col1 = [0 0.4470 0.7410];
-col2 = [0.8500 0.3250 0.0980];
-col3 = [0.9290 0.6940 0.1250];
+    % ari(count) = rand_index(M, trueM);
+    count = count + 1;
+end
+%%
+
+dat = mean(tmp_dat,3, 'omitnan');
+[trueM, Q] = community_louvain(dat, 1);
+for i = 1:size(Mtmp,2)
+    ari(i) = rand_index(Mtmp(:,i), trueM);
+end
+trueM
+
+
+%%
+
+figure, imagesc(dat), colormap(flipud(colormap(gray))), colorbar
+caxis([0.5 1])
+axis off
+line([4.5 4.5], [0.5 4.5], 'Color', [0 0.4470 0.7410], 'LineWidth', 2)
+line([0.5 4.5], [4.5 4.5], 'Color', [0 0.4470 0.7410], 'LineWidth', 2)
+line([0.5 0.5], [0.5 4.5], 'Color', [0 0.4470 0.7410], 'LineWidth', 2)
+line([0.5 4.5], [0.5 0.5], 'Color', [0 0.4470 0.7410], 'LineWidth', 2)
+
+line([4.5 4.5], [4.5 7.5], 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 2)
+line([4.5 7.5], [4.5 4.5], 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 2)
+line([4.5 7.5], [7.5 7.5], 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 2)
+line([7.5 7.5], [4.5 7.5], 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 2)
+
+line([7.5 7.5], [7.5 9.5], 'Color', [0.9290 0.6940 0.1250], 'LineWidth', 2)
+line([7.5 9.5], [7.5 7.5], 'Color', [0.9290 0.6940 0.1250], 'LineWidth', 2)
+line([7.5 9.5], [9.5 9.5], 'Color', [0.9290 0.6940 0.1250], 'LineWidth', 2)
+line([9.5 9.5], [7.5 9.5], 'Color', [0.9290 0.6940 0.1250], 'LineWidth', 2)
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\sim_matrix_with_louvain.png']), 'Resolution', 300)
+%%
+cols = zeros(length(trueM), 3);
+
 col4 = [0.4940 0.1840 0.5560];
-for i = 1:length(M)
-    if M(i) == 1
+for i = 1:length(trueM)
+    if trueM(i) == 1
         cols(i,:) = col1;
-    elseif M(i) == 2
+    elseif trueM(i) == 2
         cols(i,:) = col2;
-    elseif M(i) == 3
+    elseif trueM(i) == 3
         cols(i,:) = col3;
     else
         cols(i,:) = col4;
@@ -257,8 +355,11 @@ end
 pgraph = digraph(dat, 'omitselfloops');
 
 figure('Position', [843 70 649 826]), 
-plot(pgraph, 'MarkerSize', 20, 'LineWidth', 1, ... pgraph.Edges.Weight*15, ...
+plot(pgraph, 'MarkerSize', 20, 'LineWidth', 1,...pgraph.Edges.Weight*15, ...
     'NodeColor', cols, ...'NodeFontSize', 15, ...
     'EdgeColor', 'k', 'EdgeAlpha', 1, 'ArrowSize', 15, ...
-    'NodeLabel',all_possible_labs, ...
-    'Layout', 'force', 'WeightEffect', 'inverse')
+    'NodeLabel','', ...
+    'Layout', 'Force', ...
+    'WeightEffect', 'inverse')
+% 
+ax = gca;

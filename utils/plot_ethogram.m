@@ -1,5 +1,8 @@
-function plot_ethogram(tab, states, fs)
+function plot_ethogram(tab, states, fs, offset, ticksize)
     % figure, hold on
+    if nargin<5 || isempty(ticksize), ticksize = 1; end
+    if nargin<4 || isempty(offset), offset = 0; end
+    if nargin<3 || isempty(fs), fs = 90; end
     counter = 1;
     cols = [[0 0.4470 0.7410]; % Start
         [0 0.4470 0.7410]; % Right
@@ -34,14 +37,14 @@ function plot_ethogram(tab, states, fs)
                 else
                     data2patch = t(arr2idx(table2array(tab(:,tmp_idx))));
                 end
-                patchplot(data2patch, [counter counter+1], cols(i,:), 1)
-                myticks(counter) = counter+0.5;
+                patchplot(data2patch, [offset+(counter-1)*ticksize offset+(counter*ticksize)], cols(i,:), 1)
+                % myticks(counter) = offset+(counter*ticksize)/2;
                 stateidx(counter) = tmp_idx;
                 counter = counter + 1;
             end     
         end
     end
-    yticks(myticks)
-    yticklabels(tab.Properties.VariableNames(stateidx))
+    % yticks(myticks)
+    % yticklabels(tab.Properties.VariableNames(stateidx))
     xlabel('Time (s)')
 end
