@@ -14,7 +14,8 @@ function plot_ethogram(tab, states, fs, offset, ticksize)
         [0.4940 0.1840 0.5560]; % Ellip L
         [0 0.4470 0.7410] % Stop
         [1 0 1]; % Lick
-        [0 0 0]]; % Drop
+        [0 1 1]; %Drop
+        [0 0 0]]; % Move
     t = xt(tab, fs, 1);
     clear myticks
     for i = 1:length(states)
