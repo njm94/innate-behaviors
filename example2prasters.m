@@ -19,6 +19,7 @@ current_mouse = '';
 cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
 
 fs = 90;
+aggregation_sz = 3; % window of time to aggregate behaviors
 addpath(genpath('/home/user/Documents/grooming/utils'))
 try load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
 catch
@@ -110,10 +111,24 @@ for i = 1:length(mp_list)
     events = removevars(events, idx);
     events = addvars(events, Drop);
 
+
+    % get index of long grooming events
+    bmat = any(table2array(removevars(events, 'Drop')), 2);
+    [episodes, idx] = aggregate(bmat, aggregation_sz);
+    episode_durations = diff(idx, 1, 2)/90;
+    long_eps = [];
+    for jj = 1:length(episode_durations)
+        if episode_durations(jj) >= 10
+            long_eps = cat(1, long_eps, idx(jj,:));
+        end
+    end
+
     % Remove grooming movements from forelimb movements, then add to the
     % behavior matrix
     flrthresh(aggregate(any(event_table, 2), 3, fs)) = 0;
     fllthresh(aggregate(any(event_table, 2),3, fs)) = 0;
+
+
     
     Bmean = cat(2, Bmean, mean(Nresample(:, logical(flrthresh)),2));
     Bmean = cat(2, Bmean, mean(Nresample(:, logical(fllthresh)),2));
@@ -214,16 +229,207 @@ for i = 1:length(mp_list)
         idx = isort+1;
         scatter(x3(idx(pops(jj,1):pops(jj,2))), y3(idx(pops(jj,1):pops(jj,2))), 36, 'MarkerFaceColor', cols(jj,:), 'MarkerEdgeColor', 'k')
     end
+    mean_groom_pop = mean(rastermap(pops(1,1):pops(1,2),:));
+    mean_move_pop = mean(rastermap(pops(2,1):pops(2,2),:));
+    for jj = 1:size(long_eps,1)      
+        try
+            long_groom{i}{jj} = mean_groom_pop(long_eps(jj,1)-5*fs:long_eps(jj,2)); 
+            long_move{i}{jj} = mean_move_pop(long_eps(jj,1)-5*fs:long_eps(jj,2)); 
+        catch
+            continue
+        end
+    end
 
+end
+
+
+%%
+
+long_groom_mat = [];
+ep_length = [];
+for i = 1:length(long_groom)
+    for j = 1:length(long_groom{i})
+        tmp_length = size(long_groom{i}{j},2);
+        ep_length = [ep_length tmp_length];
+        if isempty(long_groom_mat)
+            long_groom_mat = long_groom{i}{j};
+        elseif tmp_length > size(long_groom_mat,2)
+            size_dif = tmp_length - size(long_groom_mat,2);
+            long_groom_mat = [long_groom_mat, nan(size(long_groom_mat,1), size_dif)];
+            long_groom_mat = [long_groom_mat; long_groom{i}{j}];
+        elseif tmp_length < size(long_groom_mat,2)
+            size_dif = size(long_groom_mat,2) - tmp_length;
+            long_groom_mat = [long_groom_mat; 
+                [long_groom{i}{j} nan(1, size_dif)]];
+        else
+            long_groom_mat = [long_groom_mat; long_groom{i}{j}];
+        end
+    end
+end
+
+
+
+long_move_mat = [];
+ep_length = [];
+for i = 1:length(long_move)
+    for j = 1:length(long_move{i})
+        tmp_length = size(long_move{i}{j},2);
+        ep_length = [ep_length tmp_length];
+        if isempty(long_move_mat)
+            long_move_mat = long_move{i}{j};
+        elseif tmp_length > size(long_move_mat,2)
+            size_dif = tmp_length - size(long_move_mat,2);
+            long_move_mat = [long_move_mat, nan(size(long_move_mat,1), size_dif)];
+            long_move_mat = [long_move_mat; long_move{i}{j}];
+        elseif tmp_length < size(long_move_mat,2)
+            size_dif = size(long_move_mat,2) - tmp_length;
+            long_move_mat = [long_move_mat; 
+                [long_move{i}{j} nan(1, size_dif)]];
+        else
+            long_move_mat = [long_move_mat; long_move{i}{j}];
+        end
+    end
 end
 
 
 
 
 
+%%
+figure
+[~,I] = sort(ep_length, 'descend');
+fs = 90;
+t = xt([long_groom_mat(1,:), 0], fs, 2)-5;
+num_ep = size(long_groom_mat,1):-1:1;
+
+% pcolor crops off the last row and column. add a column to the end to fix
+% this. There is one row of nans already (due to one grooming episode that
+% occurs at the beginning of the trial) so no need to add a row
+pcolor(t, num_ep, [long_groom_mat(I,:), zeros(size(I))']), 
+
+shading flat
+caxis([-2 6])
+colormap(bluewhitered())
 
 
+p50 = prctile(ep_length(ep_length>0), 50);
 
+line(([p50 p50]/fs)-5, ylim, 'Color', [0 0 0], 'LineWidth', 2, 'LineStyle', '--')
+line([0 0], ylim, 'Color', [0 0 0], 'LineWidth', 2)
+line([51 60], [3 3], 'Color', [0 0 0], 'LineWidth', 2)
+xticklabels([])
+yticklabels([])
+xticks([])
+yticks([])
+set(gca, 'YDir', 'reverse')
+
+% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_heatmap_2p.png']), 'Resolution', 300)
+
+
+%%
+figure, axis off, colorbar, caxis([-2 6]), colormap(bluewhitered())
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_heatmap_2p_colorbar.png']), 'Resolution', 300)
+%%
+
+figure, hold on
+shadedErrorBar(t(1:p50), mean(long_groom_mat(:,1:p50), 'omitnan'), std(long_groom_mat(:,1:p50), 'omitnan'), 'k', 1)
+line([0 0], ylim, 'Color', [0 0 0], 'LineWidth', 2)
+
+xticklabels([])
+yticklabels([])
+saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_average2p.svg']))
+% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_average.png']), 'Resolution', 300)
+
+%%
+
+% remove the empty row now
+empty_idx = sum(long_groom_mat,2,'omitnan') == 0;
+long_groom_mat(empty_idx,:) = [];
+ep_length(empty_idx) = [];
+t = xt(long_groom_mat, fs, 2)-5;
+t_pre = t<0;
+% t_on = abs(t)<=1;
+t_early = t>=0 & t<5;
+t_late = t>=5;
+
+dff_pre = mean(long_groom_mat(:, t_pre), 2, 'omitnan');
+% dff_on = mean(long_groom_mat(:, t_on), 2, 'omitnan');
+dff_early = mean(long_groom_mat(:,t_early), 2, 'omitnan');
+for i = 1:length(ep_length)
+    dff_late(i) = mean(long_groom_mat(i, ep_length(i)-(5*fs):end), 2, 'omitnan');
+end
+
+
+% plot_data = [dff_pre, dff_on, dff_early, dff_late];
+plot_data = [dff_pre, dff_early, dff_late];
+figure, boxplot(plot_data, 'Colors', 'k', 'Symbol', '')
+hold on
+swarmchart(repmat([1 2 3], size(dff_on,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
+ylabel('Mean \DeltaF/F_0 (\sigma)')
+xticklabels({'Pre 5s', 'First 5s', 'Last 5s'})
+ax = gca;
+ax.FontSize = 14;
+
+
+% [p,~,stats] = anova1([dff_on, dff_early, dff_late])
+% [c,m,h,gnames] = multcompare(stats);
+
+clc
+% Create a table with the data
+tbl = array2table(plot_data, 'VariableNames', {'Pre', 'Early', 'Late'});
+
+% Define the repeated measures model
+rm = fitrm(tbl, 'Pre-Late ~ 1', 'WithinDesign', [1 2 3]'); % 3 time periods
+
+% Run repeated-measures ANOVA
+ranova_results = ranova(rm);
+
+% Display the results
+disp(ranova_results);
+
+% Perform pairwise comparisons
+pairwise_results = multcompare(rm, 'Time', 'ComparisonType', 'bonferroni');
+disp(pairwise_results);
+
+%%
+blen = 5;
+
+clear p
+for i = 1:size(long_groom_mat,1)
+    
+    X = long_groom_mat(i,round(blen*fs):ep_length(i));
+    t = xt(X, fs);
+    avg_slope(i,:) = polyfit(t, X, 1);
+    
+    % figure, plot(t, X)
+    % f = fit(t,X,'exp1')
+    % hold on, plot(t, f)
+    % hfdhd
+    % linslope(i) = p(1);
+    % disp(p)
+end
+% close all
+figure, boxplot(avg_slope(:,1), 'Colors', 'k', 'Symbol', '')
+hold on, hline(0, 'k--')
+swarmchart(ones(size(avg_slope,1),1), avg_slope(:,1), 'k', 'XJitterWidth', 0.5)
+ylabel('Slope of best-fit line')
+xticks([])
+ax = gca; 
+ax.FontSize = 14;
+
+
+[h, p, ci, stats] = ttest(avg_slope(:,1), 0, 'Tail', 'left');
+
+% Display results
+disp(['p-value: ', num2str(p)]);
+disp(['Test statistic (t): ', num2str(stats.tstat)]);
+disp(['95% confidence interval: [', num2str(ci(1)), ', ', num2str(ci(2)), ']']);
+
+if h == 1
+    disp('The mean is significantly less than zero.');
+else
+    disp('The mean is not significantly less than zero.');
+end
 
 
 
@@ -232,24 +438,7 @@ end
 %%
 
 % figure
-groom_prop = zeros(size(dorsalMaps.dorsalMapScaled));
-move_prop = zeros(size(dorsalMaps.dorsalMapScaled));
-none_prop = zeros(size(dorsalMaps.dorsalMapScaled));
-mp = round(size(dorsalMaps.dorsalMapScaled,2)./2);
-for j = 1:length(region_locs)
-    % If the value is negative, it is on the right side
-    addmask = dorsalMaps.dorsalMapScaled == abs(areanames.(region_locs{j}));
-    if areanames.(region_locs{j}) < 0
-        addmask(:, 1:mp) = 0;
-    else
-        addmask(:,mp:end) = 0;
-    end
-    groom_prop = groom_prop + addmask.* (region_neurons(j,1) ./ sum(region_neurons(j,1:3)));
-    move_prop = move_prop + addmask.* (region_neurons(j,2) ./ sum(region_neurons(j,1:3)));
-    none_prop = none_prop + addmask.* (region_neurons(j,3) ./ sum(region_neurons(j,1:3)));
-end
-%%
-parent_region = cellfun(@(x) x(1:end-3), region_locs, 'UniformOutput', false);
+parent_region = cellfun(@(x) x(1:end-2), region_locs, 'UniformOutput', false);
 unique_region = unique(parent_region);
 clear consolidated_region_neurons
 for i = 1:length(unique_region)
@@ -257,7 +446,23 @@ for i = 1:length(unique_region)
     consolidated_region_neurons(i,:) = sum(region_neurons(idx,:), 1);
 end
 
-%%
+groom_prop = zeros(size(dorsalMaps.dorsalMapScaled));
+move_prop = zeros(size(dorsalMaps.dorsalMapScaled));
+none_prop = zeros(size(dorsalMaps.dorsalMapScaled));
+mp = round(size(dorsalMaps.dorsalMapScaled,2)./2);
+for j = 1:length(unique_region)
+    % If the value is negative, it is on the right side
+    addmask = dorsalMaps.dorsalMapScaled == abs(areanames.([unique_region{j},'_L']));
+    addmask(:,mp:end) = 0;
+%     if areanames.(region_locs{j}) < 0
+%         addmask(:, 1:mp) = 0;
+%     else
+%         addmask(:,mp:end) = 0;
+%     end
+    groom_prop = groom_prop + addmask.* (consolidated_region_neurons(j,1) ./ sum(consolidated_region_neurons(j,:)));
+    move_prop = move_prop + addmask.* (consolidated_region_neurons(j,2) ./ sum(consolidated_region_neurons(j,:)));
+    none_prop = none_prop + addmask.* (consolidated_region_neurons(j,3) ./ sum(consolidated_region_neurons(j,:)));
+end
 
 cols = [0 0 1; 
     1 0 0;
@@ -265,6 +470,7 @@ cols = [0 0 1;
 figure, 
 h = bar((consolidated_region_neurons ./ sum(consolidated_region_neurons,2)), 'stacked');
 % Apply colors
+title(sum(consolidated_region_neurons,2))
 for i = 1:length(h)
     h(i).FaceColor = 'flat';       % Enable flat coloring
     h(i).CData = repmat(cols(i, :), size(consolidated_region_neurons, 1), 1); % Assign colors
@@ -275,8 +481,6 @@ xticklabels(unique_region)
 % xlabel('Episode duration (s)')
 % ax = gcf;
 
-
-%%
 figure, 
 for i = 1:3
     subplot(1,3,i), hold on
