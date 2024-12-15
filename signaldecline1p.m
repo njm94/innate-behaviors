@@ -272,82 +272,7 @@ yticklabels('auto')
 
 saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'groom_episode_dff.svg']))
 
-%%
 
-test_pre = catcell(3, pre_corrmat(~cellfun(@isempty, pre_corrmat)));
-test_pre = squeeze(mean(test_pre, [1 2]));
-
-test_early = catcell(3, early_corrmat(~cellfun(@isempty, early_corrmat)));
-test_early = squeeze(mean(test_early, [1 2]));
-
-test_late = catcell(3, late_corrmat(~cellfun(@isempty, late_corrmat)));
-test_late = squeeze(mean(test_late, [1 2]));
-
-test_post = catcell(3, post_corrmat(~cellfun(@isempty, post_corrmat)));
-test_post = squeeze(mean(test_post, [1 2]));
-
-
-figure, boxplot([test_pre, test_early, test_late, test_post])
-
-%%
-test_pre = catcell(3, pre_corrmat(~cellfun(@isempty, pre_corrmat)));
-test_early = catcell(3, early_corrmat(~cellfun(@isempty, early_corrmat)));
-test_late = catcell(3, late_corrmat(~cellfun(@isempty, late_corrmat)));
-test_post = catcell(3, post_corrmat(~cellfun(@isempty, post_corrmat)));
-
-figure
-subplot(2,4,1), imagesc(mean(test_pre,3)), colorbar, caxis([0.4 1])
-xticks(1:size(test_pre,1))
-yticks(1:size(test_pre,1))
-xticklabels(labels)
-yticklabels(labels)
-subplot(2,4,2), imagesc(mean(test_early, 3)), colorbar, caxis([0.4 1])
-xticks(1:size(test_pre,1))
-yticks(1:size(test_pre,1))
-xticklabels(labels)
-yticklabels(labels)
-subplot(2,4,3), imagesc(mean(test_late, 3)), colorbar, caxis([0.4 1])
-xticks(1:size(test_pre,1))
-yticks(1:size(test_pre,1))
-xticklabels(labels)
-yticklabels(labels)
-
-subplot(2,4,4), imagesc(mean(test_post, 3)), colorbar, caxis([0.4 1])
-xticks(1:size(test_pre,1))
-yticks(1:size(test_pre,1))
-xticklabels(labels)
-yticklabels(labels)
-subplot(2,4,6), imagesc(mean(test_early-test_pre, 3)), colorbar,caxis([-0.2 0.2])
-xticks(1:size(test_pre,1))
-yticks(1:size(test_pre,1))
-xticklabels(labels)
-yticklabels(labels)
-subplot(2,4,7), imagesc(mean(test_late-test_pre, 3)), colorbar, caxis([-0.2 0.2])
-xticks(1:size(test_pre,1))
-yticks(1:size(test_pre,1))
-xticklabels(labels)
-yticklabels(labels)
-
-subplot(2,4,8), imagesc(mean(test_post-test_pre, 3)), colorbar, caxis([-0.2 0.2])
-xticks(1:size(test_pre,1))
-yticks(1:size(test_pre,1))
-xticklabels(labels)
-yticklabels(labels)
-
-colormap(bluewhitered())
-% for i = 1:length(data_list{1})
-%     subplot(1,3,1)
-%     imagesc()
-% end
-
-
-%%
-
-
-iii = 5;
-figure, imagesc(mean(test_post(:,:,25:end) - test_pre(:,:,25:end),3))
-colorbar
-colormap(bluewhitered())
 
 %%
 
@@ -433,23 +358,29 @@ exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_a
 
 %%
 t = xt(mat_global, fs, 2)-5;
-t_pre = t<-1;
-t_on = abs(t)<=1;
-t_early = t>1 & t<=5;
-t_late = t>5;
-
+t_pre = t<=0;
+% t_on = abs(t)<=1;
+t_early = t>0 & t<=5;
 dff_pre = mean(mat_global(:, t_pre), 2, 'omitnan');
-dff_on = mean(mat_global(:, t_on), 2, 'omitnan');
+% dff_on = mean(mat_global(:, t_on), 2, 'omitnan');
 dff_early = mean(mat_global(:,t_early), 2, 'omitnan');
-dff_late = mean(mat_global(:,t_late), 2, 'omitnan');
 
 
-plot_data = [dff_pre, dff_on, dff_early, dff_late];
+for i = 1:length(all_dur)
+    t_late_idx = all_dur(sort_idx(i));
+    t_late = t_late_idx - blen*fs;
+    dff_late(i) = mean(mat_global(i, t_late:end), 'omitnan');
+end
+% t_late = t>5;
+% dff_late = mean(mat_global(:,t_late), 2, 'omitnan');
+
+
+plot_data = [dff_pre, dff_early, dff_late'];
 figure, boxplot(plot_data, 'Colors', 'k', 'Symbol', '')
 hold on
-swarmchart(repmat([1 2 3 4], size(dff_on,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
+swarmchart(repmat([1 2 3], size(dff_early,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
 ylabel('Mean cortical \DeltaF/F_0 (\sigma)')
-xticklabels({'Pre [-4, -1]', 'Onset [-1, 1]', 'Early [1, 5]', 'Late [5, end]'})
+xticklabels({'Before 5s', 'First 5s', 'Last 5s'})
 ax = gca;
 ax.FontSize = 14;
 
@@ -459,10 +390,10 @@ ax.FontSize = 14;
 
 clc
 % Create a table with the data
-tbl = array2table(plot_data, 'VariableNames', {'Pre', 'Onset', 'Early', 'Late'});
+tbl = array2table(plot_data, 'VariableNames', {'Pre', 'Early', 'Late'});
 
 % Define the repeated measures model
-rm = fitrm(tbl, 'Pre-Late ~ 1', 'WithinDesign', [1 2 3 4]'); % 3 time periods
+rm = fitrm(tbl, 'Pre-Late ~ 1', 'WithinDesign', [1 2 3]'); % 3 time periods
 
 % Run repeated-measures ANOVA
 ranova_results = ranova(rm);
