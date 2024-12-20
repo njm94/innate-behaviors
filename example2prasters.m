@@ -8,11 +8,13 @@ formatSpec = '%s';
 %     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
 %     };
 
+
+
 mp_list = {'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
     'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802';
     'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240729';
     'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240731';
-    % 'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903';
+    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903';
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';};
 mp_list = fix_path(mp_list);
 current_mouse = '';
@@ -155,13 +157,14 @@ for i = 1:length(mp_list)
     if i == 1
         pops = [540 663;
             1 40;
-            % 52 115;
-            % 178 216;
+            52 115;
+            178 216;
             ];
+        zoom_x = [45725 88684];
     elseif i == 2
         pops = [1 32;
             70 99];
-        zoom_x = [45725 88684];
+        
     elseif i == 3
         pops = [300 380;
             385 419;
@@ -170,10 +173,10 @@ for i = 1:length(mp_list)
     elseif i == 4
         pops = [144 199;
             28 71];
-    % elseif i == 5
-    %     pops = [210 240;
-    %         1 105];
     elseif i == 5
+        pops = [198 237;
+            1 105];
+    elseif i == 6
         pops = [115 137;
             1 66];
     end
@@ -208,14 +211,19 @@ for i = 1:length(mp_list)
 
     fs = 90;
     rastermap(:,[1:fs, end-fs:end]) = nan; % get rid of the ringing artifact in the start and end due to upsampling
+    % move_neurons = mean(rastermap(pops(2,1):pops(2,2),:));
+    % for jj = 1:size(rastermap,1)
+    %     move_corr(jj) = corr(rastermap(i,:), move_neurons);
+    % end
+
     for jj = 1:size(pops,1)
         line([0 0], pops(jj,:), 'Color', cols(jj,:), 'LineWidth', 5)
         plot(30*mean(rastermap(pops(jj,1):pops(jj,2),:))- 100*jj, 'LineWidth', 1, 'Color', cols(jj,:))
     end
     line([1 fs*60], [-500 -500], 'Color', [0 0 0], 'LineWidth', 2)
-
+    % 
     % vline(zoom_x, 'k-')
-    % exportgraphics(h2, fix_path(['Y:\nick\behavior\grooming\figures\thy1_mouse_ethogram_raster_zoom.png']), 'Resolution', 300)
+    % exportgraphics(h2, fix_path(['Y:\nick\behavior\grooming\figures\thy1_mouse_ethogram_raster.png']), 'Resolution', 300)
     
     % axis([zoom_x, ylim])
     % line([zoom_x(1)+1 zoom_x(1)+1+fs*20], [-500 -500], 'Color', [0 0 0], 'LineWidth', 2)
@@ -227,7 +235,7 @@ for i = 1:length(mp_list)
     scatter(x3, y3,25, '.', 'MarkerEdgeColor', [0 0 0])
     for jj = 1:size(pops,1)
         idx = isort+1;
-        scatter(x3(idx(pops(jj,1):pops(jj,2))), y3(idx(pops(jj,1):pops(jj,2))), 36, 'MarkerFaceColor', cols(jj,:), 'MarkerEdgeColor', 'k')
+        scatter(x3(idx(pops(jj,1):pops(jj,2))), y3(idx(pops(jj,1):pops(jj,2))), 16, 'MarkerFaceColor', cols(jj,:), 'MarkerEdgeColor', 'k')
     end
     mean_groom_pop = mean(rastermap(pops(1,1):pops(1,2),:));
     mean_move_pop = mean(rastermap(pops(2,1):pops(2,2),:));
@@ -308,11 +316,11 @@ num_ep = size(long_groom_mat,1):-1:1;
 pcolor(t, num_ep, [long_groom_mat(I,:), zeros(size(I))']), 
 
 shading flat
-caxis([-2 6])
+caxis([-1 3])
 colormap(bluewhitered())
 
 
-p50 = prctile(ep_length(ep_length>0), 50);
+p50 = round(prctile(ep_length(ep_length>0), 50));
 
 line(([p50 p50]/fs)-5, ylim, 'Color', [0 0 0], 'LineWidth', 2, 'LineStyle', '--')
 line([0 0], ylim, 'Color', [0 0 0], 'LineWidth', 2)
@@ -327,18 +335,18 @@ set(gca, 'YDir', 'reverse')
 
 
 %%
-figure, axis off, colorbar, caxis([-2 6]), colormap(bluewhitered())
-exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_heatmap_2p_colorbar.png']), 'Resolution', 300)
+figure, axis off, colorbar, caxis([-1 3]), colormap(bluewhitered())
+% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_heatmap_2p_colorbar.png']), 'Resolution', 300)
 %%
 
 figure, hold on
 shadedErrorBar(t(1:p50), mean(long_groom_mat(:,1:p50), 'omitnan'), std(long_groom_mat(:,1:p50), 'omitnan'), 'k', 1)
 line([0 0], ylim, 'Color', [0 0 0], 'LineWidth', 2)
+axis([-5 30 -1 2.5])
 
-xticklabels([])
-yticklabels([])
-saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_average2p.svg']))
-% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_average.png']), 'Resolution', 300)
+% xticklabels([])
+% yticklabels([])
+% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_average2p.png']), 'Resolution', 300)
 
 %%
 
@@ -361,10 +369,10 @@ end
 
 
 % plot_data = [dff_pre, dff_on, dff_early, dff_late];
-plot_data = [dff_pre, dff_early, dff_late];
+plot_data = [dff_pre, dff_early, dff_late'];
 figure, boxplot(plot_data, 'Colors', 'k', 'Symbol', '')
 hold on
-swarmchart(repmat([1 2 3], size(dff_on,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
+swarmchart(repmat([1 2 3], size(dff_early,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
 ylabel('Mean \DeltaF/F_0 (\sigma)')
 xticklabels({'Pre 5s', 'First 5s', 'Last 5s'})
 ax = gca;
@@ -390,6 +398,8 @@ disp(ranova_results);
 % Perform pairwise comparisons
 pairwise_results = multcompare(rm, 'Time', 'ComparisonType', 'bonferroni');
 disp(pairwise_results);
+
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'binned_states2p.svg']))
 
 %%
 blen = 5;
@@ -433,7 +443,7 @@ end
 
 
 
-
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'average_slope2p.svg']))
 
 %%
 
@@ -481,9 +491,9 @@ xticklabels(unique_region)
 % xlabel('Episode duration (s)')
 % ax = gcf;
 
-figure, 
-for i = 1:3
-    subplot(1,3,i), hold on
+figure,  hold on
+for i = 1%:3
+    % subplot(1,3,i), hold on
     switch i
         case 1, imagesc(-groom_prop), caxis([-0.5 0]); colormap(bluewhitered()),  freezeColors
         case 2, imagesc(move_prop), colormap(bluewhitered()), caxis([0 0.5]); freezeColors
@@ -491,10 +501,14 @@ for i = 1:3
     end
     for p = 1:58%length(dorsalMaps.edgeOutline)
         % if p == 60, continue; end
-        plot(dorsalMaps.edgeOutline{p}(:,2), dorsalMaps.edgeOutline{p}(:,1), 'k')
+        plot(dorsalMaps.edgeOutline{p}(:,2), dorsalMaps.edgeOutline{p}(:,1), 'k', 'LineWidth', 2)
     end
             axis equal off
         set(gca, 'YDir', 'reverse');
 end
+
+%%
+
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'grooming_proportion2p.png']), 'Resolution', 300)
 
 %%
