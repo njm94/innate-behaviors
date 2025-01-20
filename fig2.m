@@ -211,7 +211,7 @@ end
 for i = 1:length(eth_example)
 ax = figure(i);
 axis([0 40 ylim])
-saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','ethogram_ex', num2str(i), '.svg']))
+% saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','ethogram_ex', num2str(i), '.svg']))
 end
 
 
@@ -310,7 +310,7 @@ end
 pgraph = digraph(dat, 'omitselfloops');
 
 figure('Position', [843 70 649 826]), 
-plot(pgraph, 'MarkerSize', 20, 'LineWidth', pgraph.Edges.Weight*15, ...
+plot(pgraph, 'MarkerSize', 20, 'LineWidth', pgraph.Edges.Weight, ...
     'NodeColor', cols, ...'NodeFontSize', 15, ...
     'EdgeColor', 'k', 'EdgeAlpha', 1, 'ArrowSize', 15, ...
     'NodeLabel','', ...
@@ -325,30 +325,31 @@ trueM = M;
 %%
 
 
-p1 = nanmean(pmat(:,:,thy1_idx), 3);
-p2 = nanmean(pmat(:,:,ai94_idx), 3);
-p3 = nanmean(pmat(:,:,hyl3_idx), 3);
-p4 = nanmean(pmat(:,:,ibl2_idx), 3);
-p5 = nanmean(pmat(:,:,etr2_idx), 3);
-p6 = nanmean(pmat(:,:,etr3_idx), 3);
-p7 = nanmean(pmat(:,:,ecl3_idx), 3);
-p8 = nanmean(pmat(:,:,idr3_idx), 3);
+p1 = nanmean(tmat(:,:,thy1_idx), 3);
+p2 = nanmean(tmat(:,:,ai94_idx), 3);
+p3 = nanmean(tmat(:,:,hyl3_idx), 3);
+p4 = nanmean(tmat(:,:,ibl2_idx), 3);
+p5 = nanmean(tmat(:,:,etr2_idx), 3);
+p6 = nanmean(tmat(:,:,etr3_idx), 3);
+p7 = nanmean(tmat(:,:,ecl3_idx), 3);
+p8 = nanmean(tmat(:,:,idr3_idx), 3);
 
 
 
-figure
+% figure
 idat = {'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'};
 % idat = {'p4', 'p5', 'p6'};
 for i = 1:length(idat)
     tmp =eval(idat{i});
-    subplot(2,length(idat),i)
-    imagesc(tmp), caxis([0 0.6])
-    colormap(flipud(colormap('gray'))), colorbar
-    xticks(1:size(tmp,2))
-    yticks(1:size(tmp,1))
-    xticklabels(states)
-    yticklabels(states)
+    % subplot(2,length(idat),i)
+    % imagesc(tmp), caxis([0 0.6])
+    % colormap(flipud(colormap('gray'))), colorbar
+    % xticks(1:size(tmp,2))
+    % yticks(1:size(tmp,1))
+    % xticklabels(states)
+    % yticklabels(states)
 
+    % figure
 
     [M,Q]=community_louvain(tmp);
     iM(:,i) = M;
@@ -372,8 +373,8 @@ for i = 1:length(idat)
     pgraph = digraph(tmp, 'omitselfloops');
     
     % figure('Position', [843 70 649 826]), 
-    subplot(2,length(idat),i+length(idat))
-    plot(pgraph, 'MarkerSize', 10, ...'LineWidth', pgraph.Edges.Weight*15, ...
+    subplot(1,length(idat),i)
+    plot(pgraph, 'MarkerSize', 10, 'LineWidth', pgraph.Edges.Weight/5, ...
         'NodeColor', cols, 'NodeFontSize', 10, ...
         'EdgeColor', 'k', 'EdgeAlpha', 1, 'ArrowSize', 10, ...
         'NodeLabel',states, ...
