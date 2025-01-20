@@ -165,64 +165,101 @@ boxplot([num_gR_dR' num_gL_dR'], 'colors', 'k', 'symbol', '')
 hold on
 hline(0, 'k--')
 swarmchart([ones(size(num_gR_dR))-0.25 1.25+ones(size(num_gR_dR))], [num_gR_dR num_gL_dR], [], 'k', 'XJitterWidth', 0.25)
-[~,p] = ttest(num_gR_dR, num_gL_dR);
+if isnormal(num_gR_dR) && isnormal(num_gL_dR)
+    [~,p] = ttest(num_gR_dR, num_gL_dR);
+else
+    disp('not normal')
+    p = ranksum(num_gR_dR, num_gL_dR);
+end
+
 title(num2str(p))
 ylabel('Right stimulus')
 xticklabels({'Right', 'Left'})
+xlabel([num2str(median(num_gR_dR)), '+/-', num2str(iqr(num_gR_dR)), '-------',num2str(median(num_gL_dR)), '+/-', num2str(iqr(num_gL_dR))])
 axis([.5 2.5 -5 150])
-
+%%
 figure
 boxplot([num_gRA_dR' num_gLA_dR'], 'colors', 'k', 'symbol', '')
 hold on
 hline(0, 'k--')
 swarmchart([ones(size(num_gRA_dR))-0.25 1.25+ones(size(num_gRA_dR))], [num_gRA_dR num_gLA_dR], [], 'k', 'XJitterWidth', 0.25)
-[~,p] = ttest(num_gRA_dR, num_gLA_dR);
+if isnormal(num_gRA_dR) && isnormal(num_gLA_dR)
+    [~,p] = ttest(num_gRA_dR, num_gLA_dR);
+else
+    disp('Not normal')
+    p = ranksum(num_gRA_dR, num_gLA_dR);
+end
 title(num2str(p))
 xticklabels({'Right Asymmetric', 'Left Asymmetric'})
+xlabel([num2str(median(num_gRA_dR)), '+/-', num2str(iqr(num_gRA_dR)), '-------',num2str(median(num_gLA_dR)), '+/-', num2str(std(num_gLA_dR))])
 ylabel('Right stimulus')
 axis([.5 2.5 -5 150])
-
+%%
 figure
 boxplot([num_gRE_dR' num_gLE_dR'], 'colors', 'k', 'symbol', '')
 hold on
 hline(0, 'k--')
 swarmchart([ones(size(num_gRE_dR))-0.25 1.25+ones(size(num_gRE_dR))], [num_gRE_dR num_gLE_dR], [], 'k', 'XJitterWidth', 0.25)
-[~,p] = ttest(num_gRE_dR, num_gLE_dR);
+if isnormal(num_gRE_dR) && isnormal(num_gLE_dL)
+    [~,p] = ttest(num_gRE_dR, num_gLE_dR);
+else
+    disp('Not normal')
+    p = ranksum(num_gRE_dR, num_gLE_dR);
+end
 title(num2str(p))
 xticklabels({'Elliptical Right', 'Elliptical Left'})
+xlabel([num2str(median(num_gRE_dR)), '+/-', num2str(std(num_gRE_dR)), '-------',num2str(median(num_gLE_dR)), '+/-', num2str(std(num_gLE_dR))])
 ylabel('Right stimulus')
 axis([.5 2.5 -5 150])
-
+%%
 figure
 boxplot([num_gR_dL' num_gL_dL'], 'colors', 'k', 'symbol', '')
 hold on
 swarmchart([ones(size(num_gR_dL))-0.25 1.25+ones(size(num_gR_dL))], [num_gR_dL num_gL_dL], [], 'k', 'XJitterWidth', 0.25)
 hline(0, 'k--')
-[~,p] = ttest(num_gR_dL, num_gL_dL);
+if isnormal(num_gR_dL) && isnormal(num_gL_dL)
+    [~,p] = ttest(num_gR_dL, num_gL_dL);
+else
+    disp('not normal')
+    p = ranksum(num_gR_dL, num_gL_dL);
+end
 title(num2str(p))
 xticklabels({'Right', 'Left'})
+xlabel([num2str(median(num_gR_dL)), '+/-', num2str(std(num_gR_dL)), '-------',num2str(median(num_gL_dL)), '+/-', num2str(std(num_gL_dL))])
 ylabel('Left stimulus')
 axis([.5 2.5 -5 150])
-
+%%
 figure
 boxplot([num_gRA_dL' num_gLA_dL'], 'colors', 'k', 'symbol', '')
 hold on
 swarmchart([ones(size(num_gRA_dL))-0.25 1.25+ones(size(num_gRA_dL))], [num_gRA_dL num_gLA_dL], [], 'k', 'XJitterWidth', 0.25)
-[~,p] = ttest(num_gRA_dL, num_gLA_dL);
+if isnormal(num_gRA_dL) && isnormal(num_gLA_dL)
+    [~,p] = ttest(num_gRA_dL, num_gLA_dL);
+else
+    disp('Not normal')
+    p = ranksum(num_gRA_dL, num_gLA_dL);
+end
 hline(0, 'k--')
 title(num2str(p))
 xticklabels({'Right Asymmetric', 'Left Asymmetric'})
+xlabel([num2str(median(num_gRA_dL)), '+/-', num2str(std(num_gRA_dL)) '-------',num2str(median(num_gLA_dL)), '+/-', num2str(std(num_gLA_dL))])
 ylabel('Left stimulus')
 axis([.5 2.5 -5 150])
-
+%%
 figure
 boxplot([num_gRE_dL' num_gLE_dL'], 'colors', 'k', 'symbol', '')
 hold on
 hline(0, 'k--')
 swarmchart([ones(size(num_gRE_dL))-0.25 1.25+ones(size(num_gRE_dL))], [num_gRE_dL num_gLE_dL], [], 'k', 'XJitterWidth', 0.25)
-[h,p] = ttest(num_gRE_dL, num_gLE_dL);
+if isnormal(num_gRE_dL) && isnormal(num_gLE_dL)
+    [~,p] = ttest(num_gRE_dL, num_gLE_dL);
+else
+    disp('Not normal')
+    p = ranksum(num_gRE_dL, num_gLE_dL);
+end
 title(num2str(p))
 xticklabels({'Elliptical Right', 'Elliptical Left'})
+xlabel([num2str(median(num_gRE_dL)),'+/-', num2str(std(num_gRE_dL)) '-------',num2str(median(num_gLE_dL)), '+/-', num2str(std(num_gLE_dL))])
 ylabel('Left stimulus')
 axis([.5 2.5 -5 150])
 
