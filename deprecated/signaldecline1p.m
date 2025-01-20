@@ -229,15 +229,15 @@ end
 
 
 %% 
-states = ["Start", "Right", "Left", "Elliptical", ...
-    "Right Asymmetric", "Left Asymmetric", ...
-    "Elliptical Right", "Elliptical Left", "Stop", "Lick", "Drop"];
-close all
-ex_idx = [16 1; 5 1; 17 4; 19 2];
-for i = 1:size(ex_idx,1)
-    plot_ethogram(eth_states{ex_idx(i,1)}{ex_idx(i,2)}, states, fs);
-    axis([5 60, ylim])
-end
+% states = ["Start", "Right", "Left", "Elliptical", ...
+%     "Right Asymmetric", "Left Asymmetric", ...
+%     "Elliptical Right", "Elliptical Left", "Stop", "Lick", "Drop"];
+% close all
+% ex_idx = [16 1; 5 1; 17 4; 19 2];
+% for i = 1:size(ex_idx,1)
+%     plot_ethogram(eth_states{ex_idx(i,1)}{ex_idx(i,2)}, states, fs);
+%     axis([5 60, ylim])
+% end
 
 
 
@@ -270,22 +270,10 @@ axis tight
 yticks(-5.5:8.5)
 yticklabels('auto')
 
-saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'groom_episode_dff.svg']))
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'groom_episode_dff.svg']))
 
 
 
-%%
-
-figure
-pp = diff(behaviors{4},1,2);
-for i = 1:size(behaviors{4},1)
-    subplot(1,3,i)
-    tmp = mean(dFF(:,:,behaviors{4}(i,1):behaviors{4}(i,2)),3);
-    imagesc(tmp)
-    title(num2str(pp(i)))
-    yticks([])
-    xticks([])
-end
 
 %%
 
@@ -313,9 +301,6 @@ for i = 1:length(all_global)
     mat_global(i, 1:length(all_global{sort_idx(i)})) = all_global{sort_idx(i)};
 end
 
-figure, 
-t = xt(mat_global, fs, 2)-blen;
-joyPlot(mat_global', t, 2, 'FaceColor', 'w', 'FaceAlpha', 1)
 % hold on
 % vline(0, 'r-')
 
@@ -479,16 +464,142 @@ line([400 400+scalebar_length], [520 520], 'Color', [0 0 0], 'LineWidth', 2)
 %%
 exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'example1pimage.png']), 'Resolution', 300)
 
+
+
+
 %%
 
 
-rois = {'MOS_2-L', 'SSP-ul-L', 'SSP-bfd-L', 'VIS-p-L', 'RSP_1-L', 'PTLp-L'};
 
 
-figure, hold on 
-for i = 1:size(rois,2)
-    ex_rois = roi_signal{4}{1}(:, contains(labels, rois(i)));
-    plot(xt(ex_rois, fs, 1)-5, ex_rois)%-i*2)
+
+%%
+clear, clc, close all
+addpath(fix_path('C:\Users\user\Documents\Nick\grooming\utils'))
+data_root = 'Y:\nick\behavior\grooming\1p';
+mice = {'ECR2_thy1', 'GER2_ai94', 'HYL3_tTA', 'IBL2_tTA'};
+example_mouse = 1;
+for j = 1:length(mice)
+    load(fix_path([data_root, filesep, mice{j}, filesep, 'mask.mat']))
+    if j == example_mouse
+        example_mask = mask;
+    end
+    dff_path = fix_path([data_root, filesep, mice{j}, filesep, 'outputs']);
+    dff_fig = getAllFiles(dff_path, '_dFF.fig');
+    % If there are multiple versions, use the most recent one
+    if size(dff_fig,1) > 1
+        dff_fig = sort(dff_fig);
+        dff_fig = dff_fig{end};
+    end
+    h = openfig([dff_path, filesep, dff_fig]);
+    for i = 1:length(h.Children)
+        switch(h.Children(i).Title.String)
+            case 'RightMove' 
+                rightmove(:,:,j) = h.Children(i).Children(end).CData;
+            case 'LeftMove' 
+                leftmove(:,:,j) = h.Children(i).Children(end).CData;
+            case 'largebilateral'
+                bilateral(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical'
+                elliptical(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical Right'
+                ellip_right(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical Left'
+                ellip_left(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Left Asymmetric'
+                largeleft(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Right Asymmetric'
+                largeright(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Left'
+                left(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Right'
+                right(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Lick'
+                lick(:,:,j) = h.Children(i).Children(end).CData;
+            otherwise
+                continue
+        end
+    end
+
+    close(h)
 end
-legend(rois, 'Location', 'Best')
-vline(0, 'k-')
+
+%%  plot example mouse dff
+vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
+% figure('Position', [82 474 1811 128])
+example_mask(example_mask==0)=nan;
+for i = 1:length(vars)
+    figure
+    tmp = eval(vars(i));
+    
+    % subplot(1,length(vars), i)
+    pcolor(example_mask.*tmp(:,:,example_mouse));
+    shading interp
+    set(gca, 'YDir', 'reverse');
+    axis off, box off
+    % imagesc(example_mask.*tmp(:,:,example_mouse));
+    xticks([])
+    yticks([])
+    caxis([0 2.5])
+    % title(vars(i))
+    % colorbar
+    % saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), '_example.pdf']))
+    % exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), '_example.png']), 'Resolution', 300)
+end
+
+
+%% overlay contours from diff mice
+clc
+% nanmask = zeros(128, 128, length(mice));
+
+load('allenDorsalMap.mat');
+clear nanmask
+for j = 1:length(mice)
+    load(fix_path([data_root, filesep, mice{j}, filesep, 'mask.mat']))
+    atlas_tform = load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
+    warpmask = imwarp(mask, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+    nanmask(:,:,j) = warpmask;
+    % nanmask(:,:,j) = mask;
+end
+nanmask(nanmask==0) = nan;
+
+
+
+%%
+close all
+clear all_behavior_maps
+thresh = 80;
+vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
+% figure, axis off, hold on
+for j = 1:length(mice)
+    load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
+    for i = 1:length(vars)
+        
+        behavior_map = eval(vars(i));
+        
+        behavior_map = behavior_map(:,:,j);
+        behavior_map = nanmask(:,:,j).*imwarp(behavior_map, tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+        all_behavior_maps{i}(:,:,j) = behavior_map;
+        v = prctile(behavior_map(:), thresh);
+        binary_maps{i}(:,:,j) = behavior_map >= v;
+
+        % subplot(1,round(length(vars)), i), axis off, hold on
+        figure(i), axis off, hold on
+        for p = 1:length(dorsalMaps.edgeOutline)
+            plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
+            xticks([])
+            yticks([])
+        end
+            if v > 0
+                contourf(binary_maps{i}(:,:,j).*j, [j-0.1 j-0.1], 'FaceAlpha', 0.25)
+
+                % title(vars(i));
+            else
+                disp('v is not greater than 0')
+                disp(vars(i))
+            end
+            set(gca, 'YDir', 'reverse');
+    end
+    
+end
+
