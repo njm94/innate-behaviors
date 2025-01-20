@@ -117,67 +117,12 @@ disp('Reconstructing model and real data')
 data_modeled = reshape(Umaster * Vfull(:,sub_idx), [128, 128, trial_length]);
 data_real = reshape(Umaster * Vbrain, [128, 128, trial_length]);
 
-%% get seeds for evaluating model fit
-clear u v
-load([mouse_root_dir filesep 'atlas_tform.mat'])
-
-template_img = loadtiff(fix_path([mouse_root_dir, filesep, 'template.tif']));
-[seeds, labels] = get_seeds();
-close()
-rois = {'MOS_1-L', 'SSP-ul-L', 'SSP-bfd-L', 'MOP_1-L', 'VIS-p-L', 'RSP_2-L'};
-figure(1), 
-imagesc(template_img), colormap gray,
-hold on
-for i = 1:length(rois)
-    tmp = seeds(strcmp(labels, rois(i)),:);
-    % seeds are in atlas coords. Use inverse of atlas tform to get them
-    % back in original space
-
-    [u(i), v(i)] = transformPointsInverse(tform, tmp(1), tmp(2));
-    plot(u(i),v(i), '.', 'MarkerSize', 30)
-end
-
 %%
 nanmask = mask;
 nanmask(mask==0) = nan;
 t = xt(data_real, fs, 3);
 dff = data_real-min(data_real(:));
 dff = zscore((dff - mean(dff, 3))./mean(dff,3), [], 3);
-%%
-figure('Position', [428 453 817 256]), 
-plot(t, squeeze(mean(nanmask.*dff, [1 2], 'omitnan')),' k')
-hold on, axis tight
-groom_events = any(table2array(events(:,1:end-1)),2);
-patchplot(t(arr2idx(groom_events(1:size(dff,3)))), [7.5 8], 'k', 1)
-vline(912, 'r-')
-vline(960, 'r-')
-line([31 90], [4 4], 'Color', [0 0 0], 'LineWidth', 2)
-line([31 31], [4 6], 'Color', [0 0 0], 'LineWidth', 2)
-axis off
-% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'groom_wholesession_dff.svg']))
-%%
-% Aggregate groom events, but this time use the modeled data since each 
-% event has a surrounding window.
-
-groom_events = arr2idx(squeeze(any(data_modeled, [1 2])));
-clear expVar episode_duration
-
-for i = 1:size(groom_events,1)
-    % tmp_model = reshape(nanmask.*(data_modeled(:,:,groom_events(i,1):groom_events(i,2))), 128*128, []);
-    % tmp_real = reshape(nanmask.*(data_real(:,:,groom_events(i,1):groom_events(i,2))), 128*128, []);
-
-    episode_duration(i) = (groom_events(i,2)-groom_events(i,1))/fs;
-    expVar(:,:,i) = reshape(modelCorr(Vbrain(:, groom_events(i,1):groom_events(i,2)), ...
-        Vfull(:,sub_idx(1)-1+groom_events(i,1):sub_idx(1)-1+groom_events(i,2)), Umaster.*nanmask(:)), 128, 128);
-end
-
-%%
-
-figure, scatter(episode_duration-2.5, squeeze(mean(expVar, [1 2], 'omitnan')))
-
-%%
-
-show_mov(expVar(:,:,episode_duration>=10))
 
 
 %%
@@ -201,7 +146,7 @@ for i = 1:length(rois)
     [u(i), v(i)] = transformPointsInverse(tform, tmp(1), tmp(2));
     plot(u(i),v(i), '.', 'MarkerSize', 60)
 end
-exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'example_map_with_rois.png']), 'Resolution', 300)
+% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'example_map_with_rois.png']), 'Resolution', 300)
 
 %%
 
@@ -241,8 +186,8 @@ for i = 1:length(betas_to_plot)
     vline(0, 'k-')
     vline(0.5, 'k-')
     vline(1, 'k-')
-    saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', betas_to_plot{i}, '_timeseries.svg']))
-    close gcf
+    % saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', betas_to_plot{i}, '_timeseries.svg']))
+    % close gcf
 end
 
 
@@ -269,4 +214,136 @@ axis([15 315 -20 5])
 axis off
 line([51 60], [-19 -19], 'Color', [0 0 0], 'LineWidth', 2)
 line([51 51], [-19 -17], 'Color', [0 0 0], 'LineWidth', 2)
-saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'model_timeseries.svg']))
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'model_timeseries.svg']))
+
+
+%%
+clear, clc, close all
+addpath(fix_path('C:\Users\user\Documents\Nick\grooming\utils'))
+data_root = 'Y:\nick\behavior\grooming\1p';
+mice = {'ECR2_thy1', 'GER2_ai94', 'HYL3_tTA', 'IBL2_tTA'};
+example_mouse = 1;
+for j = 1:length(mice)
+    load(fix_path([data_root, filesep, mice{j}, filesep, 'mask.mat']))
+    if j == example_mouse
+        example_mask = mask;
+    end
+    dff_path = fix_path([data_root, filesep, mice{j}, filesep, 'outputs']);
+    dff_fig = getAllFiles(dff_path, '_summary.fig');
+    % If there are multiple versions, use the most recent one
+    if size(dff_fig,1) > 1
+        dff_fig = sort(dff_fig);
+        dff_fig = dff_fig{end};
+    end
+    h = openfig([dff_path, filesep, dff_fig]);
+    for i = 1:length(h.Children)
+        switch(h.Children(i).Title.String)
+            case 'RightMove' 
+                rightmove(:,:,j) = h.Children(i).Children(end).CData;
+            case 'LeftMove' 
+                leftmove(:,:,j) = h.Children(i).Children(end).CData;
+            case 'largebilateral'
+                bilateral(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical'
+                elliptical(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical Right'
+                ellip_right(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Elliptical Left'
+                ellip_left(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Left Asymmetric'
+                largeleft(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Right Asymmetric'
+                largeright(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Left'
+                left(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Right'
+                right(:,:,j) = h.Children(i).Children(end).CData;
+            case 'Lick'
+                lick(:,:,j) = h.Children(i).Children(end).CData;
+            otherwise
+                continue
+        end
+    end
+
+    close(h)
+end
+
+%%  plot example mouse dff
+vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
+% figure('Position', [82 474 1811 128])
+example_mask(example_mask==0)=nan;
+for i = 1:length(vars)
+    figure
+    tmp = eval(vars(i));
+    
+    % subplot(1,length(vars), i)
+    pcolor(example_mask.*tmp(:,:,example_mouse));
+    shading interp
+    set(gca, 'YDir', 'reverse');
+    axis off, box off
+    % imagesc(example_mask.*tmp(:,:,example_mouse));
+    xticks([])
+    yticks([])
+    caxis([0 0.05])
+    % title(vars(i))
+    % colorbar
+    % saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), '_example.pdf']))
+    % exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), '_example.png']), 'Resolution', 300)
+end
+
+
+%% overlay contours from diff mice
+clc
+% nanmask = zeros(128, 128, length(mice));
+
+load('allenDorsalMap.mat');
+clear nanmask
+for j = 1:length(mice)
+    load(fix_path([data_root, filesep, mice{j}, filesep, 'mask.mat']))
+    atlas_tform = load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
+    warpmask = imwarp(mask, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+    nanmask(:,:,j) = warpmask;
+    % nanmask(:,:,j) = mask;
+end
+nanmask(nanmask==0) = nan;
+
+
+
+%%
+close all
+clear all_behavior_maps
+thresh = 80;
+vars = ["lick", "right", "left", "elliptical", "largeright", "largeleft", "ellip_right", "ellip_left"];
+% figure, axis off, hold on
+for j = 1:length(mice)
+    load(fix_path([data_root, filesep, mice{j}, filesep, 'atlas_tform.mat']));
+    for i = 1:length(vars)
+        
+        behavior_map = eval(vars(i));
+        
+        behavior_map = behavior_map(:,:,j);
+        behavior_map = nanmask(:,:,j).*imwarp(behavior_map, tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+        all_behavior_maps{i}(:,:,j) = behavior_map;
+        v = prctile(behavior_map(:), thresh);
+        binary_maps{i}(:,:,j) = behavior_map >= v;
+
+        % subplot(1,round(length(vars)), i), axis off, hold on
+        figure(i), axis off, hold on
+        for p = 1:length(dorsalMaps.edgeOutline)
+            plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
+            xticks([])
+            yticks([])
+        end
+            if v > 0
+                contourf(binary_maps{i}(:,:,j).*j, [j-0.1 j-0.1], 'FaceAlpha', 0.25)
+
+                % title(vars(i));
+            else
+                disp('v is not greater than 0')
+                disp(vars(i))
+            end
+            set(gca, 'YDir', 'reverse');
+    end
+end
+
+
