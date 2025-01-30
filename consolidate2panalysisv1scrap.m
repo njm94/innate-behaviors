@@ -20,6 +20,7 @@ mp_list = fix_path(mp_list);
 current_mouse = '';
 cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
 
+dmetric = 'cosine';
 fs = 90;
 aggregation_sz = 3; % window of time to aggregate behaviors
 addpath(genpath('/home/user/Documents/grooming/utils'))
@@ -37,7 +38,7 @@ consolidated_labs = {'FL', 'Unilateral', 'Elliptical', 'Asymmetric', 'Ellip-Asym
 region_locs = {};
 region_neurons = [];
 total_neurons = 0;
-for i = 1%:length(mp_list)
+for i = 1:length(mp_list)
     
     mouse_root = fileparts(mp_list{i});
     
@@ -247,6 +248,68 @@ for i = 1%:length(mp_list)
             continue
         end
     end
+
+
+    % Do the hierarchical clustering
+    
+    Z = linkage(Bmean', 'average', dmetric);
+
+    figure, subplot(3,2,1)
+    [H, T, outperm] = dendrogram(Z,'Labels', labs);  % Plot the dendrogram
+    ylabel(['Distance (',dmetric,')'])
+    xticks([])
+        
+    % sort neurons by anatomical location
+    label_column = ones(size(Bmean,1), 2);
+    anat = sort(unique(nloc));
+    I = [];
+    uni_idx = strcmp(labs, 'FLR') | strcmp(labs, 'FLL');
+
+    for j = 1:length(anat)
+        Itmp = find(strcmp(nloc,anat{j}));
+        [~, Itmp_sorted] = sort(mean(Bmean(Itmp,uni_idx),2));
+        I = [I; Itmp(Itmp_sorted)];
+    end
+    
+    anat_parent = unique(cellfun(@(x) x(1:3), anat, 'UniformOutput', false));
+    for j = 1:length(anat_parent)
+        label_column(contains(nloc(I), anat_parent{j}), 1) = j;  
+    end
+    
+    for j = 1:length(anat)
+        label_column(contains(nloc(I), anat{j}), 2) = j;    
+    end
+    
+    % label_column
+    
+    subplot(3,2,[3,5])
+    imagesc(Bmean(I, outperm)),
+    xticks(1:length(labs))
+    xticklabels(labs(outperm))
+    % c=colorbar;
+    % c.Label.String = 'Z-score';
+    caxis([-1 3])
+    colormap(bluewhitered())
+    ylabel('Neuron')
+    freezeColors
+    % 
+    subplot(3,2,[4, 6]), imagesc(label_column), colormap default, axis off
+
+
+    % Not all possible behaviors are observed in each session. To compare
+    % across sessions, map the relationships between neuronal population
+    % distances across behaviors to a matrix which contains all possible
+    % behaviors. If some behaviors are not present, fill those with NaNs
+
+    for j=1:length(all_possible_labs)
+        if any(strcmp(all_possible_labs{j}, labs))
+            tmp_Bmean(j,:) = Bmean(:, strcmp(all_possible_labs{j}, labs));
+        else
+            tmp_Bmean(j,:) = nan(1, size(Bmean,1));
+        end
+    end
+
+    sim_matrix(:,:,i) = 1-squareform(pdist(tmp_Bmean, dmetric));
 
 end
 
