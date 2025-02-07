@@ -177,10 +177,6 @@ for j = 1:length(data_list{1})+1
     % get ROIs - seeds are in atlas coords
     [seeds, labels] = get_seeds();
 
-    % use these vars to find contiguous stretch of stationary behavior
-    % which is same duration as grooming- we will overwrite tmp in the loop
-    % starting with longest grooming behavior first, so we avoid choosing
-    % same time
     any_behavior = any([bmat, LeftMove, RightMove], 2);
     tmp = any_behavior;
 
@@ -190,22 +186,37 @@ for j = 1:length(data_list{1})+1
 
         tmp_idx(i,:) = [idx(i,1)-round(blen*fs), idx(i,2)+round(blen*fs)];
         try 
+
             dFF_crop = dFF(:,:,tmp_idx(i,1):tmp_idx(i,2));
+
+            % set windows
+            prewin = 1:round(blen*fs);
+            earlywin = round(blen*fs)+1:2*round(blen*fs);
+            latewin = size(dFF_crop,3)-2*round(blen*fs):size(dFF_crop,3)-round(blen*fs);
+            postwin = size(dFF_crop,3)-round(blen*fs)+1:size(dFF_crop,3);
+
+            % fname = ['dFF_', mouse_id, '_', exp_date, '_', num2str(i)];
+            % fileID = fopen(['/home/user/teamshare/TM_Lab/nick/behavior/grooming/1p/outputs/', filesep, fname, '.raw'],'w', 'l');
+            % fwrite(fileID, single(dFF_crop),'single');
+            % fclose(fileID);
     
             % get into atlas coords
             dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
             ts = getTimeseries(dFF_crop, seeds, 2);
-    
-            % set windows
-            prewin = 1:round(blen*fs);
-            earlywin = round(blen*fs)+1:2*round(blen*fs);
-            latewin = size(ts,1)-2*round(blen*fs):size(ts,1)-round(blen*fs);
-            postwin = size(ts,1)-round(blen*fs)+1:size(ts,1);
-    
-            % pre_corrmat{j}(:,:,i) = corrcoef(ts(prewin, :));
-            % early_corrmat{j}(:,:,i) = corrcoef(ts(earlywin, :));
-            % late_corrmat{j}(:,:,i) = corrcoef(ts(latewin, :));
-            % post_corrmat{j}(:,:,i) = corrcoef(ts(postwin, :));
+            
+            if i == 1
+                figure
+                mask_warp = imwarp(mask, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
+                imagesc(mask_warp), hold on
+                scatter(seeds(:,1), seeds(:,2))
+            end
+               
+            pre_corrmat{j}(:,:,i) = corrcoef(ts(prewin, :));
+            early_corrmat{j}(:,:,i) = corrcoef(ts(earlywin, :));
+            late_corrmat{j}(:,:,i) = corrcoef(ts(latewin, :));
+            post_corrmat{j}(:,:,i) = corrcoef(ts(postwin, :));
+
+            continue
     
             global_signal{j}{i,:} = squeeze(mean(dFF_crop, [1 2], 'omitnan'));
             roi_signal{j}{i} = ts;

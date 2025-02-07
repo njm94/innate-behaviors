@@ -18,15 +18,15 @@ vline(midline)
 
 % [x, y] = ginput(5);
 
-seeds = [223 153; % MOS_1
-    259 202; % MOS_2
-    268 256; % MOS_3
+seeds = [193 153; % MOS_1
+    240 202; % MOS_2
+    253 256; % MOS_3
     164 204; % MOP_1
     203 242; % MOP_2
     153 260; % SSP-ul
     197 298; % SSP-ll
     121 237; % SSP-m
-    109 277; % SSP-n
+    % 109 277; % SSP-n
     114 337; % SSP-bfd
     262 356; % RSP_1
     251 407; % RSP_2
@@ -36,7 +36,7 @@ seeds = [223 153; % MOS_1
     ];
 
 labels = {'MOS_1', 'MOS_2', 'MOS_3', 'MOP_1', 'MOP_2', 'SSP-ul', ...
-    'SSP-ll', 'SSP-m', 'SSP-n', 'SSP-bfd', 'RSP_1', 'RSP_2', 'PTLp', ...
+    'SSP-ll', 'SSP-m', 'SSP-bfd', 'RSP_1', 'RSP_2', 'PTLp', ...
     'VIS-am', 'VIS-p'};
 
 labelsR = cellfun(@(x) cat(2, x, '-R'), labels, 'UniformOutput', false);

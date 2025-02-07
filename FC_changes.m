@@ -335,91 +335,284 @@ for j = 1:length(data_list{1})+1
 
 end
 
+
+
+%% starting here
+midx = {'thy1_idx', 'ai94_idx', 'hyl3_idx', 'ibl2_idx'};
+m = 4;
+
+
+test_pre = pre_corrmat;
+test_pre = test_pre(:,eval(midx{m}));
+test_pre = catcell(3, test_pre(~cellfun(@isempty, test_pre)));
+
+
+
+upper_t = triu(true(size(test_pre,1)), 1); % Mask for upper triangle
+test_pre = reshape(test_pre(repmat(upper_t, 1, 1, size(test_pre,3))), [], size(test_pre,3));
+test_pre = tanh(mean(atanh(test_pre)))';
+% test_pre = mean(test_pre)';
+
+
+test_early = early_corrmat;
+test_early = test_early(:,eval(midx{m}));
+test_early = catcell(3, test_early(~cellfun(@isempty, test_early)));
+test_early = reshape(test_early(repmat(upper_t, 1, 1, size(test_early,3))), [], size(test_early,3));
+test_early = tanh(mean(atanh(test_early)))';
+% test_early = mean(test_early)';
+
+test_late = late_corrmat;
+test_late = test_late(:,eval(midx{m}));
+test_late = catcell(3, test_late(~cellfun(@isempty, test_late)));
+test_late = reshape(test_late(repmat(upper_t, 1, 1, size(test_late,3))), [], size(test_late,3));
+test_late = tanh(mean(atanh(test_late)))';
+% test_late = mean(test_late)';
+
+
+test_post = post_corrmat;
+test_post = test_post(:,eval(midx{m}));
+test_post = catcell(3, test_post(~cellfun(@isempty, test_post)));
+test_post = reshape(test_post(repmat(upper_t, 1, 1, size(test_post,3))), [], size(test_post,3));
+test_post = tanh(mean(atanh(test_post)))';
+% test_post = mean(test_post)';
+
+% remove zeros for now but check where they are coming from in the future
+
+if any(test_pre==0) 
+    zidx=find(test_pre==0); 
+    test_pre(zidx) = [];
+    test_early(zidx) = [];
+    test_late(zidx) = [];
+    test_post(zidx) = [];
+end
+
+plot_data = [test_pre, test_early, test_late, test_post];
+
+figure, boxplot(plot_data, 'Colors', 'k', 'Symbol', '')
+hold on
+swarmchart(repmat([1 2 3 4], size(test_early,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
+ylabel('Average correlation')
+xticklabels({'Before 5s', 'First 5s', 'Last 5s', 'After 5s'})
+ax = gca;
+ax.FontSize = 14;
+
+
+
+
+% Run Friedman test
+[p_friedman, tbl, stats] = friedman(plot_data, 1); % 1 indicates repeated measures
+disp(['Friedman test p-value: ', num2str(p_friedman)]);
+
+% If the Friedman test is significant, perform post-hoc pairwise comparisons
+if p_friedman < 0.05
+    fprintf('Post-hoc pairwise comparisons:\n');
+    
+    % Define time points
+    time_labels = {'Pre', 'Early', 'Late', 'Post'};
+    
+    % Get all possible pairwise combinations
+    pairs = nchoosek(1:4, 2);
+    p_values = zeros(size(pairs, 1), 1);
+    
+    % Perform Wilcoxon signed-rank tests for each pair
+    for i = 1:size(pairs, 1)
+        [p_values(i), ~, stats] = signrank(plot_data(:, pairs(i, 1)), plot_data(:, pairs(i, 2)));
+        fprintf('%s vs. %s: p = %.4f\n', time_labels{pairs(i, 1)}, time_labels{pairs(i, 2)}, p_values(i));
+    end
+
+    % Multiple comparisons correction (Bonferroni)
+    corrected_p_values = min(p_values * length(p_values), 1); % Bonferroni correction
+    fprintf('\nBonferroni corrected p-values:\n');
+    
+    for i = 1:size(pairs, 1)
+        fprintf('%s vs. %s: p_corrected = %.4f\n', time_labels{pairs(i, 1)}, time_labels{pairs(i, 2)}, corrected_p_values(i));
+    end
+end
+
+timepoints = {'test_pre', 'test_early', 'test_late', 'test_post'};
+figure,  hold on
+for i = 1:length(timepoints)
+    [a,b] = ksdensity(eval(timepoints{i}));
+    plot(a,b, 'LineWidth', 2);
+end
+legend({'Before 5s', 'First 5s', 'Last 5s', 'After 5s'}, 'Location', 'Best')
+
+
+
 %%
+hyl3_idx = 14:19;
+ibl2_idx = 20:25;
+midx = {'thy1_idx', 'ai94_idx', 'hyl3_idx', 'ibl2_idx'};
+m = 3;
+caxlims = [0.5 1];
+test_pre = pre_corrmat;
+test_pre = pre_corrmat(:,eval(midx{m}));
+test_pre = catcell(3, test_pre(~cellfun(@isempty, test_pre)));
+disp(size(test_pre,3))
 
-test_pre = catcell(2,pre_numComponents);
-test_pre(test_pre==0) = [];
+test_early = early_corrmat;
+test_early = early_corrmat(:,eval(midx{m}));
+test_early = catcell(3, test_early(~cellfun(@isempty, test_early)));
 
-test_early = catcell(2,early_numComponents);
-test_early(test_early==0) = [];
+test_late = late_corrmat;
+test_late = late_corrmat(:,eval(midx{m}));
+test_late = catcell(3, test_late(~cellfun(@isempty, test_late)));
 
-test_late = catcell(2,late_numComponents);
-test_late(test_late==0) = [];
+test_post = post_corrmat;
+test_post = post_corrmat(:,eval(midx{m}));
+test_post = catcell(3, test_post(~cellfun(@isempty, test_post)));
 
-test_post = catcell(2,post_numComponents);
-test_post(test_post==0) = [];
-
-
-figure, boxplot([test_pre; test_early; test_late; test_post]')
-
-
-%%
-
-test_pre = catcell(3, pre_corrmat(~cellfun(@isempty, pre_corrmat)));
-test_pre = squeeze(mean(test_pre, [1 2]));
-
-test_early = catcell(3, early_corrmat(~cellfun(@isempty, early_corrmat)));
-test_early = squeeze(mean(test_early, [1 2]));
-
-test_late = catcell(3, late_corrmat(~cellfun(@isempty, late_corrmat)));
-test_late = squeeze(mean(test_late, [1 2]));
-
-test_post = catcell(3, post_corrmat(~cellfun(@isempty, post_corrmat)));
-test_post = squeeze(mean(test_post, [1 2]));
-
-
-figure, boxplot([test_pre, test_early, test_late, test_post])
-
-%%
-test_pre = catcell(3, pre_corrmat(~cellfun(@isempty, pre_corrmat)));
-test_early = catcell(3, early_corrmat(~cellfun(@isempty, early_corrmat)));
-test_late = catcell(3, late_corrmat(~cellfun(@isempty, late_corrmat)));
-test_post = catcell(3, post_corrmat(~cellfun(@isempty, post_corrmat)));
 
 figure
-subplot(2,4,1), imagesc(mean(test_pre,3)), colorbar, caxis([0.4 1])
+subplot(2,4,1), imagesc(tanh(nanmean(atanh(test_pre),3))), colorbar, caxis(caxlims)
 xticks(1:size(test_pre,1))
 yticks(1:size(test_pre,1))
 xticklabels(labels)
 yticklabels(labels)
-subplot(2,4,2), imagesc(mean(test_early, 3)), colorbar, caxis([0.4 1])
+subplot(2,4,2), imagesc(tanh(nanmean(atanh(test_early), 3))), colorbar, caxis(caxlims)
 xticks(1:size(test_pre,1))
 yticks(1:size(test_pre,1))
 xticklabels(labels)
 yticklabels(labels)
-subplot(2,4,3), imagesc(mean(test_late, 3)), colorbar, caxis([0.4 1])
-xticks(1:size(test_pre,1))
-yticks(1:size(test_pre,1))
-xticklabels(labels)
-yticklabels(labels)
-
-subplot(2,4,4), imagesc(mean(test_post, 3)), colorbar, caxis([0.4 1])
-xticks(1:size(test_pre,1))
-yticks(1:size(test_pre,1))
-xticklabels(labels)
-yticklabels(labels)
-subplot(2,4,6), imagesc(mean(test_early-test_pre, 3)), colorbar,caxis([-0.2 0.2])
-xticks(1:size(test_pre,1))
-yticks(1:size(test_pre,1))
-xticklabels(labels)
-yticklabels(labels)
-subplot(2,4,7), imagesc(mean(test_late-test_pre, 3)), colorbar, caxis([-0.2 0.2])
+subplot(2,4,3), imagesc(tanh(nanmean(atanh(test_late), 3))), colorbar, caxis(caxlims)
 xticks(1:size(test_pre,1))
 yticks(1:size(test_pre,1))
 xticklabels(labels)
 yticklabels(labels)
 
-subplot(2,4,8), imagesc(mean(test_post-test_pre, 3)), colorbar, caxis([-0.2 0.2])
+subplot(2,4,4), imagesc(tanh(nanmean(atanh(test_post), 3))), colorbar, caxis(caxlims)
 xticks(1:size(test_pre,1))
 yticks(1:size(test_pre,1))
 xticklabels(labels)
 yticklabels(labels)
+
+colormap(flipud(colormap(gray)))
+%%
+
+tb = tanh(mean(atanh(test_pre),3));
+tb = tb(upper_t);
+
+te = tanh(mean(atanh(test_early),3));
+te = te(upper_t);
+
+tl = tanh(mean(atanh(test_late),3));
+tl = tl(upper_t);
+
+ta = tanh(mean(atanh(test_post),3));
+ta = ta(upper_t);
+
+
+figure, plot(sort(tb), (1:numel(tb))/numel(tb), 'LineWidth', 2);
+hold on
+plot(sort(te), (1:numel(te))/numel(te), 'LineWidth', 2)
+plot(sort(tl), (1:numel(tl))/numel(tl), 'LineWidth', 2)
+plot(sort(ta), (1:numel(ta))/numel(ta), 'LineWidth', 2)
+legend({'Before 5', 'First 5', 'Last 5', 'After 5'}, 'FontSize', 16, 'Location', 'Best')
+
+
+
+%%
+figure
+d_early_pre = tanh(nanmean(atanh(test_early),3))-tanh(nanmean(atanh(test_pre), 3));
+subplot(1,3,1), imagesc(d_early_pre), 
+caxis([-0.2 0.2])
+xticks(1:size(test_pre,1))
+yticks(1:size(test_pre,1))
+xticklabels(labels)
+yticklabels(labels)
+title('First 5s - Before 5s')
+c=colorbar;
+c.Label.String = '\Delta Correlation';
+
+d_late_pre = tanh(nanmean(atanh(test_late),3))-tanh(nanmean(atanh(test_pre), 3));
+subplot(1,3,2), imagesc(d_late_pre),  caxis([-0.2 0.2])
+xticks(1:size(test_pre,1))
+yticks(1:size(test_pre,1))
+xticklabels(labels)
+yticklabels(labels)
+title('Last 5s - Before 5s')
+c=colorbar;
+c.Label.String = '\Delta Correlation';
+
+d_post_pre = tanh(nanmean(atanh(test_post), 3))-tanh(nanmean(atanh(test_pre), 3));
+subplot(1,3,3), imagesc(d_post_pre), colorbar, caxis([-0.2 0.2])
+xticks(1:size(test_pre,1))
+yticks(1:size(test_pre,1))
+xticklabels(labels)
+yticklabels(labels)
+title('After 5s - Before 5s')
+c=colorbar;
+c.Label.String = '\Delta Correlation';
 
 colormap(bluewhitered())
 % for i = 1:length(data_list{1})
 %     subplot(1,3,1)
 %     imagesc()
 % end
+
+
+
+d_time_points = {'d_early_pre', 'd_late_pre', 'd_post_pre'};
+time_points = {'test_early', 'test_late', 'test_post'};
+% figure,
+
+data_1 = atanh(test_pre);
+% data_1 = test_pre;
+
+
+
+for i = 1:length(time_points)
+    d_tmp = eval(d_time_points{i});
+    % data_2 = eval(time_points{i});
+    data_2 = atanh(eval(time_points{i}));
+
+    clear p_values
+    for ii = 1:size(data_1,1)
+        for jj = 1:size(data_2,1)
+            [p_values(ii,jj), observeddifference, effectsize] = permutationTest(squeeze(data_1(ii,jj,:)), squeeze(data_2(ii,jj,:)), 1000); 
+        end
+    end
+
+    % for ii = 1:size(data_1,1)
+    %     for jj = 1:size(data_2,1)
+    %         [~, p_values(ii,jj)] = ttest(squeeze(data_1(ii,jj,:)), squeeze(data_2(ii,jj,:))); 
+    %     end
+    % end
+
+
+    [h, crit_p, adj_ci_cvrg, adj_p]=fdr_bh(p_values(upper_t),0.05,'dep','yes');
+    h_tmp = zeros(size(p_values));
+    h_tmp(upper_t) = h;
+
+    if nansum(h(:)) ==0, h_tmp = zeros(size(d_tmp)); end
+    G = graph(d_tmp.*h_tmp, 'upper');
+    LWidths = abs(G.Edges.Weight)*20;
+    LColors = zeros(numedges(G), 3);
+
+    for ii = 1:numedges(G)
+        if G.Edges.Weight(ii) <0
+            LColors(ii,:) = [0 0 1];
+        else
+            LColors(ii,:) = [1 0 0];
+        end
+    end
+    figure, hold on
+    
+    for p = 1:length(dorsalMaps.edgeOutline)
+        plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
+        xticks([])
+        yticks([])
+    end
+    set(gca, 'YDir', 'reverse');
+    hold on, axis equal off
+    h=plot(G, 'XData', seeds(:,1), 'YData', seeds(:,2), 'EdgeColor', LColors, 'LineWidth', LWidths, 'NodeLabel', {}, 'NodeColor', 'k');
+end
+%%
+
+
+
+
+
 
 
 %%
