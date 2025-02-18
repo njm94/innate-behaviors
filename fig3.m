@@ -216,7 +216,7 @@ for j = 1:length(data_list{1})+1
             late_corrmat{j}(:,:,i) = corrcoef(ts(latewin, :));
             post_corrmat{j}(:,:,i) = corrcoef(ts(postwin, :));
 
-            continue
+            % continue
     
             global_signal{j}{i,:} = squeeze(mean(dFF_crop, [1 2], 'omitnan'));
             roi_signal{j}{i} = ts;
@@ -297,7 +297,8 @@ for i = 1:length(global_signal)
     if ~isempty(global_signal{i})
         for j = 1:length(global_signal{i})
             if ~isempty(global_signal{i}{j})
-                all_global{counter} = global_signal{i}{j}(1:end-(round(blen*fs)));
+                % all_global{counter} = global_signal{i}{j}(1:end-(round(blen*fs)));
+                all_global{counter} = global_signal{i}{j};
                 all_dur(counter) = length(all_global{counter});
                 counter = counter + 1;
             end
@@ -364,19 +365,22 @@ dff_early = mean(mat_global(:,t_early), 2, 'omitnan');
 
 for i = 1:length(all_dur)
     t_late_idx = all_dur(sort_idx(i));
-    t_late = t_late_idx - blen*fs;
-    dff_late(i) = mean(mat_global(i, t_late:end), 'omitnan');
+    t_late = t_late_idx - 2*blen*fs;
+    dff_late(i) = mean(mat_global(i, t_late:t_late_idx-blen*fs), 'omitnan');
+    dff_post(i) = mean(mat_global(i, t_late_idx-blen*fs + 1: end), 'omitnan');
+    % t_late = t_late_idx - blen*fs;
+    % dff_late(i) = mean(mat_global(i, t_late:end), 'omitnan');
 end
 % t_late = t>5;
 % dff_late = mean(mat_global(:,t_late), 2, 'omitnan');
 
 
-plot_data = [dff_pre, dff_early, dff_late'];
+plot_data = [dff_pre, dff_early, dff_late', dff_post'];
 figure, boxplot(plot_data, 'Colors', 'k', 'Symbol', '')
 hold on
-swarmchart(repmat([1 2 3], size(dff_early,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
+swarmchart(repmat([1 2 3 4], size(dff_early,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
 ylabel('Mean cortical \DeltaF/F_0 (\sigma)')
-xticklabels({'Before 5s', 'First 5s', 'Last 5s'})
+xticklabels({'Before 5s', 'First 5s', 'Last 5s', 'After 5s'})
 ax = gca;
 ax.FontSize = 14;
 
@@ -386,10 +390,10 @@ ax.FontSize = 14;
 
 clc
 % Create a table with the data
-tbl = array2table(plot_data, 'VariableNames', {'Pre', 'Early', 'Late'});
+tbl = array2table(plot_data, 'VariableNames', {'Before', 'Early', 'Late', 'After'});
 
 % Define the repeated measures model
-rm = fitrm(tbl, 'Pre-Late ~ 1', 'WithinDesign', [1 2 3]'); % 3 time periods
+rm = fitrm(tbl, 'Before-After ~ 1', 'WithinDesign', [1 2 3 4]'); % 3 time periods
 
 % Run repeated-measures ANOVA
 ranova_results = ranova(rm);

@@ -11,18 +11,18 @@ formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 data_list = data_list{1};
 
-ger2_idx = 1:11;
-hyl3_idx = 52:56;
-ecr2_idx = 57:59;
-
+ger2_idx = find(contains(data_list, 'GER2'));
+hyl3_idx = find(contains(data_list, 'HYL3'));
+ecr2_idx = find(contains(data_list, 'ECR2'));
 
 current_mouse = '';
 
 %%
 k = 0.2;
-for j = ger2_idx
+expts_to_analyze = ger2_idx;
+for j = 1:length(expts_to_analyze)+1
      try
-        data_dir = data_list{j};
+        data_dir = data_list{expts_to_analyze(j)};
         disp(['Starting ' data_dir])
 
         if isunix % working on linux computer - modify paths
@@ -50,12 +50,12 @@ for j = ger2_idx
                 Vmaster{i} = Vmaster{i}(:,1:min_trial_length);
                 mvtOn{i} = mvtOn{i}(1:min_trial_length);
                 lick_start{i} = lick_start{i}(1:min_trial_length);
-                lick_timer{i} = lick_timer{i}(1:min_trial_length);
+                % lick_timer{i} = lick_timer{i}(1:min_trial_length);
             end
             Vmaster = catcell(2, Vmaster);
             mvtOn = catcell(1, mvtOn)';
             lick_start = catcell(1, lick_start);
-            lick_timer = catcell(1, lick_timer);
+            % lick_timer = catcell(1, lick_timer);
             new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
 
             % ridge here
@@ -71,10 +71,10 @@ for j = ger2_idx
             % Full-Trial events:    new_trial
             % Peri-Stimulus events: 
             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3], opts);
-            regLabels = {'Movement', 'Lick', 'Timer'}; %some movement variables
+            regLabels = {'Movement', 'Lick'}; %some movement variables
 %             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 1], opts);
 %             regLabels = {'Movment', 'Lick', 'Trial'}; %some movement variables
-            fullR = [dMat, lick_timer];
+            fullR = [dMat];
             regIdx = [regIdx; max(regIdx)+1];
 
             disp('Running ridge regression with 10-fold cross-validation')
@@ -83,7 +83,7 @@ for j = ger2_idx
             
             fullMat = modelCorr(Vmaster,Vfull,Umaster) .^2;
 
-            break
+            % break
 
             disp('Running reduced models')
             reducedMat = [];
@@ -100,10 +100,10 @@ for j = ger2_idx
                 reducedMat(:, i) = modelCorr(Vmaster, Vreduced{i}, Umaster) .^2; %compute explained variance
             end
 
-            save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
+            % save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
 
             figure
-            subplot(4, 1, 1)
+            subplot(3, 1, 1)
             imagesc(reshape(fullMat, [128 128]))
             xticks([])
             c=colorbar;
@@ -111,7 +111,7 @@ for j = ger2_idx
             c.Label.String = 'cvR^2';
             yticks([])
             for i = 1:length(regLabels)
-                subplot(4, 1, i+1)
+                subplot(3, 1, i+1)
                 imagesc(reshape(fullMat - reducedMat(:,i), [128 128]))
                 c=colorbar;
                 title(regLabels{i})
@@ -122,7 +122,7 @@ for j = ger2_idx
             end
 
         
-            savefig(gcf, [fPath 'summary.fig'])
+            % savefig(gcf, [fPath 'summary.fig'])
 
 
             % all mice completed - break the loop
@@ -201,7 +201,7 @@ for j = ger2_idx
     lick(b_idx{1}(:,1)) = 1;
 %     lick_start{count}(b_idx{1}(:,1)) = 1;
     lick_start{count} = lick;
-    [~, lick_timer{count}] = start_timer(lick, k, fs);
+    % [~, lick_timer{count}] = start_timer(lick, k, fs);
 
 %     lick_duration = b_idx{1}(end,end)-b_idx{1}(1,1);
 %     lick_timer{count} = zeros(size(mvtOn{count}));
@@ -216,8 +216,8 @@ end
 %%
 
 fullLabels
-visual = false;
-cBetaRight = check_beta('Right Asymmetric', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, [], visual);
+visual = true;
+cBetaRight = check_beta('Lick', fullLabels, fullIdx, Umaster, mean(catcell(3,fullBeta),3), Vfull, [], visual);
 
 %%
 
