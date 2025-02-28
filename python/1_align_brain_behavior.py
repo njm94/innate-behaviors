@@ -12,7 +12,7 @@ import pandas as pd
 from scipy import signal
 from pathlib import Path
 from tqdm import tqdm
-from get_list_data import expt1_data_list, expt2_data_list
+from get_list_data import expt1_data_list, expt2_data_list, expt3_data_list
 from helper import *
 import gc
 import numpy as np
@@ -21,11 +21,11 @@ from skimage.transform import rescale, resize, downscale_local_mean
 
 
 # data_root = '/media/user/teamshare/nick/behavior/grooming/1p/'
-data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'
-# data_root = '/media/user/teamshare/pankaj/closedloop_rig5_data/'
+# data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'
+data_root = '/media/user/teamshare/pankaj/closedloop_rig5_data/'
 
 # data_root = '/mnt/njm/nick/behavior/grooming/1p/'
-data_list = expt2_data_list
+data_list = expt3_data_list
 # data_list_idx = expt2_start_end_idx
 
 k = int(1000)
@@ -59,9 +59,9 @@ for ii, expt in enumerate(data_list):
         beh_motion_file = str(beh_vid_file).replace('.mp4', '_ME.avi')
         beh_motion_svd_file = str(beh_vid_file).replace('.mp4', '_MEsvd.mat')
 
-        if ('1p' in data_root or 'closedloop' in data_root) and os.path.isfile(brain_svd_file):
-            print(mouse_id + "_" + rec_dir + " already processed. Skipping...")
-            continue
+        # if ('1p' in data_root or 'closedloop' in data_root) and os.path.isfile(brain_svd_file):
+        #     print(mouse_id + "_" + rec_dir + " already processed. Skipping...")
+        #     continue
         
         # if os.path.isfile(beh_vid_trim_file) and \
         #     (not os.path.isfile(brain_cam0_file) or os.path.isfile(brain_svd_file)) and \
@@ -172,7 +172,7 @@ for ii, expt in enumerate(data_list):
         #     print('Trim file already computed, Skip ', brain_cam0_trim_file)
         #     continue
 
-            if not os.path.isfile(brain_svd_file) or not os.path.isfile(brain_frame_file):
+            if True: #not os.path.isfile(brain_svd_file) or not os.path.isfile(brain_frame_file):
                 print("reading the brain stack")
                 brain_stack = tif.imread(brain_cam0_file)
                 brain_start, brain_stop = get_dark_frames(brain_stack)

@@ -37,7 +37,11 @@ consolidated_labs = {'FL', 'Unilateral', 'Elliptical', 'Asymmetric', 'Ellip-Asym
 region_locs = {};
 region_neurons = [];
 total_neurons = 0;
-for i = 1%:length(mp_list)
+ncorr = [];
+gcorr = [];
+ncorrm = [];
+gcorrm = [];
+for i = 1:length(mp_list)
     
     mouse_root = fileparts(mp_list{i});
     
@@ -248,7 +252,72 @@ for i = 1%:length(mp_list)
         end
     end
 
+    clear allcorr mallcorr
+    anym = flrthresh | fllthresh;
+    for jj = 1:size(rastermap,1)
+        nanidx = isnan(rastermap(jj,:));
+        allcorr(jj) = corr(rastermap(jj,~nanidx)', episodes(~nanidx));
+        mallcorr(jj) = corr(rastermap(jj,~nanidx)', anym(~nanidx));
+        
+    end
+    ncorr = cat(1, ncorr, allcorr');
+    gcorr = cat(1, gcorr, allcorr(pops(1,1):pops(1,2))');
+
+    ncorrm = cat(1, ncorrm, mallcorr');
+    gcorrm = cat(1, gcorrm, mallcorr(pops(1,1):pops(1,2))');
+
 end
+
+%% plot histogram of neuron correlations with behavior highlight grooming population
+clc
+figure, gg=histogram(ncorr, 'FaceColor', [0 0 0], 'FaceAlpha', 0.3);
+hold on
+histogram(gcorr, 'BinWidth', gg.BinWidth, 'FaceColor', [0 0 1], 'FaceAlpha', 1)
+xlabel('Correlation with Grooming')
+ylabel('# Neurons')
+legend({'All neurons', 'Grooming neurons', ''}, 'Location', 'Best')
+gg.Parent.FontSize = 12;
+
+
+h1 = lillietest(ncorr);
+h2 = lillietest(gcorr);
+if h1 || h2
+    disp('At least one distribution is not normal')
+else
+    disp('Both distributions normal')
+end
+
+[p,h, stats] = ranksum(ncorr, gcorr);
+disp(['Grooming population is different from all neurons: Wilcoxon RankSum test, p=', num2str(p)])
+axis([-1 1 0 500])
+saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.svg']))
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.png']), 'Resolution', 300)
+
+%%
+clc
+figure, gg=histogram(ncorrm, 'FaceColor', [0 0 0], 'FaceAlpha', 0.3);
+hold on
+histogram(gcorrm, 'BinWidth', gg.BinWidth, 'FaceColor', [0 0 1], 'FaceAlpha', 1)
+xlabel('Correlation with Movement')
+ylabel('# Neurons')
+legend({'All neurons', 'Grooming neurons', ''}, 'Location', 'Best')
+gg.Parent.FontSize = 12;
+
+
+h1 = lillietest(ncorrm);
+h2 = lillietest(gcorrm);
+if h1 || h2
+    disp('At least one distribution is not normal')
+else
+    disp('Both distributions normal')
+end
+
+[p,h, stats] = ranksum(ncorrm, gcorrm);
+disp(['Grooming population is different from all neurons: Wilcoxon RankSum test, p=', num2str(p)])
+axis([-1 1 0 350])
+saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.svg']))
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.png']), 'Resolution', 300)
+
 
 
 %%

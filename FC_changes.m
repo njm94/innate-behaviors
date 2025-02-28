@@ -7,8 +7,42 @@
 % This is on 1p data only
 
 
+%% Look at power spectra
+fs = 90;
+count = 1;
+for i =1:length(roi_signal)
+    if ~isempty(roi_signal{i})
+        for j = 1:length(roi_signal{i})
+            if ~isempty(roi_signal{i}{j})
+                p_before(count,:) = 10*log10(mean(pspectrum(roi_signal{i}{j}(1:blen*fs,:), fs),2));
+                p_early(count,:) = 10*log10(mean(pspectrum(roi_signal{i}{j}(1+blen*fs:2*blen*fs,:), fs),2));
+                p_late(count,:) = 10*log10(mean(pspectrum(roi_signal{i}{j}(end-(2*blen*fs)+1:end-(blen*fs),:), fs),2));
+                p_after(count,:) = 10*log10(mean(pspectrum(roi_signal{i}{j}(end-(blen*fs)+1:end,:), fs),2));
+                count = count +1;
+            end
+        end
+    end
+end
+[~, f] = pspectrum(roi_signal{i}{j}(1:blen*fs,:), fs);
+
+%%
+figure, hold on
+%plot(f, mean(p_before))
+plot(f, mean(p_early-p_before))
+plot(f, mean(p_early-p_before)+std(p_early-p_before), ':')
+plot(f, mean(p_late-p_before))
+plot(f, mean(p_after-p_before))
+%%
+
 midx = {'thy1_idx', 'ai94_idx', 'hyl3_idx', 'ibl2_idx'};
-% m = 4;
+
+
+
+thy1_idx = 1:12;
+ai94_idx = 13:16;
+hyl3_idx = 17:40;
+ibl2_idx = 41:55;
+% m = 4
 
 
 test_pre = pre_corrmat;
@@ -63,6 +97,11 @@ plot_data = [test_pre, test_early, test_late, test_post];
 figure, boxplot(plot_data, 'Colors', 'k', 'Symbol', '')
 hold on
 swarmchart(repmat([1 2 3 4], size(test_early,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
+cols = [0 0.4470 0.7410; 0.8500 0.3250 0.0980;0.9290 0.6940 0.1250;0.4940 0.1840 0.5560];
+for i = 1:length(midx)
+    plot(mean(plot_data(eval(midx{i}),:))', 'Color', cols(i,:), 'LineWidth', 2)
+end
+
 ylabel('Average correlation')
 xticklabels({'Before 5s', 'First 5s', 'Last 5s', 'After 5s'})
 ax = gca;
@@ -70,6 +109,45 @@ ax.FontSize = 14;
 
 
 
+
+%% better stats
+
+% Convert data into long format
+num_trials = size(plot_data, 1);
+timepoints = repmat((1:4), num_trials, 1);  % Timepoint variable
+mouseID = repmat([ones(1,12), 1+ones(1,4), 2+ones(1,24),3+ones(1,15)]', 1, size(timepoints,2));  % Mouse identity variable
+response = plot_data(:);  % Flatten response matrix
+
+% Rank-transform response for non-parametric analysis
+ranked_response = tiedrank(response);
+
+% Convert to table
+T = table(mouseID(:), timepoints(:), ranked_response, 'VariableNames', {'Mouse', 'Timepoint', 'Response'});
+
+% Fit LMM (random intercept for Mouse)
+lme = fitlme(T, 'Response ~ Timepoint + (1|Mouse)', 'FitMethod', 'REML');
+
+% Display results
+disp(anova(lme));
+
+%%
+% Get estimated fixed effects and covariance matrix
+beta = fixedEffects(lme); % Fixed effects (Intercept + Timepoint)
+C = lme.CoefficientCovariance; % Covariance matrix
+
+% Define contrast matrix for pairwise comparisons
+% Each row represents a contrast: e.g., [0 1 -1 0] tests Timepoint 1 vs 2
+contrasts = [0  1 -1  0;  % Timepoint 1 vs Timepoint 2
+             0  1  0 -1;  % Timepoint 1 vs Timepoint 3
+             0  0  1 -1;  % Timepoint 2 vs Timepoint 3
+             0  1 -0 -1]; % Timepoint 1 vs Timepoint 4
+
+% Compute p-values for each contrast
+for i = 1:size(contrasts,1)
+    pval = coefTest(lme, contrasts(i,:));
+    fprintf('Comparison %d: p = %.4f\n', i, pval);
+end
+%%
 
 % Run Friedman test
 [p_friedman, tbl, stats] = friedman(plot_data, 1); % 1 indicates repeated measures
@@ -112,26 +190,31 @@ legend({'Before 5s', 'First 5s', 'Last 5s', 'After 5s'}, 'Location', 'Best')
 
 
 %%
+% hyl3_idx = 14:19;
+% ibl2_idx = 20:25;
+midx = {'thy1_idx', 'ai94_idx', 'hyl3_idx', 'ibl2_idx'};
+thy1_idx = 1:7;
+ai94_idx = 8:13;
 hyl3_idx = 14:19;
 ibl2_idx = 20:25;
-midx = {'thy1_idx', 'ai94_idx', 'hyl3_idx', 'ibl2_idx'};
+
 m = 3;
 caxlims = [0.5 1];
 test_pre = pre_corrmat;
-% test_pre = pre_corrmat(:,eval(midx{m}));
+test_pre = pre_corrmat(:,eval(midx{m}));
 test_pre = catcell(3, test_pre(~cellfun(@isempty, test_pre)));
 disp(size(test_pre,3))
 
 test_early = early_corrmat;
-% test_early = early_corrmat(:,eval(midx{m}));
+test_early = early_corrmat(:,eval(midx{m}));
 test_early = catcell(3, test_early(~cellfun(@isempty, test_early)));
 
 test_late = late_corrmat;
-% test_late = late_corrmat(:,eval(midx{m}));
+test_late = late_corrmat(:,eval(midx{m}));
 test_late = catcell(3, test_late(~cellfun(@isempty, test_late)));
 
 test_post = post_corrmat;
-% test_post = post_corrmat(:,eval(midx{m}));
+test_post = post_corrmat(:,eval(midx{m}));
 test_post = catcell(3, test_post(~cellfun(@isempty, test_post)));
 
 
@@ -239,17 +322,17 @@ for i = 1:length(time_points)
     data_2 = atanh(eval(time_points{i}));
 
     clear p_values
-    for ii = 1:size(data_1,1)
-        for jj = 1:size(data_2,1)
-            [p_values(ii,jj), observeddifference, effectsize] = permutationTest(squeeze(data_1(ii,jj,:)), squeeze(data_2(ii,jj,:)), 1000); 
-        end
-    end
-
     % for ii = 1:size(data_1,1)
     %     for jj = 1:size(data_2,1)
-    %         [~, p_values(ii,jj)] = ttest(squeeze(data_1(ii,jj,:)), squeeze(data_2(ii,jj,:))); 
+    %         [p_values(ii,jj), observeddifference, effectsize] = permutationTest(squeeze(data_1(ii,jj,:)), squeeze(data_2(ii,jj,:)), 1000); 
     %     end
     % end
+
+    for ii = 1:size(data_1,1)
+        for jj = 1:size(data_2,1)
+            [~, p_values(ii,jj)] = ttest(squeeze(data_1(ii,jj,:)), squeeze(data_2(ii,jj,:))); 
+        end
+    end
 
 
     [h, crit_p, adj_ci_cvrg, adj_p]=fdr_bh(p_values(upper_t),0.05,'dep','yes');
@@ -302,12 +385,12 @@ for i = 1:length(timepoints)
 
     tmp = data_2 - data_1;
 
-    figure, bar(mean(tmp,2)), hold on
-    errorbar(mean(tmp,2),std(tmp,[],2)/sqrt(size(tmp,2)), 'k.')
+    figure, bar(mean(tmp(:,42:end),2)), hold on
+    % errorbar(mean(tmp(:,1:12),2),std(tmp(:,1:12),[],2), 'k.')
     grid on
     xticks(1:size(data_2,1));
     xticklabels(labels)
-    axis([-0.2000 29.2000, -0.2 0.02])
+    axis([-0.2000 29.2000, -0.4 0.2])
 
     % figure, imagesc(data_2 - data_1)
     % ylabel('region')
@@ -316,21 +399,23 @@ for i = 1:length(timepoints)
     % colormap(bluewhitered()),
     % colorbar
     
-    continue
-    sgfgsf
+    % continue
+    % sgfgsf
     % data_2 = eval(time_points{i});
     
 
     clear p_values
     for ii = 1:size(data_1,1)
         for jj = 1:size(data_2,1)
-            [p_values(ii,jj), observeddifference, effectsize] = permutationTest(squeeze(data_1(ii,jj,:)), squeeze(data_2(ii,jj,:)), 1000); 
+            % [p_values(ii,jj), observeddifference, effectsize] = permutationTest(squeeze(data_1(ii,jj,:)), squeeze(data_2(ii,jj,:)), 1000); 
+            [p_values(ii,jj), observeddifference, effectsize] = permutationTest(squeeze(data_1(ii,:)), squeeze(data_2(jj,:)), 1000); 
         end
     end
 
     % for ii = 1:size(data_1,1)
     %     for jj = 1:size(data_2,1)
-    %         [~, p_values(ii,jj)] = ttest(squeeze(data_1(ii,jj,:)), squeeze(data_2(ii,jj,:))); 
+    %         % [~, p_values(ii,jj)] = ttest(squeeze(data_1(ii,jj,:)), squeeze(data_2(ii,jj,:))); 
+    %         [~, p_values(ii,jj)] = ttest(squeeze(data_1(ii,:)), squeeze(data_2(jj,:))); 
     %     end
     % end
 

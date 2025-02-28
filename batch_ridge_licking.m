@@ -1,12 +1,16 @@
 clc, clear, %close all
 fileID = fopen('expt3_datalist.txt','r');
-addpath('C:\Users\user\Documents\Nick\grooming\utils')
+% addpath('C:\Users\user\Documents\Nick\grooming\utils')
 
-addpath('C:\Users\user\Documents\Nick\ridgeModel');
-addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
-addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
-addpath('C:\Users\user\Documents\Nick\grooming\utils')
-
+% addpath('C:\Users\user\Documents\Nick\ridgeModel');
+% addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
+% addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
+% addpath('C:\Users\user\Documents\Nick\grooming\utils')
+addpath('/home/user/Documents/grooming/utils')
+addpath('/home/user/Documents/grooming/ridgeModel')
+addpath('/home/user/Documents/grooming/ridgeModel/widefield')
+addpath('/home/user/Documents/grooming/ridgeModel/smallStuff')
+    
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 data_list = data_list{1};
@@ -14,21 +18,22 @@ data_list = data_list{1};
 ger2_idx = find(contains(data_list, 'GER2'));
 hyl3_idx = find(contains(data_list, 'HYL3'));
 ecr2_idx = find(contains(data_list, 'ECR2'));
+gt33_idx = find(contains(data_list, 'GT33'));
 
 current_mouse = '';
 
 %%
 k = 0.2;
-expts_to_analyze = ger2_idx;
+expts_to_analyze = hyl3_idx;
 for j = 1:length(expts_to_analyze)+1
      try
         data_dir = data_list{expts_to_analyze(j)};
-        disp(['Starting ' data_dir])
-
         if isunix % working on linux computer - modify paths
             data_dir = strrep(data_dir, '\', '/');
-            data_dir = strrep(data_dir, 'Y:/', '/media/user/teamshare/');
-        end    
+            % data_dir = strrep(data_dir, 'Y:/', '/media/user/teamshare/');
+            data_dir = strrep(data_dir, 'Y:/', '/home/user/teamshare/TM_Lab/');
+        end  
+        disp(['Starting ' data_dir])
         [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
         [~, mouse_id, ~] = fileparts(mouse_root_dir);
         [expt_root_dir, ~, ~] = fileparts(mouse_root_dir);
@@ -50,12 +55,12 @@ for j = 1:length(expts_to_analyze)+1
                 Vmaster{i} = Vmaster{i}(:,1:min_trial_length);
                 mvtOn{i} = mvtOn{i}(1:min_trial_length);
                 lick_start{i} = lick_start{i}(1:min_trial_length);
-                % lick_timer{i} = lick_timer{i}(1:min_trial_length);
+                lick_timer{i} = lick_timer{i}(1:min_trial_length);
             end
             Vmaster = catcell(2, Vmaster);
             mvtOn = catcell(1, mvtOn)';
             lick_start = catcell(1, lick_start);
-            % lick_timer = catcell(1, lick_timer);
+            lick_timer = catcell(1, lick_timer);
             new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
 
             % ridge here
@@ -63,18 +68,18 @@ for j = 1:length(expts_to_analyze)+1
             opts.frameRate = fs;
             opts.sPostTime=round(fs*2);
             opts.mPreTime = ceil(0.5 * fs);  % precede motor events to capture preparatory activity in frames (used for eventType 3)
-            opts.mPostTime = ceil(1 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
+            opts.mPostTime = ceil(2 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
             opts.framesPerTrial = min_trial_length; % nr. of frames per trial
-            opts.folds = 1; %nr of folds for cross-validation
+            opts.folds = 10; %nr of folds for cross-validation
             
             regressor_mat = [mvtOn' lick_start]; 
             % Full-Trial events:    new_trial
             % Peri-Stimulus events: 
             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3], opts);
-            regLabels = {'Movement', 'Lick'}; %some movement variables
+            regLabels = {'Movement', 'Lick', 'LickRate'}; %some movement variables
 %             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 1], opts);
 %             regLabels = {'Movment', 'Lick', 'Trial'}; %some movement variables
-            fullR = [dMat];
+            fullR = [dMat lick_timer];
             regIdx = [regIdx; max(regIdx)+1];
 
             disp('Running ridge regression with 10-fold cross-validation')
@@ -121,6 +126,8 @@ for j = 1:length(expts_to_analyze)+1
                 yticks([])
             end
 
+            twer
+
         
             % savefig(gcf, [fPath 'summary.fig'])
 
@@ -133,6 +140,7 @@ for j = 1:length(expts_to_analyze)+1
         load([mouse_root_dir filesep 'Umaster.mat'])
         clear Vmaster ipsi contra bilat fll_move flr_move audio_tone water_drop
         current_mouse = mouse_id;
+        load([mouse_root_dir filesep 'mask.mat'])
 
         %     %% draw mask - might be needed for memory management
         %     frame = loadtiff(frame_file);
@@ -153,6 +161,7 @@ for j = 1:length(expts_to_analyze)+1
         end
     catch
         disp('Missing one or more of the required files. Skipping...')
+
         continue
     end
     % read ini file
@@ -163,6 +172,7 @@ for j = 1:length(expts_to_analyze)+1
     
     % load experiment specific data into cell array
     load([data_dir filesep 'tform.mat'])
+
 
     disp('Loading brain data...')
     load(brain_file);
@@ -199,9 +209,9 @@ for j = 1:length(expts_to_analyze)+1
     [events, b_idx, b_tab] = read_boris(boris_file);
     lick = zeros(size(mvtOn{count}));
     lick(b_idx{1}(:,1)) = 1;
-%     lick_start{count}(b_idx{1}(:,1)) = 1;
+    % lick_start{count}(b_idx{1}(:,1)) = 1;
     lick_start{count} = lick;
-    % [~, lick_timer{count}] = start_timer(lick, k, fs);
+    [~, lick_timer{count}] = start_timer(lick, k, fs);
 
 %     lick_duration = b_idx{1}(end,end)-b_idx{1}(1,1);
 %     lick_timer{count} = zeros(size(mvtOn{count}));
@@ -217,16 +227,10 @@ end
 
 fullLabels
 visual = true;
-cBetaRight = check_beta('Lick', fullLabels, fullIdx, Umaster, mean(catcell(3,fullBeta),3), Vfull, [], visual);
+cBetaRight = check_beta('LickRate', fullLabels, fullIdx, Umaster, mean(catcell(3,fullBeta),3), Vfull, [], visual);
 
 %%
 
-test = reshape(Umaster*Vmaster, 128, 128, []);
-test2 = reshape(Umaster*Vfull, 128, 128, []);
-figure, plot(xt(test,fs), squeeze(mean(test, [1, 2])),'k'),
-hold on
-plot(xt(test, fs), squeeze(mean(test2, [1, 2]))), hold on,
-% plot(xt(test,fs), lick_timer*.057)
 %%
 
 % figure
