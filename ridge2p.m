@@ -4,7 +4,10 @@ clear, clc
 
 % addpath(genpath('C:\Users\user\Documents\Nick\grooming'));
 addpath('C:\Users\user\Documents\Nick\grooming\utils')
-[event_file, event_path] = uigetfile('*.tsv','Select BORIS event labels.', 'Y:\nick\behavior\grooming\2p');
+addpath('/home/user/Documents/grooming/utils')
+
+% [event_file, event_path] = uigetfile('*.tsv','Select BORIS event labels.', 'Y:\nick\behavior\grooming\2p');
+[event_file, event_path] = uigetfile('*.tsv','Select BORIS event labels.', '/media/user/teamshare/nick/behavior/grooming/2p/');
 [events, b_idx, ~] = read_boris([event_path, filesep, event_file]);
 
 if ~isfile([event_path, 'Nresample.mat'])
@@ -45,17 +48,20 @@ bopts.folds = 10; %nr of folds for cross-validation
 
 
 % use only first frame times
-bmat = zeros(size(events,1), sum(~strcmp(events.Properties.VariableNames, 'Video End')));
+bmat = [];%zeros(size(events,1), sum(~strcmp(events.Properties.VariableNames, 'Video End')));
 count = 1;
 for i = 1:size(b_idx,2)
     if strcmp(events.Properties.VariableNames{i}, 'Video End')
         continue
     elseif contains(events.Properties.VariableNames{i}, 'Drop')
         continue
-        bmat(:,i) = table2array(events(:,i));        
+        bmat = cat(2, bmat, table2array(events(:,i)));        
     else
         behaviors(:, count) = table2array(events(:,i));
-        bmat(b_idx{i}(:,1),i) = 1;
+        tmp = zeros(size(behaviors,1),1);
+        tmp(b_idx{i}(:,1)) = 1;
+
+        bmat = cat(2, bmat, tmp);
         count = count + 1;
     end
 end
@@ -77,7 +83,7 @@ end
 
 
 % get rid of drop
-bmat(:,1) = [];
+% bmat(:,1) = [];
 
 %%
 % bmat = table2array(events(:, 3:end-1));
@@ -111,6 +117,12 @@ valve = test(1:vid_end,6);
 flrthresh = flrv>mean(flrv) + std(flrv);
 fllthresh = fllv>mean(fllv) + std(fllv);
 
+
+% Remove grooming movements from forelimb movements, then add to the
+% behavior matrix
+flrthresh(aggregate(any(bmat, 2), 3, fs)) = 0;
+fllthresh(aggregate(any(bmat, 2),3, fs)) = 0;
+
 behaviors = [behaviors, flrthresh, fllthresh];
 
 % get time on for all movement and audio/valve data
@@ -127,9 +139,9 @@ regLabels = [regLabels, 'FLR', 'FLL'];
 
 %%
 % % concatenate 2 STIMULUS variable types for audio tone and valve opening
-% bmat = [audio valve bmat(1:vid_end, :)];
-% reg_type = [2 2 reg_type];
-% regLabels = ['audio', 'valve', regLabels];
+bmat = [audio valve bmat(1:vid_end, :)];
+reg_type = [2 2 reg_type];
+regLabels = ['audio', 'valve', regLabels];
 
 %%
 
@@ -150,9 +162,6 @@ fullR = dMat;
 % add forelimb movements to the design matrix as continuous variables
 % fullR = [dMat flrv fllv];
 % regIdx = [regIdx; max(regIdx)+1; max(regIdx)+2]; %regressor index
-
-
-
 % regLabels = [regLabels, 'FLR', 'FLL'];
 % regLabels = [regLabels, 'rFLv', 'lFLv'];
 
@@ -182,6 +191,55 @@ disp("Running ridgeMML cell")
 
 %reconstruct imaging data and compute R^2
 Vm = (fullR * dimBeta)';
+disp('Finished')
+
+
+%%
+
+%% run cross-validation
+    %full model - this will take a moment
+    disp('Running ridge regression with 10-fold cross-validation')
+    [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Nresample, regLabels, regIdx, regLabels, bopts.folds);
+    % save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), 'movie_cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
+    
+    % fullMat = modelCorr(Nresample,Vfull,Ubrain(:,1:num_comps)) .^2; %compute explained variance
+    
+%% run reduced models for unique contribution
+    disp('Running reduced models')
+    % fig_flag = 1;
+    % reducedMat = [];
+    for i = 1:length(regLabels)
+        reduced = fullR;
+        cIdx = regIdx == i;
+%         if ~any(cIdx)
+%             disp(['No ', regLabels{i}, '  events found. Skipping...'])
+%             continue
+%         end
+        reduced(:, cIdx) = reduced(randperm(size(reduced, 1)), cIdx);
+        
+        [Vreduced{i}, reducedBeta{i}, reducedR, reducedIdx, reducedRidge, reducedLabels] = crossValModel(reduced, Nresample, regLabels, regIdx, regLabels, bopts.folds);
+        % reducedMat(:, i) = modelCorr(Vbrain, Vreduced{i}, Ubrain) .^2; %compute explained variance
+    end
+    % save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), 'movie_cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
+    
+
+
+    %%
+
+
+    fullmat = diag(corr(Nresample', Vfull')).^2;
+    for i = 1:length(Vreduced)
+        reducedmat(:,i) = diag(corr(Nresample', Vreduced{i}')).^2;
+        dR(:,i) = fullmat - reducedmat(:,i);
+    end
+
+
+    %%
+    figure
+    for i =1:size(dR,2)
+        subplot(3,4,i), plot(dR(:,i), 1:size(dR,1))
+        title(reducedLabels{i})
+    end
 
 %%
 figure
@@ -202,24 +260,29 @@ for j =1:length(regLabels)
     test = dimBeta(cIdx,:)';
     [~, I] = sort(mean(test(:,0.5*fs:end),2));
     subplot(4, 4, j)
-    imagesc(test(I,:))
-    colorbar
-    caxis([-1 1])
-    colormap(bluewhitered())
-    try if reg_type(j) == 3 
-            vline(0.5*fs, 'k-')
-            
-            baseline = test(:,1:0.5*fs);
-            mu0 = mean(baseline,2);
-            std0 = std(baseline,[],2);
-
-%             mux = mean(test(I,0.5*fs+1:end),2);
-            response_snr = max(test(:,0.5*fs+1:end), [], 2) ./ mu0;
-
+    % imagesc(test(I,:))
+    if size(test,2)==1
+        plot(test(isort+1,:),1:length(test))
+    else
+        imagesc(test(isort+1,:))
+        colorbar
+        caxis([-1 1])
+        colormap(bluewhitered())
+        try if reg_type(j) == 3 
+                vline(0.5*fs, 'k-')
+                
+                baseline = test(:,1:0.5*fs);
+                mu0 = mean(baseline,2);
+                std0 = std(baseline,[],2);
+    
+    %             mux = mean(test(I,0.5*fs+1:end),2);
+                response_snr = max(test(:,0.5*fs+1:end), [], 2) ./ mu0;
+    
+            end
+        catch
         end
-    catch
     end
-    title(regLabels{j})
+        title(regLabels{j})
 end
 
 %%

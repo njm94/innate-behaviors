@@ -41,6 +41,56 @@ ncorr = [];
 gcorr = [];
 ncorrm = [];
 gcorrm = [];
+
+for i = 1%:length(mp_list)
+
+     mouse_root = fileparts(mp_list{i});
+    
+    if ~strcmp(mouse_root, current_mouse)
+        load([mouse_root, filesep, 'dalsa', filesep, 'atlas_tform.mat'])
+    end
+
+    boris_file = [mp_list{i}, filesep, getAllFiles(mp_list{i}, 'events.tsv')];
+    if ~isfile([mp_list{i}, filesep, 'Nresample.mat'])
+        load([mp_list{i}, filesep, getAllFiles(mp_list{i}, 'Fclean.mat')]);
+        
+        [events, b_idx, ~, vid_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file, include_boris);
+
+        try Nresample = resample(N, vid_end, size(N, 2), 'Dimension', 2);
+        catch
+            disp('Data too big. Splitting into halves and resampling each half separately')
+            Nresample = resamplee(N', size(events,1), size(N,2))';
+        end
+    
+        save([mp_list{i}, filesep, 'Nresample.mat'], 'Nresample', 'nloc', 'fs', 'cstat', 'tforms', '-v7.3')
+    else
+        disp('Loading resampled neuron data')
+        load([mp_list{i}, filesep, 'Nresample.mat'])
+    end
+    if i ==1
+    figure(1), axis equal off; hold on; set(gca, 'YDir', 'reverse');
+    for p = 1:length(dorsalMaps.edgeOutline)-2 % -2 to ignore olfactory bulbs
+        plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 2);
+    end
+    end
+    
+        load([mp_list{i}, filesep, 'Nresample.mat'])
+        clear x3 y3
+        for j = 1:length(cstat)
+            x0 = double(cstat{j}.med(2));
+            y0 = double(cstat{j}.med(1));        
+            [x1, y1] = transformPointsForward(tforms{cstat{j}.use_tform}.roi_to_linear.tform, x0, y0);        
+            [x2, y2] = transformPointsForward(tforms{cstat{j}.use_tform}.linear_to_wfield.tform, x1, y1);        
+            [x3(j), y3(j)] = transformPointsForward(tforms{cstat{j}.use_tform}.wfield_to_atlas.tform, x2, y2);
+    
+        end
+        % total_neurons = total_neurons + length(x3);
+        % uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
+        % scatter(x3, y3,50, '.', 'MarkerEdgeColor', [0 200 150]/255)
+        figure(1), scatter(x3, y3, 20, 'filled', 'MarkerFaceColor', [0.4 0.4 0.4])
+end
+%%
+
 for i = 1:length(mp_list)
     
     mouse_root = fileparts(mp_list{i});
@@ -69,6 +119,14 @@ for i = 1:length(mp_list)
 
 
 %%
+% % Plot the Allen Atlas
+% if i ==1
+% figure(1), axis equal off; hold on; set(gca, 'YDir', 'reverse');
+% 
+% for p = 1:length(dorsalMaps.edgeOutline)-2 % -2 to ignore olfactory bulbs
+%     plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 2);
+% end
+% end
 
     load([mp_list{i}, filesep, 'Nresample.mat'])
     clear x3 y3
@@ -81,8 +139,9 @@ for i = 1:length(mp_list)
 
     end
     total_neurons = total_neurons + length(x3);
-    uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
-    scatter(x3, y3,50, '.', 'MarkerEdgeColor', [0 200 150]/255)
+    % uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
+    % scatter(x3, y3,50, '.', 'MarkerEdgeColor', [0 200 150]/255)
+    % figure(1), scatter(x3, y3, 20, 'filled', 'MarkerFaceColor', [0.5 0.5 0.5])
 
     %%
     % Load BORIS file
@@ -93,8 +152,8 @@ for i = 1:length(mp_list)
     vel = vel(1:vid_end,:);
     flrv = sum(vel(:,4:5).^2, 2).^0.5;
     fllv = sum(vel(:,7:8).^2, 2).^0.5;
-    flrthresh = flrv>mean(flrv) + 3.5*std(flrv);
-    fllthresh = fllv>mean(fllv) + 3.5*std(fllv);
+    flrthresh = flrv>mean(flrv) + 1*std(flrv);
+    fllthresh = fllv>mean(fllv) + 1*std(fllv);
     
     % Create the behavior matrix for hierarchical clustering
     clear Bmean event_table labs tmp_Bmean
@@ -235,11 +294,12 @@ for i = 1:length(mp_list)
     % line([64253 64253 + 90*10], [-50 -50], 'Color', [0 0 0], 'LineWidth', 2)
     % exportgraphics(h2, fix_path(['Y:\nick\behavior\grooming\figures\thy1_ethogram_raster_zoom.png']), 'Resolution', 300)
     
-    uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
-    scatter(x3, y3,25, '.', 'MarkerEdgeColor', [0 0 0])
-    for jj = 1:size(pops,1)
+    % uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
+    % scatter(x3, y3,25, '.', 'MarkerEdgeColor', [0 0 0])
+    for jj = 1%:size(pops,1)
         idx = isort+1;
-        scatter(x3(idx(pops(jj,1):pops(jj,2))), y3(idx(pops(jj,1):pops(jj,2))), 16, 'MarkerFaceColor', cols(jj,:), 'MarkerEdgeColor', 'k')
+        figure(1)
+        scatter(x3(idx(pops(jj,1):pops(jj,2))), y3(idx(pops(jj,1):pops(jj,2))), 20, 'filled', 'MarkerFaceColor', cols(jj,:))
     end
     mean_groom_pop = mean(rastermap(pops(1,1):pops(1,2),:));
     mean_move_pop = mean(rastermap(pops(2,1):pops(2,2),:));
@@ -290,8 +350,8 @@ end
 [p,h, stats] = ranksum(ncorr, gcorr);
 disp(['Grooming population is different from all neurons: Wilcoxon RankSum test, p=', num2str(p)])
 axis([-1 1 0 500])
-saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.svg']))
-exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.png']), 'Resolution', 300)
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.svg']))
+% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.png']), 'Resolution', 300)
 
 %%
 clc
@@ -303,8 +363,12 @@ ylabel('# Neurons')
 legend({'All neurons', 'Grooming neurons', ''}, 'Location', 'Best')
 gg.Parent.FontSize = 12;
 
+ncorrm2 = ncorrm;
+for i = 1:length(gcorrm)
+    ncorrm2(find(ncorrm2==gcorrm(i)))=[];
+end
 
-h1 = lillietest(ncorrm);
+h1 = lillietest(ncorrm2);
 h2 = lillietest(gcorrm);
 if h1 || h2
     disp('At least one distribution is not normal')
@@ -312,11 +376,11 @@ else
     disp('Both distributions normal')
 end
 
-[p,h, stats] = ranksum(ncorrm, gcorrm);
-disp(['Grooming population is different from all neurons: Wilcoxon RankSum test, p=', num2str(p)])
+[p,h, stats] = ranksum(ncorrm2, gcorrm);
+disp(['Grooming population vs all neurons: Wilcoxon RankSum test, p=', num2str(p)])
 axis([-1 1 0 350])
-saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.svg']))
-exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.png']), 'Resolution', 300)
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.svg']))
+% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.png']), 'Resolution', 300)
 
 
 
