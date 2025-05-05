@@ -450,7 +450,7 @@ for j = 1:length(regLabels)
     test = reducedBeta{j}{1}';
     test = test(:, cIdx);
 %     test = dimBeta(cIdx,:)';
-    [~, I] = sort(mean(test(:,0.5*fs:end),2));
+%     [~, I] = sort(mean(test(:,0.5*fs:end),2));
     subplot(4, 4, j)
     imagesc(test(I,:))
     colorbar
