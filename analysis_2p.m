@@ -31,15 +31,19 @@ mp_list = {%'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925';
 %     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
 %     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
+mp_list = fix_path(mp_list);
 data_list = mp_list;
 current_mouse = '';
 cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
-
+dmetric = 'cosine';
 
 addpath(genpath('C:\Users\user\Documents\Nick\grooming\utils'))
-load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
+try load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
+catch
+    load('/home/user/Documents/grooming/utils/allen_map/allenDorsalMap.mat');
+end
 
-
+fs = 90;
 include_boris = true;
 %%
 
@@ -59,7 +63,7 @@ for i = 1:length(mp_list)
     mouse_root = fileparts(mp_list{i});
     
     if ~strcmp(mouse_root, current_mouse)
-        load([mouse_root, filesep, 'dalsa\atlas_tform.mat'])
+        load([mouse_root, filesep, 'dalsa', filesep, 'atlas_tform.mat'])
     end
 
     boris_file = [mp_list{i}, filesep, getAllFiles(mp_list{i}, 'events.tsv')];
@@ -164,7 +168,7 @@ for i = 1:length(mp_list)
     %%
 
     % Do the hierarchical clustering
-    dmetric = 'correlation';
+    
     Z = linkage(Bmean', 'average', dmetric);
 
     figure, subplot(3,2,1)
@@ -222,10 +226,6 @@ for i = 1:length(mp_list)
         end
     end
 
-    for j = 1:length(consolidated_labs)
-%         if 
-%         end
-    end
     sim_matrix(:,:,i) = 1-squareform(pdist(tmp_Bmean, dmetric));
 
 
@@ -239,29 +239,35 @@ end
 dat = mean(sim_matrix,3,'omitnan');
 
 
-[M,Q]=community_louvain(dat);
-
-cols = zeros(length(M), 3);
-col1 = [0 0.4470 0.7410];
-col2 = [0.8500 0.3250 0.0980];
-col3 = [0.9290 0.6940 0.1250];
-col4 = [0.4940 0.1840 0.5560];
-for i = 1:length(M)
-    if M(i) == 1
-        cols(i,:) = col1;
-    elseif M(i) == 2
-        cols(i,:) = col2;
-    elseif M(i) == 3
-        cols(i,:) = col3;
-    else
-        cols(i,:) = col4;
+[trueM,Q]=community_louvain(dat);
+count = 1;
+clear M ari
+for i = 1:size(sim_matrix,3)
+    if isnan(mean(sim_matrix(:,:,i), 'all'))
+        continue
     end
+    M(:, count) = community_louvain(sim_matrix(:,:,i), [], [], 'negative_asym');
+    ari(count) = rand_index(trueM, M(:, count));
+    count = count + 1;
 end
-pgraph = digraph(dat, 'omitselfloops');
 
-figure('Position', [843 70 649 826]), 
-plot(pgraph, 'MarkerSize', 20, 'LineWidth', 1, ... pgraph.Edges.Weight*15, ...
-    'NodeColor', cols, ...'NodeFontSize', 15, ...
-    'EdgeColor', 'k', 'EdgeAlpha', 1, 'ArrowSize', 15, ...
-    'NodeLabel',all_possible_labs, ...
-    'Layout', 'force', 'WeightEffect', 'inverse')
+figure, imagesc(dat), 
+caxis([0.5 1]),
+colormap(flipud(colormap(gray)))
+pt = find(diff(trueM));
+
+line([0.5 0.5], [0 pt+0.5], 'Color', [0 0.4470 0.7410], 'LineWidth', 5)
+line([pt+0.5 pt+0.5], [0 pt+0.5], 'Color', [0 0.4470 0.7410], 'LineWidth', 5)
+line([0.5 pt+0.5], [0.5 0.5], 'Color', [0 0.4470 0.7410], 'LineWidth', 5)
+line([0.5 pt+0.5], [pt+0.5 pt+0.5], 'Color', [0 0.4470 0.7410], 'LineWidth', 5)
+
+line([pt+0.5 pt+0.5], [pt+0.5 9.5], 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 5)
+line([9.5 9.5], [pt+0.5 9.5], 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 5)
+line([pt+0.5 9.5], [9.5 9.5], 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 5)
+line([pt+0.5 9.5], [pt+0.5 pt+0.5], 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 5)
+
+axis equal off
+% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'behavior_cluster_2p.png']), 'Resolution', 300)
+%%
+figure, axis off; caxis([0.5 1]), colormap(flipud(colormap(gray))); colorbar
+% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'behavior_cluster_2p_colorbar.png']), 'Resolution', 300)

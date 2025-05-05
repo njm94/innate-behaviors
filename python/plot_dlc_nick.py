@@ -39,9 +39,9 @@ from helper import *
 # data_root = '/media/user/teamshare/nick/behavior/grooming/1p/'    
 # data_list = expt1_data_list
 
-data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'    
-# data_root = '/media/user/teamshare/pankaj/closedloop_rig5_data/'
-data_list = expt2_data_list
+# data_root = '/media/user/teamshare/nick/behavior/grooming/2p/'    
+data_root = '/media/user/teamshare/pankaj/closedloop_rig5_data/'
+data_list = expt3_data_list
 
 # %%
 
@@ -59,7 +59,7 @@ for expt in tqdm(data_list):
             print('DLC tracking missing ', mouse_id + os.sep + rec_dir, ' continue to next')
             continue
         
-        if not os.path.isfile(dlc_file.replace('.h5','.csv')):
+        if True:#not os.path.isfile(dlc_file.replace('.h5','.csv')):
             df_dlc, bodyparts, scorer = dlc2kinematics.load_data(dlc_file, smooth=True, filter_window=10, order=3)
 
             df_vel = dlc2kinematics.compute_velocity(df_dlc, bodyparts=['all'])

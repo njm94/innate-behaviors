@@ -20,6 +20,7 @@ mp_list = fix_path(mp_list);
 current_mouse = '';
 cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
 
+dmetric = 'cosine';
 fs = 90;
 aggregation_sz = 3; % window of time to aggregate behaviors
 addpath(genpath('/home/user/Documents/grooming/utils'))
@@ -37,60 +38,6 @@ consolidated_labs = {'FL', 'Unilateral', 'Elliptical', 'Asymmetric', 'Ellip-Asym
 region_locs = {};
 region_neurons = [];
 total_neurons = 0;
-ncorr = [];
-gcorr = [];
-ncorrm = [];
-gcorrm = [];
-
-for i = 1%:length(mp_list)
-
-     mouse_root = fileparts(mp_list{i});
-    
-    if ~strcmp(mouse_root, current_mouse)
-        load([mouse_root, filesep, 'dalsa', filesep, 'atlas_tform.mat'])
-    end
-
-    boris_file = [mp_list{i}, filesep, getAllFiles(mp_list{i}, 'events.tsv')];
-    if ~isfile([mp_list{i}, filesep, 'Nresample.mat'])
-        load([mp_list{i}, filesep, getAllFiles(mp_list{i}, 'Fclean.mat')]);
-        
-        [events, b_idx, ~, vid_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file, include_boris);
-
-        try Nresample = resample(N, vid_end, size(N, 2), 'Dimension', 2);
-        catch
-            disp('Data too big. Splitting into halves and resampling each half separately')
-            Nresample = resamplee(N', size(events,1), size(N,2))';
-        end
-    
-        save([mp_list{i}, filesep, 'Nresample.mat'], 'Nresample', 'nloc', 'fs', 'cstat', 'tforms', '-v7.3')
-    else
-        disp('Loading resampled neuron data')
-        load([mp_list{i}, filesep, 'Nresample.mat'])
-    end
-    if i ==1
-    figure(1), axis equal off; hold on; set(gca, 'YDir', 'reverse');
-    for p = 1:length(dorsalMaps.edgeOutline)-2 % -2 to ignore olfactory bulbs
-        plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 2);
-    end
-    end
-    
-        load([mp_list{i}, filesep, 'Nresample.mat'])
-        clear x3 y3
-        for j = 1:length(cstat)
-            x0 = double(cstat{j}.med(2));
-            y0 = double(cstat{j}.med(1));        
-            [x1, y1] = transformPointsForward(tforms{cstat{j}.use_tform}.roi_to_linear.tform, x0, y0);        
-            [x2, y2] = transformPointsForward(tforms{cstat{j}.use_tform}.linear_to_wfield.tform, x1, y1);        
-            [x3(j), y3(j)] = transformPointsForward(tforms{cstat{j}.use_tform}.wfield_to_atlas.tform, x2, y2);
-    
-        end
-        % total_neurons = total_neurons + length(x3);
-        % uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
-        % scatter(x3, y3,50, '.', 'MarkerEdgeColor', [0 200 150]/255)
-        figure(1), scatter(x3, y3, 20, 'filled', 'MarkerFaceColor', [0.4 0.4 0.4])
-end
-%%
-
 for i = 1:length(mp_list)
     
     mouse_root = fileparts(mp_list{i});
@@ -119,14 +66,6 @@ for i = 1:length(mp_list)
 
 
 %%
-% % Plot the Allen Atlas
-% if i ==1
-% figure(1), axis equal off; hold on; set(gca, 'YDir', 'reverse');
-% 
-% for p = 1:length(dorsalMaps.edgeOutline)-2 % -2 to ignore olfactory bulbs
-%     plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 2);
-% end
-% end
 
     load([mp_list{i}, filesep, 'Nresample.mat'])
     clear x3 y3
@@ -139,9 +78,8 @@ for i = 1:length(mp_list)
 
     end
     total_neurons = total_neurons + length(x3);
-    % uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
-    % scatter(x3, y3,50, '.', 'MarkerEdgeColor', [0 200 150]/255)
-    % figure(1), scatter(x3, y3, 20, 'filled', 'MarkerFaceColor', [0.5 0.5 0.5])
+    uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
+    scatter(x3, y3,50, '.', 'MarkerEdgeColor', [0 200 150]/255)
 
     %%
     % Load BORIS file
@@ -152,8 +90,8 @@ for i = 1:length(mp_list)
     vel = vel(1:vid_end,:);
     flrv = sum(vel(:,4:5).^2, 2).^0.5;
     fllv = sum(vel(:,7:8).^2, 2).^0.5;
-    flrthresh = flrv>mean(flrv) + 1*std(flrv);
-    fllthresh = fllv>mean(fllv) + 1*std(fllv);
+    flrthresh = flrv>mean(flrv) + 3.5*std(flrv);
+    fllthresh = fllv>mean(fllv) + 3.5*std(fllv);
     
     % Create the behavior matrix for hierarchical clustering
     clear Bmean event_table labs tmp_Bmean
@@ -294,12 +232,11 @@ for i = 1:length(mp_list)
     % line([64253 64253 + 90*10], [-50 -50], 'Color', [0 0 0], 'LineWidth', 2)
     % exportgraphics(h2, fix_path(['Y:\nick\behavior\grooming\figures\thy1_ethogram_raster_zoom.png']), 'Resolution', 300)
     
-    % uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
-    % scatter(x3, y3,25, '.', 'MarkerEdgeColor', [0 0 0])
-    for jj = 1%:size(pops,1)
+    uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
+    scatter(x3, y3,25, '.', 'MarkerEdgeColor', [0 0 0])
+    for jj = 1:size(pops,1)
         idx = isort+1;
-        figure(1)
-        scatter(x3(idx(pops(jj,1):pops(jj,2))), y3(idx(pops(jj,1):pops(jj,2))), 20, 'filled', 'MarkerFaceColor', cols(jj,:))
+        scatter(x3(idx(pops(jj,1):pops(jj,2))), y3(idx(pops(jj,1):pops(jj,2))), 16, 'MarkerFaceColor', cols(jj,:), 'MarkerEdgeColor', 'k')
     end
     mean_groom_pop = mean(rastermap(pops(1,1):pops(1,2),:));
     mean_move_pop = mean(rastermap(pops(2,1):pops(2,2),:));
@@ -312,76 +249,69 @@ for i = 1:length(mp_list)
         end
     end
 
-    clear allcorr mallcorr
-    anym = flrthresh | fllthresh;
-    for jj = 1:size(rastermap,1)
-        nanidx = isnan(rastermap(jj,:));
-        allcorr(jj) = corr(rastermap(jj,~nanidx)', episodes(~nanidx));
-        mallcorr(jj) = corr(rastermap(jj,~nanidx)', anym(~nanidx));
+
+    % Do the hierarchical clustering
+    
+    Z = linkage(Bmean', 'average', dmetric);
+
+    figure, subplot(3,2,1)
+    [H, T, outperm] = dendrogram(Z,'Labels', labs);  % Plot the dendrogram
+    ylabel(['Distance (',dmetric,')'])
+    xticks([])
         
+    % sort neurons by anatomical location
+    label_column = ones(size(Bmean,1), 2);
+    anat = sort(unique(nloc));
+    I = [];
+    uni_idx = strcmp(labs, 'FLR') | strcmp(labs, 'FLL');
+
+    for j = 1:length(anat)
+        Itmp = find(strcmp(nloc,anat{j}));
+        [~, Itmp_sorted] = sort(mean(Bmean(Itmp,uni_idx),2));
+        I = [I; Itmp(Itmp_sorted)];
     end
-    ncorr = cat(1, ncorr, allcorr');
-    gcorr = cat(1, gcorr, allcorr(pops(1,1):pops(1,2))');
+    
+    anat_parent = unique(cellfun(@(x) x(1:3), anat, 'UniformOutput', false));
+    for j = 1:length(anat_parent)
+        label_column(contains(nloc(I), anat_parent{j}), 1) = j;  
+    end
+    
+    for j = 1:length(anat)
+        label_column(contains(nloc(I), anat{j}), 2) = j;    
+    end
+    
+    % label_column
+    
+    subplot(3,2,[3,5])
+    imagesc(Bmean(I, outperm)),
+    xticks(1:length(labs))
+    xticklabels(labs(outperm))
+    % c=colorbar;
+    % c.Label.String = 'Z-score';
+    caxis([-1 3])
+    colormap(bluewhitered())
+    ylabel('Neuron')
+    freezeColors
+    % 
+    subplot(3,2,[4, 6]), imagesc(label_column), colormap default, axis off
 
-    ncorrm = cat(1, ncorrm, mallcorr');
-    gcorrm = cat(1, gcorrm, mallcorr(pops(1,1):pops(1,2))');
+
+    % Not all possible behaviors are observed in each session. To compare
+    % across sessions, map the relationships between neuronal population
+    % distances across behaviors to a matrix which contains all possible
+    % behaviors. If some behaviors are not present, fill those with NaNs
+
+    for j=1:length(all_possible_labs)
+        if any(strcmp(all_possible_labs{j}, labs))
+            tmp_Bmean(j,:) = Bmean(:, strcmp(all_possible_labs{j}, labs));
+        else
+            tmp_Bmean(j,:) = nan(1, size(Bmean,1));
+        end
+    end
+
+    sim_matrix(:,:,i) = 1-squareform(pdist(tmp_Bmean, dmetric));
 
 end
-
-%% plot histogram of neuron correlations with behavior highlight grooming population
-clc
-figure, gg=histogram(ncorr, 'FaceColor', [0 0 0], 'FaceAlpha', 0.3);
-hold on
-histogram(gcorr, 'BinWidth', gg.BinWidth, 'FaceColor', [0 0 1], 'FaceAlpha', 1)
-xlabel('Correlation with Grooming')
-ylabel('# Neurons')
-legend({'All neurons', 'Grooming neurons', ''}, 'Location', 'Best')
-gg.Parent.FontSize = 12;
-
-
-h1 = lillietest(ncorr);
-h2 = lillietest(gcorr);
-if h1 || h2
-    disp('At least one distribution is not normal')
-else
-    disp('Both distributions normal')
-end
-
-[p,h, stats] = ranksum(ncorr, gcorr);
-disp(['Grooming population is different from all neurons: Wilcoxon RankSum test, p=', num2str(p)])
-axis([-1 1 0 500])
-% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.svg']))
-% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.png']), 'Resolution', 300)
-
-%%
-clc
-figure, gg=histogram(ncorrm, 'FaceColor', [0 0 0], 'FaceAlpha', 0.3);
-hold on
-histogram(gcorrm, 'BinWidth', gg.BinWidth, 'FaceColor', [0 0 1], 'FaceAlpha', 1)
-xlabel('Correlation with Movement')
-ylabel('# Neurons')
-legend({'All neurons', 'Grooming neurons', ''}, 'Location', 'Best')
-gg.Parent.FontSize = 12;
-
-ncorrm2 = ncorrm;
-for i = 1:length(gcorrm)
-    ncorrm2(find(ncorrm2==gcorrm(i)))=[];
-end
-
-h1 = lillietest(ncorrm2);
-h2 = lillietest(gcorrm);
-if h1 || h2
-    disp('At least one distribution is not normal')
-else
-    disp('Both distributions normal')
-end
-
-[p,h, stats] = ranksum(ncorrm2, gcorrm);
-disp(['Grooming population vs all neurons: Wilcoxon RankSum test, p=', num2str(p)])
-axis([-1 1 0 350])
-% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.svg']))
-% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.png']), 'Resolution', 300)
-
 
 
 %%

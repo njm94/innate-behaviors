@@ -1,34 +1,39 @@
 clc, clear, %close all
 fileID = fopen('expt3_datalist.txt','r');
-addpath('C:\Users\user\Documents\Nick\grooming\utils')
+% addpath('C:\Users\user\Documents\Nick\grooming\utils')
 
-addpath('C:\Users\user\Documents\Nick\ridgeModel');
-addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
-addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
-addpath('C:\Users\user\Documents\Nick\grooming\utils')
-
+% addpath('C:\Users\user\Documents\Nick\ridgeModel');
+% addpath('C:\Users\user\Documents\Nick\ridgeModel\widefield')
+% addpath('C:\Users\user\Documents\Nick\ridgeModel\smallStuff') 
+% addpath('C:\Users\user\Documents\Nick\grooming\utils')
+addpath('/home/user/Documents/grooming/utils')
+addpath('/home/user/Documents/grooming/ridgeModel')
+addpath('/home/user/Documents/grooming/ridgeModel/widefield')
+addpath('/home/user/Documents/grooming/ridgeModel/smallStuff')
+    
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 data_list = data_list{1};
 
-ger2_idx = 1:11;
-hyl3_idx = 52:56;
-ecr2_idx = 57:59;
-
+ger2_idx = find(contains(data_list, 'GER2'));
+hyl3_idx = find(contains(data_list, 'HYL3'));
+ecr2_idx = find(contains(data_list, 'ECR2'));
+gt33_idx = find(contains(data_list, 'GT33'));
 
 current_mouse = '';
 
 %%
 k = 0.2;
-for j = ger2_idx
+expts_to_analyze = hyl3_idx;
+for j = 1:length(expts_to_analyze)+1
      try
-        data_dir = data_list{j};
-        disp(['Starting ' data_dir])
-
+        data_dir = data_list{expts_to_analyze(j)};
         if isunix % working on linux computer - modify paths
             data_dir = strrep(data_dir, '\', '/');
-            data_dir = strrep(data_dir, 'Y:/', '/media/user/teamshare/');
-        end    
+            % data_dir = strrep(data_dir, 'Y:/', '/media/user/teamshare/');
+            data_dir = strrep(data_dir, 'Y:/', '/home/user/teamshare/TM_Lab/');
+        end  
+        disp(['Starting ' data_dir])
         [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
         [~, mouse_id, ~] = fileparts(mouse_root_dir);
         [expt_root_dir, ~, ~] = fileparts(mouse_root_dir);
@@ -63,18 +68,18 @@ for j = ger2_idx
             opts.frameRate = fs;
             opts.sPostTime=round(fs*2);
             opts.mPreTime = ceil(0.5 * fs);  % precede motor events to capture preparatory activity in frames (used for eventType 3)
-            opts.mPostTime = ceil(1 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
+            opts.mPostTime = ceil(2 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
             opts.framesPerTrial = min_trial_length; % nr. of frames per trial
-            opts.folds = 1; %nr of folds for cross-validation
+            opts.folds = 10; %nr of folds for cross-validation
             
             regressor_mat = [mvtOn' lick_start]; 
             % Full-Trial events:    new_trial
             % Peri-Stimulus events: 
             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3], opts);
-            regLabels = {'Movement', 'Lick', 'Timer'}; %some movement variables
+            regLabels = {'Movement', 'Lick', 'LickRate'}; %some movement variables
 %             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 1], opts);
 %             regLabels = {'Movment', 'Lick', 'Trial'}; %some movement variables
-            fullR = [dMat, lick_timer];
+            fullR = [dMat lick_timer];
             regIdx = [regIdx; max(regIdx)+1];
 
             disp('Running ridge regression with 10-fold cross-validation')
@@ -83,7 +88,7 @@ for j = ger2_idx
             
             fullMat = modelCorr(Vmaster,Vfull,Umaster) .^2;
 
-            break
+            % break
 
             disp('Running reduced models')
             reducedMat = [];
@@ -100,10 +105,10 @@ for j = ger2_idx
                 reducedMat(:, i) = modelCorr(Vmaster, Vreduced{i}, Umaster) .^2; %compute explained variance
             end
 
-            save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
+            % save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
 
             figure
-            subplot(4, 1, 1)
+            subplot(3, 1, 1)
             imagesc(reshape(fullMat, [128 128]))
             xticks([])
             c=colorbar;
@@ -111,7 +116,7 @@ for j = ger2_idx
             c.Label.String = 'cvR^2';
             yticks([])
             for i = 1:length(regLabels)
-                subplot(4, 1, i+1)
+                subplot(3, 1, i+1)
                 imagesc(reshape(fullMat - reducedMat(:,i), [128 128]))
                 c=colorbar;
                 title(regLabels{i})
@@ -121,8 +126,10 @@ for j = ger2_idx
                 yticks([])
             end
 
+            twer
+
         
-            savefig(gcf, [fPath 'summary.fig'])
+            % savefig(gcf, [fPath 'summary.fig'])
 
 
             % all mice completed - break the loop
@@ -133,6 +140,7 @@ for j = ger2_idx
         load([mouse_root_dir filesep 'Umaster.mat'])
         clear Vmaster ipsi contra bilat fll_move flr_move audio_tone water_drop
         current_mouse = mouse_id;
+        load([mouse_root_dir filesep 'mask.mat'])
 
         %     %% draw mask - might be needed for memory management
         %     frame = loadtiff(frame_file);
@@ -153,6 +161,7 @@ for j = ger2_idx
         end
     catch
         disp('Missing one or more of the required files. Skipping...')
+
         continue
     end
     % read ini file
@@ -163,6 +172,7 @@ for j = ger2_idx
     
     % load experiment specific data into cell array
     load([data_dir filesep 'tform.mat'])
+
 
     disp('Loading brain data...')
     load(brain_file);
@@ -199,7 +209,7 @@ for j = ger2_idx
     [events, b_idx, b_tab] = read_boris(boris_file);
     lick = zeros(size(mvtOn{count}));
     lick(b_idx{1}(:,1)) = 1;
-%     lick_start{count}(b_idx{1}(:,1)) = 1;
+    % lick_start{count}(b_idx{1}(:,1)) = 1;
     lick_start{count} = lick;
     [~, lick_timer{count}] = start_timer(lick, k, fs);
 
@@ -216,17 +226,11 @@ end
 %%
 
 fullLabels
-visual = false;
-cBetaRight = check_beta('Right Asymmetric', fullLabels, fullIdx, Umaster, fullBeta{1}, Vfull, [], visual);
+visual = true;
+cBetaRight = check_beta('LickRate', fullLabels, fullIdx, Umaster, mean(catcell(3,fullBeta),3), Vfull, [], visual);
 
 %%
 
-test = reshape(Umaster*Vmaster, 128, 128, []);
-test2 = reshape(Umaster*Vfull, 128, 128, []);
-figure, plot(xt(test,fs), squeeze(mean(test, [1, 2])),'k'),
-hold on
-plot(xt(test, fs), squeeze(mean(test2, [1, 2]))), hold on,
-% plot(xt(test,fs), lick_timer*.057)
 %%
 
 % figure

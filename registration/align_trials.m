@@ -15,9 +15,13 @@ fileID = fopen('expt3_datalist.txt','r');
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 current_mouse = '';
-for j = 57:length(data_list{1})+1
+for j = 1:length(data_list{1})+1
     if j <= length(data_list{1})
         data_dir = data_list{1}{j};
+        if isunix % working on linux computer - modify paths
+            data_dir = strrep(data_dir, '\', '/');
+            data_dir = strrep(data_dir, 'Y:/', '/media/user/teamshare/');
+        end  
         disp(['Starting ' data_dir])
     
         [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
@@ -47,9 +51,9 @@ for j = 57:length(data_list{1})+1
                 
             end
             current_mouse = mouse_id;
-            mouse_ref_image = loadtiff([mouse_root_dir filesep 'template.tif'], false);
-%             expt_ref_image = loadtiff([data_dir, filesep, 'cam0_singleFrame.tif'], false);
-            expt_ref_image = loadtiff([data_dir, filesep, mouse_id, '_', exp_date, '_', 'cam0_singleFrame.tif'], false);
+            mouse_ref_image = loadtiff([mouse_root_dir filesep 'template.tif']);
+            expt_ref_image = loadtiff([data_dir, filesep, getAllFiles(data_dir, 'singleFrame')]);
+            % expt_ref_image = loadtiff([data_dir, filesep, mouse_id, '_', exp_date, '_', 'cam0_singleFrame.tif'], false);
 
             Umaster = [];
         end

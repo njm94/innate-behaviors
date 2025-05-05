@@ -1,3 +1,29 @@
+% attempt to do parcellation on 1p signals            
+tmp = dFF_crop(:,:,prewin);
+tmp = reshape(tmp, size(tmp,1).*size(tmp,2), size(tmp,3));
+k=5;
+[kidx, ~] = kmeans(tmp, k, 'Distance', 'correlation');
+kmap_pre{j}(:,:,i) = reshape(kidx, 128, 128);
+
+tmp = dFF_crop(:,:,earlywin);
+tmp = reshape(tmp, size(tmp,1).*size(tmp,2), size(tmp,3));
+[kidx, ~] = kmeans(tmp, k, 'Distance', 'correlation');
+kmap_early{j}(:,:,i) = reshape(kidx, 128, 128);
+
+tmp = dFF_crop(:,:,latewin);
+tmp = reshape(tmp, size(tmp,1).*size(tmp,2), size(tmp,3));
+[kidx, ~] = kmeans(tmp, k, 'Distance', 'correlation');
+kmap_late{j}(:,:,i) = reshape(kidx, 128, 128);
+
+tmp = dFF_crop(:,:,postwin);
+tmp = reshape(tmp, size(tmp,1).*size(tmp,2), size(tmp,3));
+[kidx, ~] = kmeans(tmp, k, 'Distance', 'correlation');
+kmap_post{j}(:,:,i) = reshape(kidx, 128, 128);
+disp('Done with kmaps')
+% continue
+
+
+
 clear, clc
 
 % addpath(genpath('C:\Users\user\Documents\Nick\grooming'));
