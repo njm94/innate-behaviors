@@ -11,9 +11,12 @@ addpath('C:\Users\user\Documents\Nick\grooming\utils')
 fileID = fopen('expt1_datalist.txt','r');
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
-num_comps = 200;
 
-for j = 5%1:length(data_list{1})
+count = 1;
+for j = 7%1:length(data_list{1})
+
+    for num_comps = 10:10:1000
+
     data_dir = data_list{1}{j};
     disp(['Starting ' data_dir])
     fPath = [data_dir filesep 'ridge_outputs_video' filesep];
@@ -120,52 +123,52 @@ for j = 5%1:length(data_list{1})
     regIdx = [aEventIdx;  repmat(max(aEventIdx)+1, num_comps, 1)];
     regLabels = [moveLabels, {'MotionEnergy'}];
 
-%% run QR and check for rank-defficiency. This will show whether a given regressor is highly collinear with other regressors in the design matrix.
-% The resulting plot ranges from 0 to 1 for each regressor, with 1 being
-% fully orthogonal to all preceeding regressors in the matrix and 0 being
-% fully redundant. Having fully redundant regressors in the matrix will
-% break the model, so in this example those regressors are removed. In
-% practice, you should understand where the redundancy is coming from and
-% change your model design to avoid it in the first place!
-
-rejIdx = false(1,size(fullR,2));
-[~, fullQRR] = qr(bsxfun(@rdivide,fullR,sqrt(sum(fullR.^2))),0); %orthogonalize normalized design matrix
-figure; plot(abs(diag(fullQRR)),'linewidth',2); ylim([0 1.1]); title('Regressor orthogonality'); drawnow; %this shows how orthogonal individual regressors are to the rest of the matrix
-axis square; ylabel('Norm. vector angle'); xlabel('Regressors');
-if sum(abs(diag(fullQRR)) > max(size(fullR)) * eps(fullQRR(1))) < size(fullR,2) %check if design matrix is full rank
-    temp = ~(abs(diag(fullQRR)) > max(size(fullR)) * eps(fullQRR(1)));
-    fprintf('Design matrix is rank-defficient. Removing %d/%d additional regressors.\n', sum(temp), sum(~rejIdx));
-    rejIdx(~rejIdx) = temp; %reject regressors that cause rank-defficint matrix
-end
-% save([fPath filesep 'regData.mat'], 'fullR', 'regIdx', 'regLabels','fullQRR','-v7.3'); %save some model variables
+% %% run QR and check for rank-defficiency. This will show whether a given regressor is highly collinear with other regressors in the design matrix.
+% % The resulting plot ranges from 0 to 1 for each regressor, with 1 being
+% % fully orthogonal to all preceeding regressors in the matrix and 0 being
+% % fully redundant. Having fully redundant regressors in the matrix will
+% % break the model, so in this example those regressors are removed. In
+% % practice, you should understand where the redundancy is coming from and
+% % change your model design to avoid it in the first place!
+% 
+% rejIdx = false(1,size(fullR,2));
+% [~, fullQRR] = qr(bsxfun(@rdivide,fullR,sqrt(sum(fullR.^2))),0); %orthogonalize normalized design matrix
+% figure; plot(abs(diag(fullQRR)),'linewidth',2); ylim([0 1.1]); title('Regressor orthogonality'); drawnow; %this shows how orthogonal individual regressors are to the rest of the matrix
+% axis square; ylabel('Norm. vector angle'); xlabel('Regressors');
+% if sum(abs(diag(fullQRR)) > max(size(fullR)) * eps(fullQRR(1))) < size(fullR,2) %check if design matrix is full rank
+%     temp = ~(abs(diag(fullQRR)) > max(size(fullR)) * eps(fullQRR(1)));
+%     fprintf('Design matrix is rank-defficient. Removing %d/%d additional regressors.\n', sum(temp), sum(~rejIdx));
+%     rejIdx(~rejIdx) = temp; %reject regressors that cause rank-defficint matrix
+% end
+% % save([fPath filesep 'regData.mat'], 'fullR', 'regIdx', 'regLabels','fullQRR','-v7.3'); %save some model variables
 
     
     %% run cross-validation
     %full model - this will take a moment
     disp('Running ridge regression with 10-fold cross-validation')
     [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Vbrain, regLabels, regIdx, regLabels, bopts.folds);
-    save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), 'movie_cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
+%     save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), 'movie_cvFull_', num2str(num_comps),'.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
     
-    fullMat = modelCorr(Vbrain,Vfull,Ubrain(:,1:num_comps)) .^2; %compute explained variance
-    
-    fasfas
-    %% run reduced models for unique contribution
-    disp('Running reduced models')
-    fig_flag = 1;
-    reducedMat = [];
-    for i = 1:length(regLabels)
-        reduced = fullR;
-        cIdx = regIdx == i;
-%         if ~any(cIdx)
-%             disp(['No ', regLabels{i}, '  events found. Skipping...'])
-%             continue
-%         end
-        reduced(:, cIdx) = reduced(randperm(size(reduced, 1)), cIdx);
-        
-        [Vreduced{i}, reducedBeta{i}, reducedR, reducedIdx, reducedRidge, reducedLabels] = crossValModel(reduced, Vbrain, regLabels, regIdx, regLabels, bopts.folds);
-        reducedMat(:, i) = modelCorr(Vbrain, Vreduced{i}, Ubrain) .^2; %compute explained variance
+    fullMat(:,:,count) = modelCorr(Vbrain,Vfull,Ubrain(:,1:num_comps)) .^2; %compute explained variance
+    count = count + 1;
     end
-    save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), 'movie_cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
+%     %% run reduced models for unique contribution
+%     disp('Running reduced models')
+%     fig_flag = 1;
+%     reducedMat = [];
+%     for i = 1:length(regLabels)
+%         reduced = fullR;
+%         cIdx = regIdx == i;
+% %         if ~any(cIdx)
+% %             disp(['No ', regLabels{i}, '  events found. Skipping...'])
+% %             continue
+% %         end
+%         reduced(:, cIdx) = reduced(randperm(size(reduced, 1)), cIdx);
+%         
+%         [Vreduced{i}, reducedBeta{i}, reducedR, reducedIdx, reducedRidge, reducedLabels] = crossValModel(reduced, Vbrain, regLabels, regIdx, regLabels, bopts.folds);
+%         reducedMat(:, i) = modelCorr(Vbrain, Vreduced{i}, Ubrain) .^2; %compute explained variance
+%     end
+%     save([fPath, char(datetime('now', 'Format', 'yyyy-MM-dd-HH-mm-ss')), 'movie_cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
     
     %%
     
@@ -200,11 +203,10 @@ end
 %     savefig(gcf, [fPath 'movie_summary.fig'])
 end
   %%
-%%
-testreal = permute(reshape(Ubrain(:,1:num_comps) * Vbrain(:,6.45e3:7.1e4), 128, 128, []), [2 1 3]);
-testmodel = permute(reshape(Ubrain(:,1:num_comps) * Vfull(:,6.45e3:7.1e4), 128, 128, []), [2 1 3]);
 
-%%
+testreal = permute(reshape(Ubrain(:,1:num_comps) * Vbrain(:,6.45e4:7.1e4), 128, 128, []), [2 1 3]);
+testmodel = permute(reshape(Ubrain(:,1:num_comps) * Vfull(:,6.45e4:7.1e4), 128, 128, []), [2 1 3]);
+
 resid = testreal-testmodel;
 
 
