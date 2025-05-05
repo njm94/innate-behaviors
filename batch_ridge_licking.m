@@ -30,8 +30,8 @@ for j = 1:length(expts_to_analyze)+1
         data_dir = data_list{expts_to_analyze(j)};
         if isunix % working on linux computer - modify paths
             data_dir = strrep(data_dir, '\', '/');
-            % data_dir = strrep(data_dir, 'Y:/', '/media/user/teamshare/');
-            data_dir = strrep(data_dir, 'Y:/', '/home/user/teamshare/TM_Lab/');
+            data_dir = strrep(data_dir, 'Y:/', '/media/user/teamshare/TM_Lab/');
+            % data_dir = strrep(data_dir, 'Y:/', '/home/user/teamshare/TM_Lab/');
         end  
         disp(['Starting ' data_dir])
         [mouse_root_dir, exp_date, ~] = fileparts(data_dir);
@@ -56,11 +56,13 @@ for j = 1:length(expts_to_analyze)+1
                 mvtOn{i} = mvtOn{i}(1:min_trial_length);
                 lick_start{i} = lick_start{i}(1:min_trial_length);
                 lick_timer{i} = lick_timer{i}(1:min_trial_length);
+                lick_rate{i} = lick_rate{i}(1:min_trial_length);
             end
             Vmaster = catcell(2, Vmaster);
             mvtOn = catcell(1, mvtOn)';
             lick_start = catcell(1, lick_start);
             lick_timer = catcell(1, lick_timer);
+            lick_rate = catcell(1,lick_rate);
             new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
 
             % ridge here
@@ -79,7 +81,7 @@ for j = 1:length(expts_to_analyze)+1
             regLabels = {'Movement', 'Lick', 'LickRate'}; %some movement variables
 %             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 1], opts);
 %             regLabels = {'Movment', 'Lick', 'Trial'}; %some movement variables
-            fullR = [dMat lick_timer];
+            fullR = [dMat lick_rate];
             regIdx = [regIdx; max(regIdx)+1];
 
             disp('Running ridge regression with 10-fold cross-validation')
@@ -116,7 +118,7 @@ for j = 1:length(expts_to_analyze)+1
             c.Label.String = 'cvR^2';
             yticks([])
             for i = 1:length(regLabels)
-                subplot(3, 1, i+1)
+                subplot(4, 1, i+1)
                 imagesc(reshape(fullMat - reducedMat(:,i), [128 128]))
                 c=colorbar;
                 title(regLabels{i})
@@ -209,6 +211,7 @@ for j = 1:length(expts_to_analyze)+1
     [events, b_idx, b_tab] = read_boris(boris_file);
     lick = zeros(size(mvtOn{count}));
     lick(b_idx{1}(:,1)) = 1;
+    lick_rate{count} = movsum(lick, fs);
     % lick_start{count}(b_idx{1}(:,1)) = 1;
     lick_start{count} = lick;
     [~, lick_timer{count}] = start_timer(lick, k, fs);
@@ -227,7 +230,7 @@ end
 
 fullLabels
 visual = true;
-cBetaRight = check_beta('LickRate', fullLabels, fullIdx, Umaster, mean(catcell(3,fullBeta),3), Vfull, [], visual);
+cBetaRight = check_beta('Lick', fullLabels, fullIdx, Umaster, mean(catcell(3,fullBeta),3), Vfull, [], visual);
 
 %%
 
