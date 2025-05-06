@@ -5,7 +5,7 @@ function path = fix_path(path)
 % if ~isempty(dir(path)), return; end
 
 if isunix
-    path = strrep(path, 'Y:', '/media/user/teamshare');
+    path = strrep(path, 'Y:', '/media/user/teamshare/TM_Lab');
     path = strrep(path, '\', '/');
 else
     path = strrep(path, '/media/user/teamshare', 'Y:');

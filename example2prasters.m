@@ -42,53 +42,53 @@ gcorr = [];
 ncorrm = [];
 gcorrm = [];
 
-for i = 1%:length(mp_list)
-
-     mouse_root = fileparts(mp_list{i});
-    
-    if ~strcmp(mouse_root, current_mouse)
-        load([mouse_root, filesep, 'dalsa', filesep, 'atlas_tform.mat'])
-    end
-
-    boris_file = [mp_list{i}, filesep, getAllFiles(mp_list{i}, 'events.tsv')];
-    if ~isfile([mp_list{i}, filesep, 'Nresample.mat'])
-        load([mp_list{i}, filesep, getAllFiles(mp_list{i}, 'Fclean.mat')]);
-        
-        [events, b_idx, ~, vid_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file, include_boris);
-
-        try Nresample = resample(N, vid_end, size(N, 2), 'Dimension', 2);
-        catch
-            disp('Data too big. Splitting into halves and resampling each half separately')
-            Nresample = resamplee(N', size(events,1), size(N,2))';
-        end
-    
-        save([mp_list{i}, filesep, 'Nresample.mat'], 'Nresample', 'nloc', 'fs', 'cstat', 'tforms', '-v7.3')
-    else
-        disp('Loading resampled neuron data')
-        load([mp_list{i}, filesep, 'Nresample.mat'])
-    end
-    if i ==1
-    figure(1), axis equal off; hold on; set(gca, 'YDir', 'reverse');
-    for p = 1:length(dorsalMaps.edgeOutline)-2 % -2 to ignore olfactory bulbs
-        plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 2);
-    end
-    end
-    
-        load([mp_list{i}, filesep, 'Nresample.mat'])
-        clear x3 y3
-        for j = 1:length(cstat)
-            x0 = double(cstat{j}.med(2));
-            y0 = double(cstat{j}.med(1));        
-            [x1, y1] = transformPointsForward(tforms{cstat{j}.use_tform}.roi_to_linear.tform, x0, y0);        
-            [x2, y2] = transformPointsForward(tforms{cstat{j}.use_tform}.linear_to_wfield.tform, x1, y1);        
-            [x3(j), y3(j)] = transformPointsForward(tforms{cstat{j}.use_tform}.wfield_to_atlas.tform, x2, y2);
-    
-        end
-        % total_neurons = total_neurons + length(x3);
-        % uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
-        % scatter(x3, y3,50, '.', 'MarkerEdgeColor', [0 200 150]/255)
-        figure(1), scatter(x3, y3, 20, 'filled', 'MarkerFaceColor', [0.4 0.4 0.4])
-end
+% for i = 1:length(mp_list)
+% 
+%      mouse_root = fileparts(mp_list{i});
+% 
+%     if ~strcmp(mouse_root, current_mouse)
+%         load([mouse_root, filesep, 'dalsa', filesep, 'atlas_tform.mat'])
+%     end
+% 
+%     boris_file = [mp_list{i}, filesep, getAllFiles(mp_list{i}, 'events.tsv')];
+%     if ~isfile([mp_list{i}, filesep, 'Nresample.mat'])
+%         load([mp_list{i}, filesep, getAllFiles(mp_list{i}, 'Fclean.mat')]);
+% 
+%         [events, b_idx, ~, vid_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_file, include_boris);
+% 
+%         try Nresample = resample(N, vid_end, size(N, 2), 'Dimension', 2);
+%         catch
+%             disp('Data too big. Splitting into halves and resampling each half separately')
+%             Nresample = resamplee(N', size(events,1), size(N,2))';
+%         end
+% 
+%         save([mp_list{i}, filesep, 'Nresample.mat'], 'Nresample', 'nloc', 'fs', 'cstat', 'tforms', '-v7.3')
+%     else
+%         disp('Loading resampled neuron data')
+%         load([mp_list{i}, filesep, 'Nresample.mat'])
+%     end
+%     if i ==1
+%     figure(1), axis equal off; hold on; set(gca, 'YDir', 'reverse');
+%     for p = 1:length(dorsalMaps.edgeOutline)-2 % -2 to ignore olfactory bulbs
+%         plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 2);
+%     end
+%     end
+% 
+%         load([mp_list{i}, filesep, 'Nresample.mat'])
+%         clear x3 y3
+%         for j = 1:length(cstat)
+%             x0 = double(cstat{j}.med(2));
+%             y0 = double(cstat{j}.med(1));        
+%             [x1, y1] = transformPointsForward(tforms{cstat{j}.use_tform}.roi_to_linear.tform, x0, y0);        
+%             [x2, y2] = transformPointsForward(tforms{cstat{j}.use_tform}.linear_to_wfield.tform, x1, y1);        
+%             [x3(j), y3(j)] = transformPointsForward(tforms{cstat{j}.use_tform}.wfield_to_atlas.tform, x2, y2);
+% 
+%         end
+%         % total_neurons = total_neurons + length(x3);
+%         % uiopen([mouse_root, filesep, 'dalsa', filesep, 'atlas_aligned.fig'],1), hold on
+%         % scatter(x3, y3,50, '.', 'MarkerEdgeColor', [0 200 150]/255)
+%         figure(1), scatter(x3, y3, 20, 'filled', 'MarkerFaceColor', [0.4 0.4 0.4])
+% end
 %%
 
 for i = 1:length(mp_list)
@@ -339,9 +339,9 @@ legend({'All neurons', 'Grooming neurons', ''}, 'Location', 'Best')
 gg.Parent.FontSize = 12;
 
 
-h1 = lillietest(ncorr);
-h2 = lillietest(gcorr);
-if h1 || h2
+h1 = isnormal(ncorr);
+h2 = isnormal(gcorr);
+if ~h1 || ~h2
     disp('At least one distribution is not normal')
 else
     disp('Both distributions normal')
@@ -365,12 +365,12 @@ gg.Parent.FontSize = 12;
 
 ncorrm2 = ncorrm;
 for i = 1:length(gcorrm)
-    ncorrm2(find(ncorrm2==gcorrm(i)))=[];
+    ncorrm2(find(ncorrm2==gcorrm(i),1))=[];
 end
 
-h1 = lillietest(ncorrm2);
-h2 = lillietest(gcorrm);
-if h1 || h2
+h1 = isnormal(ncorrm2);
+h2 = isnormal(gcorrm);
+if ~h1 || ~h2
     disp('At least one distribution is not normal')
 else
     disp('Both distributions normal')
@@ -383,6 +383,31 @@ axis([-1 1 0 350])
 % exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.png']), 'Resolution', 300)
 
 
+%%
+
+
+plot_data = [gcorr gcorrm];
+figure, swarmchart(repmat([1 2], size(gcorrm,1), 1), plot_data, 'b', 'filled','MarkerFaceAlpha',0.25,'MarkerEdgeAlpha',0.25, 'XJitterWidth', 0.25)
+hold on
+boxplot(plot_data, 'Colors', 'k', 'Symbol', '')
+ylabel('Pearson correlation coefficient')
+xticklabels({'Grooming', 'Movement'})
+title('Grooming neuron population')
+ax = gca;
+ax.FontSize = 14;
+
+
+h1 = isnormal(gcorr);
+h2 = isnormal(gcorrm);
+if ~h1 || ~h2
+    disp('At least one distribution is not normal')
+else
+    disp('Both distributions normal')
+end
+
+[h,p] = ttest(gcorr, gcorrm);
+disp(['Grooming population vs all neurons: Paired t-test, p=', num2str(p)])
+saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'groomingpop_groomingvsmovementcorrelation.svg']))
 
 %%
 
