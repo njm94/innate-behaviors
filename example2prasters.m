@@ -193,7 +193,6 @@ for i = 1:length(mp_list)
     flrthresh(aggregate(any(event_table, 2), 3, fs)) = 0;
     fllthresh(aggregate(any(event_table, 2),3, fs)) = 0;
 
-
     
     Bmean = cat(2, Bmean, mean(Nresample(:, logical(flrthresh)),2));
     Bmean = cat(2, Bmean, mean(Nresample(:, logical(fllthresh)),2));
@@ -353,34 +352,34 @@ axis([-1 1 0 500])
 % saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.svg']))
 % exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.png']), 'Resolution', 300)
 
-%%
-clc
-figure, gg=histogram(ncorrm, 'FaceColor', [0 0 0], 'FaceAlpha', 0.3);
-hold on
-histogram(gcorrm, 'BinWidth', gg.BinWidth, 'FaceColor', [0 0 1], 'FaceAlpha', 1)
-xlabel('Correlation with Movement')
-ylabel('# Neurons')
-legend({'All neurons', 'Grooming neurons', ''}, 'Location', 'Best')
-gg.Parent.FontSize = 12;
-
-ncorrm2 = ncorrm;
-for i = 1:length(gcorrm)
-    ncorrm2(find(ncorrm2==gcorrm(i),1))=[];
-end
-
-h1 = isnormal(ncorrm2);
-h2 = isnormal(gcorrm);
-if ~h1 || ~h2
-    disp('At least one distribution is not normal')
-else
-    disp('Both distributions normal')
-end
-
-[p,h, stats] = ranksum(ncorrm2, gcorrm);
-disp(['Grooming population vs all neurons: Wilcoxon RankSum test, p=', num2str(p)])
-axis([-1 1 0 350])
-% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.svg']))
-% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.png']), 'Resolution', 300)
+%% deprecated
+% clc
+% figure, gg=histogram(ncorrm, 'FaceColor', [0 0 0], 'FaceAlpha', 0.3);
+% hold on
+% histogram(gcorrm, 'BinWidth', gg.BinWidth, 'FaceColor', [0 0 1], 'FaceAlpha', 1)
+% xlabel('Correlation with Movement')
+% ylabel('# Neurons')
+% legend({'All neurons', 'Grooming neurons', ''}, 'Location', 'Best')
+% gg.Parent.FontSize = 12;
+% 
+% ncorrm2 = ncorrm;
+% for i = 1:length(gcorrm)
+%     ncorrm2(find(ncorrm2==gcorrm(i),1))=[];
+% end
+% 
+% h1 = isnormal(ncorrm2);
+% h2 = isnormal(gcorrm);
+% if ~h1 || ~h2
+%     disp('At least one distribution is not normal')
+% else
+%     disp('Both distributions normal')
+% end
+% 
+% [p,h, stats] = ranksum(ncorrm2, gcorrm);
+% disp(['Grooming population vs all neurons: Wilcoxon RankSum test, p=', num2str(p)])
+% axis([-1 1 0 350])
+% % saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.svg']))
+% % exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_movement_correlation.png']), 'Resolution', 300)
 
 
 %%
@@ -407,7 +406,7 @@ end
 
 [h,p] = ttest(gcorr, gcorrm);
 disp(['Grooming population vs all neurons: Paired t-test, p=', num2str(p)])
-saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'groomingpop_groomingvsmovementcorrelation.svg']))
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'groomingpop_groomingvsmovementcorrelation.svg']))
 
 %%
 
