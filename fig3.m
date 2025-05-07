@@ -200,21 +200,21 @@ for j = 1:length(data_list{1})+1
             % fwrite(fileID, single(dFF_crop),'single');
             % fclose(fileID);
     
-            % get into atlas coords
-            dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
-            ts = getTimeseries(dFF_crop, seeds, 2);
-            
-            if i == 1
-                figure
-                mask_warp = imwarp(mask, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
-                imagesc(mask_warp), hold on
-                scatter(seeds(:,1), seeds(:,2))
-            end
-               
-            pre_corrmat{j}(:,:,i) = corrcoef(ts(prewin, :));
-            early_corrmat{j}(:,:,i) = corrcoef(ts(earlywin, :));
-            late_corrmat{j}(:,:,i) = corrcoef(ts(latewin, :));
-            post_corrmat{j}(:,:,i) = corrcoef(ts(postwin, :));
+%             % get into atlas coords
+%             dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
+%             ts = getTimeseries(dFF_crop, seeds, 2);
+%             
+%             if i == 1
+%                 figure
+%                 mask_warp = imwarp(mask, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
+%                 imagesc(mask_warp), hold on
+%                 scatter(seeds(:,1), seeds(:,2))
+%             end
+%                
+%             pre_corrmat{j}(:,:,i) = corrcoef(ts(prewin, :));
+%             early_corrmat{j}(:,:,i) = corrcoef(ts(earlywin, :));
+%             late_corrmat{j}(:,:,i) = corrcoef(ts(latewin, :));
+%             post_corrmat{j}(:,:,i) = corrcoef(ts(postwin, :));
 
             % continue
     
