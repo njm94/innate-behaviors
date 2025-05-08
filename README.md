@@ -88,10 +88,72 @@ METHODOLOGICAL INFORMATION
    		prior to stopping acquisition. Frames were synchronized across behavior and brain cameras by matching the illuminated
    		frames at the start and end of the trial.
 
+	2-photon imaging
+
+		Two-photon imaging was performed using the Diesel2p microscope (Yu et al. 2021) controlled with MATLAB software Scanimage
+		(Vidrio). Two-photon laser excitation was provided by an 80-MHz Newport Spectra-Physics Mai Tai HP 1020. The Diesel2p’s
+		dual scan engines were utilized to maximize the imaging area and imaging regions of interest (ROIs) were chosen across mice
+		and imaging sessions to cover as many cortical regions as possible. Each scan path consisted of a resonant scanner
+		(CRS 8 KHz, Cambridge Technologies), and two XY galvanometers (8320K, Cambridge Technologies). While imaging area sizes
+		sometimes varied between scan engines, the spatial resolution was held constant across scan arms, resulting in acquisition
+		rates that varied, with larger areas collected at lower frames per second. Photon signal was collected by photomultiplier
+		tube (H11706P-40, Hamamatsu) and amplified with a high-speed current amplifier (HCA-400M-5K-C, Laser Components). Imaging
+		was performed with 920 nm laser at ~80 mW excitation out of the front of the air objective (0.55 NA). Behavior video
+		acquisition and resonant scanning were initiated prior to collecting 2-photon images. Acquisition of 2-photon images was
+		triggered using TTL output from the Jetson which simultaneously turned on infrared LEDs which illuminated the scene, and at
+		the end of the trial, 2-photon image acquisition was terminated by TTL and the infrared LEDs were simultaneously turned off.
+		Behavior video acquisition ended following a short delay after turning off the LEDs and 2-photon images were synchronized to
+		the behavior video by matching to the illuminated frames.
+
 3. Methods for processing the data: 
 
+	Identification of grooming behaviors
+		Grooming behaviors were identified using two independent approaches - manual labelling (Figure 1-1A) and unsupervised
+		clustering (Figure 1D). Final results are presented using the unsupervised clustering approach, however both labelling
+		strategies demonstrated substantial agreement (Figure 1D, Figure 1-1B) and the results presented throughout the paper were
+		consistent across approaches. For manual labelling, the start and end index for each grooming event were saved and manually
+		curated using Behavioral Observation Research Interactive Software (BORIS) (Friard and Gamba 2016). Grooming component
+		behaviors were classified by visual inspection as one of seven distinct behaviors, including unilateral facial strokes:
+		right and left; and bilateral facial strokes: elliptical, elliptical asymmetric, right asymmetric, left asymmetric, and
+		large bilateral (Figure 1-1B). BORIS was also used to label licking behaviors where the tongue clearly protruded from the
+		mouth, as well as the precise timepoints in which the full weight of the drop makes contact with the mouse.
 
-4. Instrument- or software-specific information needed to interpret the data: 
+		For unsupervised labelling, the position of the paws and nose were tracked using DeepLabCut (Mathis et al. 2018). A single
+		point was used for each paw and around 20-60 frames from each trial and mouse were selected for labeling. The network was
+		trained with default parameters for 1030000 iterations. The start and end frame index of each grooming behavior obtained
+		using BORIS were used to extract paw position and velocity information during each behavior event. This information was
+		distilled down to  44 features for each behavior event (Table 1), yielding a matrix of size Nx44, where N is the number of
+		grooming behaviors exhibited across all mice. This feature matrix was then reduced to 2 dimensions using Uniform Manifold
+		Approximation and Projection (UMAP) for dimension reduction. The resulting embedding exhibited several spatially distinct
+		clusters, which were extracted with hierarchical clustering (Figure 1D). These clusters correspond with distinct and
+		stereotyped patterns of paw movements (Figure 1E, Figure 1-1C).
+
+	1-photon image pre-processing
+		Single photon wide-field fluorescence data was compressed using singular value decomposition (SVD), which yielded U, the
+		matrix of pixels × components; V, the matrix of components x time; and s the diagonal matrix of singular values. The top
+		1,000 components were retained, and s was multiplied into V, which was then upsampled to 90 fps to match the behavior
+   		video. All subsequent analyses, such as temporal filtering and ridge regression, were performed on tThe matrix s*V was
+   		then high-pass filtered at 0.01 Hz using a second-order zero-phase Butterworth filter. Wide-field fluorescence data were
+   		combined within mice across separate recordings, by recasting experiment-specific SVD components into a master SVD basis
+   		set (Peters et al. 2021). To create the master SVD basis set, spatial components from each imaging session were first
+   		aligned to a reference session and concatenated, then SVD was performed on the resulting matrix and the top 1,000
+   		components were retained. Temporal components for each experiment then were recast into the master basis set as described
+   		in (Peters et al. 2021). Wide-field fluorescence data for each mouse were then aligned to the Allen Institute Common
+   		Coordinate Framework (Q. Wang et al. 2020) using a control-point based registration method with key points placed along
+   		the superior sagittal sinus, bregma, and the space between olfactory bulbs and frontal cortex (Saxena et al. 2020). A
+   		mask was drawn manually over the cortex of the reference image for each mouse to discard pixels outside of the cortex
+   		from analysis.
+
+	2-photon image processing
+		2-photon images were spatially binned by a factor of 2x2 to improve signal to noise ratio and reduce file sizes for
+   		subsequent operations. After binning, neuron diameters were typically ~5-8 pixels. Motion correction and neuron detection
+   		were then performed using Suite2p. Neuronal regions of interest were curated after visual inspection of their shape and
+   		fluorescence signals. Neuronal fluorescence signals were consolidated by upsampling the signals obtained with the lowest
+   		frame rate to match those acquired with the maximum frame rate. To relate neuronal activity to behavior, the consolidated
+   		fluorescence signals were upsampled again to match the framerate of the behavior video.
+
+
+5. Instrument- or software-specific information needed to interpret the data: 
 
 	Instruments
 
@@ -109,13 +171,13 @@ METHODOLOGICAL INFORMATION
 		B. Data analysis
 
 
-5. Environmental/experimental conditions: 
+6. Environmental/experimental conditions: 
 
 
-6. Describe any quality-assurance procedures performed on the data: 
+7. Describe any quality-assurance procedures performed on the data: 
 
 
-7. People involved with sample collection, processing, analysis and/or submission: 
+8. People involved with sample collection, processing, analysis and/or submission: 
 Nicholas Michelson
 
 --------------------------
