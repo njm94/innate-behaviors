@@ -52,7 +52,7 @@ for i = 1:size(umap_results.bFiles,1)
     if isunix
         newBfiles = umap_results.bFiles;
     else
-        newBfiles(i,:) = strrep(umap_results.bFiles(i,:), '/media/user/teamshare', 'Y:');
+        newBfiles(i,:) = strrep(umap_results.bFiles(i,:), '/media/user/teamshare/TM_Lab/', 'Y:');
         newBfiles(i,:) = strrep(newBfiles(i,:), '/', '\');
     end
 end

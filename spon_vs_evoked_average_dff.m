@@ -581,7 +581,7 @@ for j = 1:length(mice)
     
 end
 %% 
-for i = 1:length(vars)
-    disp([char(vars(i)), ' n=', num2str(bcounter(i))]);
-    exportgraphics(figure(i), fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), '_contours_evoked.png']), 'Resolution', 300)
-end
+% for i = 1:length(vars)
+%     disp([char(vars(i)), ' n=', num2str(bcounter(i))]);
+%     exportgraphics(figure(i), fix_path(['Y:\nick\behavior\grooming\figures\',char(vars(i)), '_contours_evoked.png']), 'Resolution', 300)
+% end

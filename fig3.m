@@ -29,7 +29,7 @@ fileID = fopen('expt1_datalist.txt','r');
 
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
-cluster_data = fix_path('/media/user/teamshare/nick/behavior/grooming/20241114092737_behavior_clustering.mat');
+cluster_data = fix_path('/media/user/teamshare/TM_Lab/nick/behavior/grooming/20241114092737_behavior_clustering.mat');
 include_boris = true;
 current_mouse = '';
 
@@ -47,7 +47,7 @@ save_average_across_days = true;
 
 %%
  
-for j = 1:length(data_list{1})+1
+for j = 4%1:length(data_list{1})+1
     disp('\n\n')
      try
 
@@ -113,6 +113,10 @@ for j = 1:length(data_list{1})+1
     eth_events = removevars(events, idx);
     
     bmat = any(table2array(groom_events),2);
+    if ~any(bmat)
+        continue
+    end
+
     [episodes, idx] = aggregate(bmat, aggregation_sz);
     episode_durations = diff(idx, 1, 2)/fs;
 
@@ -200,6 +204,7 @@ for j = 1:length(data_list{1})+1
             % fwrite(fileID, single(dFF_crop),'single');
             % fclose(fileID);
     
+
 %             % get into atlas coords
 %             dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
 %             ts = getTimeseries(dFF_crop, seeds, 2);
@@ -220,6 +225,7 @@ for j = 1:length(data_list{1})+1
     
             global_signal{j}{i,:} = squeeze(mean(dFF_crop, [1 2], 'omitnan'));
             roi_signal{j}{i} = ts;
+
     
     
             % find a period of time that is equal in length with no activity
