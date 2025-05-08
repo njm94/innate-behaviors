@@ -108,6 +108,7 @@ METHODOLOGICAL INFORMATION
 3. Methods for processing the data: 
 
 	Identification of grooming behaviors
+
 		Grooming behaviors were identified using two independent approaches - manual labelling (Figure 1-1A) and unsupervised
 		clustering (Figure 1D). Final results are presented using the unsupervised clustering approach, however both labelling
 		strategies demonstrated substantial agreement (Figure 1D, Figure 1-1B) and the results presented throughout the paper were
@@ -129,6 +130,7 @@ METHODOLOGICAL INFORMATION
 		stereotyped patterns of paw movements (Figure 1E, Figure 1-1C).
 
 	1-photon image pre-processing
+   
 		Single photon wide-field fluorescence data was compressed using singular value decomposition (SVD), which yielded U, the
 		matrix of pixels × components; V, the matrix of components x time; and s the diagonal matrix of singular values. The top
 		1,000 components were retained, and s was multiplied into V, which was then upsampled to 90 fps to match the behavior
@@ -145,6 +147,7 @@ METHODOLOGICAL INFORMATION
    		from analysis.
 
 	2-photon image processing
+   
 		2-photon images were spatially binned by a factor of 2x2 to improve signal to noise ratio and reduce file sizes for
    		subsequent operations. After binning, neuron diameters were typically ~5-8 pixels. Motion correction and neuron detection
    		were then performed using Suite2p. Neuronal regions of interest were curated after visual inspection of their shape and
