@@ -68,11 +68,7 @@ METHODOLOGICAL INFORMATION
 		Mice were head-restrained in a plexiglass apparatus and the scene was illuminated with 850nm LEDs (Gupta and Murphy 2025).
 		A monochrome camera (Omron-Sentech, STC-MBS43U3V) connected to a NVIDIA Jetson was equipped with a bandpass infrared
 		filter (840-865 nm, Bock Optronics) and positioned directly in front of the animal to record 8-bit behavior videos at 90
-		frames per second with a resolution of 640 x 320 pixels (Figure 1A). After an initial baseline period, grooming behavior
-		was evoked by delivering a drop of water onto the orofacial area once per minute for 20 minutes. Each water drop stimulus
-		was preceded by a 1-second 10kHz tone followed by a 1-second delay period (Figure 1B). For each mouse, at least two
-		spontaneous sessions, which contained the audio cue without the water drop stimulus, were recorded before the evoked
-		grooming sessions (Figure 1C).
+		frames per second with a resolution of 640 x 320 pixels (Figure 1A). 
 	
 	1-photon imaging
 
@@ -82,11 +78,7 @@ METHODOLOGICAL INFORMATION
 		blue LED (Luxeon, 473 nm) with a band-pass filter (Chroma, 467–499 nm) delivered to the surface of the cortex through a
 		liquid light guide (Thorlabs). GCaMP fluorescence emission was filtered using a 510–550 nm band-pass filter (Chroma).
 		12-bit images were collected at 30 frames per second using XCAP imaging software using 8x8 pixel on-chip binning, yielding
-   		images of size 128x128 pixels. Video acquisition was triggered by the Jetson which also started behavior video recording,
-   		and after a few seconds of delay, the blue cortical excitation LED and the infrared behavior LED were simultaneously
-   		turned on by TTL from the Jetson. At the end of the trial, the cortical and behavior LEDs were turned off simultaneously
-   		prior to stopping acquisition. Frames were synchronized across behavior and brain cameras by matching the illuminated
-   		frames at the start and end of the trial.
+   		images of size 128x128 pixels. 
 
 	2-photon imaging
 
@@ -98,12 +90,7 @@ METHODOLOGICAL INFORMATION
 		sometimes varied between scan engines, the spatial resolution was held constant across scan arms, resulting in acquisition
 		rates that varied, with larger areas collected at lower frames per second. Photon signal was collected by photomultiplier
 		tube (H11706P-40, Hamamatsu) and amplified with a high-speed current amplifier (HCA-400M-5K-C, Laser Components). Imaging
-		was performed with 920 nm laser at ~80 mW excitation out of the front of the air objective (0.55 NA). Behavior video
-		acquisition and resonant scanning were initiated prior to collecting 2-photon images. Acquisition of 2-photon images was
-		triggered using TTL output from the Jetson which simultaneously turned on infrared LEDs which illuminated the scene, and at
-		the end of the trial, 2-photon image acquisition was terminated by TTL and the infrared LEDs were simultaneously turned off.
-		Behavior video acquisition ended following a short delay after turning off the LEDs and 2-photon images were synchronized to
-		the behavior video by matching to the illuminated frames.
+		was performed with 920 nm laser at ~80 mW excitation out of the front of the air objective (0.55 NA). 
 
 3. Methods for processing the data: 
 
@@ -176,11 +163,44 @@ METHODOLOGICAL INFORMATION
 
 6. Environmental/experimental conditions: 
 
+		After an initial baseline period (30s for 1-photon imaging or 5 mins for 2-photon imaging), grooming behavior
+		was evoked by delivering a drop of water onto the orofacial area once per minute for 20 minutes. Each water drop stimulus
+		was preceded by a 1-second 10kHz tone followed by a 1-second delay period (Figure 1B). For each mouse, at least two
+		spontaneous sessions, which contained the audio cue without the water drop stimulus, were recorded before the evoked
+		grooming sessions (Figure 1C).
 
-7. Describe any quality-assurance procedures performed on the data: 
+8. Describe any quality-assurance procedures performed on the data: 
 
+	Synchronization between devices
 
-8. People involved with sample collection, processing, analysis and/or submission: 
+		Video acquisition was triggered by the Jetson which also started behavior video recording, and after a few seconds of
+		delay, the blue cortical excitation LED and the infrared behavior LED were simultaneously turned on by TTL from the
+		Jetson. At the end of the trial, the cortical and behavior LEDs were turned off simultaneously prior to stopping
+		acquisition. Frames were synchronized across behavior and brain cameras by matching the illuminated frames at the
+		start and end of the trial.
+
+   		Behavior video acquisition and resonant scanning were initiated prior to collecting 2-photon images. Acquisition of 2-photon
+   		images was triggered using TTL output from the Jetson which simultaneously turned on infrared LEDs which illuminated the
+   		scene, and at the end of the trial, 2-photon image acquisition was terminated by TTL and the infrared LEDs were
+   		simultaneously turned off. Behavior video acquisition ended following a short delay after turning off the LEDs and 2-photon
+   		images were synchronized to the behavior video by matching to the illuminated frames.
+
+   	Alignment of 2-photon images to Allen Common Coordinate Framework
+
+		Prior to 2-photon imaging experiments, the locations of the forelimb and hindlimb somatosensory cortex were determined by
+		sensory mapping. Sensory mapping experiments were conducted under similar conditions as the single-photon imaging
+		experiments, only mice were anesthetized with 1.2% isoflurane in oxygen and images were acquired at 40 fps (Figure 4-1D).
+		Piezoelectric stimulators touching the forelimb or hindlimb were used to record somatosensory-evoked stimulus responses
+		(Y. Xie et al. 2016). Averages of responses to sensory stimulation were calculated from 20 trials of stimulation with an
+		interstimulus interval of 10 s (Figure 4-1E). After each 2-photon imaging session, a 5x5mm2 image of the cortical surface
+		was taken with the Diesel2p’s linear scanners. ROIs captured with the resonant scanners were registered to this larger
+		field-of-view 2-photon image, which was then registered to a 1024x1024 pixel template image (8.2x8.2mm2), obtained on the
+		single-photon imaging system (Figure 4-1A-C). The single-photon template image was then registered to the dorsal projection
+		of the Allen Common Coordinate Framework using control points placed in the forelimb and hindlimb somatosensory cortex
+		(Figure 4-1F). Each image registration process yields a transformation matrix, which was used to transform each neuron’s
+		pixel location in the resonant image obtained from Suite2p, to its location in the Allen Common Coordinate Framework.
+
+10. People involved with sample collection, processing, analysis and/or submission: 
 Nicholas Michelson
 
 --------------------------
