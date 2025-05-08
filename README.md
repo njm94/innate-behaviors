@@ -74,7 +74,13 @@ METHODOLOGICAL INFORMATION
 
 	Software
 		A. Data preprocessing
-
+			- Python		3.7 
+			- numpy 		1.16.4
+			- opencv-python		4.1.0.25
+			- scipy 		1.2.1
+			- roipoly 		0.5.0
+			- scikit-learn 		0.21.2
+			- matplotlib 		3.1.0
 
 		B. Data analysis
 
@@ -86,7 +92,7 @@ METHODOLOGICAL INFORMATION
 
 
 6. People involved with sample collection, processing, analysis and/or submission: 
-
+Nicholas Michelson
 
 --------------------------
 DATA-SPECIFIC INFORMATION 
