@@ -42,13 +42,13 @@ DATA & FILE OVERVIEW
 
 1. File List
 
-   A. Folder:     
-      Short description:       
+   A. Folder:     1p
+      Short description:       Contains a list of folders named by SubjectID_Genotype. Each folder contains a list of folders named by YYYYMMDDHHmmss when data was collected
 
-   B. Folder:     
+   B. Folder:     2p
       Short description: 
 
-   C. Folder name:      
+   C. Folder name:      mouse_grooming-nick-2023-11-27
       Short description: 
 	Note: 
 
