@@ -73,6 +73,7 @@ METHODOLOGICAL INFORMATION
 	Instruments
 
 	Software
+
 		A. Data preprocessing
 			- Python		3.7 
 			- numpy 		1.16.4
@@ -85,13 +86,13 @@ METHODOLOGICAL INFORMATION
 		B. Data analysis
 
 
-4. Environmental/experimental conditions: 
+5. Environmental/experimental conditions: 
 
 
-5. Describe any quality-assurance procedures performed on the data: 
+6. Describe any quality-assurance procedures performed on the data: 
 
 
-6. People involved with sample collection, processing, analysis and/or submission: 
+7. People involved with sample collection, processing, analysis and/or submission: 
 Nicholas Michelson
 
 --------------------------
