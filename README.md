@@ -72,7 +72,21 @@ METHODOLOGICAL INFORMATION
 		was evoked by delivering a drop of water onto the orofacial area once per minute for 20 minutes. Each water drop stimulus
 		was preceded by a 1-second 10kHz tone followed by a 1-second delay period (Figure 1B). For each mouse, at least two
 		spontaneous sessions, which contained the audio cue without the water drop stimulus, were recorded before the evoked
-		grooming sessions (Figure 1C). 
+		grooming sessions (Figure 1C).
+	
+	1-photon imaging
+
+		Dorsal cortical GCaMP activity was recorded using similar methods as described previously (Ramandi et al. 2023). Briefly,
+		images of the cortical surface (Figure 3A) were projected through a pair of back-to-back photographic lenses
+		(50 mm, 1.4 f:135 mm, 2.8 f or 50 mm, 1.4 f:30 mm, 2 f) onto a 1M60 Pantera CCD camera (Dalsa). GCaMP was excited with a
+		blue LED (Luxeon, 473 nm) with a band-pass filter (Chroma, 467–499 nm) delivered to the surface of the cortex through a
+		liquid light guide (Thorlabs). GCaMP fluorescence emission was filtered using a 510–550 nm band-pass filter (Chroma).
+		12-bit images were collected at 30 frames per second using XCAP imaging software using 8x8 pixel on-chip binning, yielding
+   		images of size 128x128 pixels. Video acquisition was triggered by the Jetson which also started behavior video recording,
+   		and after a few seconds of delay, the blue cortical excitation LED and the infrared behavior LED were simultaneously
+   		turned on by TTL from the Jetson. At the end of the trial, the cortical and behavior LEDs were turned off simultaneously
+   		prior to stopping acquisition. Frames were synchronized across behavior and brain cameras by matching the illuminated
+   		frames at the start and end of the trial.
 
 3. Methods for processing the data: 
 
