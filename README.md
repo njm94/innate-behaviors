@@ -65,12 +65,17 @@ METHODOLOGICAL INFORMATION
 
 	Behavior imaging
 
-		Mice were head-restrained in a plexiglass apparatus and the scene was illuminated with 850nm LEDs (Gupta and Murphy 2025). A monochrome camera (Omron-			Sentech, STC-MBS43U3V) connected to a NVIDIA Jetson was equipped with a bandpass infrared filter (840-865 nm, Bock Optronics) and positioned directly in 		front of the animal to record 8-bit behavior videos at 90 frames per second with a resolution of 640 x 320 pixels (Figure 1A). After an initial baseline 		period, grooming behavior was evoked by delivering a drop of water onto the orofacial area once per minute for 20 minutes. Each water drop stimulus was 		preceded by a 1-second 10kHz tone followed by a 1-second delay period (Figure 1B). For each mouse, at least two spontaneous sessions, which contained the 		audio cue without the water drop stimulus, were recorded before the evoked grooming sessions (Figure 1C). 
+		Mice were head-restrained in a plexiglass apparatus and the scene was illuminated with 850nm LEDs (Gupta and Murphy 2025). A monochrome camera (Omron-
+		Sentech, STC-MBS43U3V) connected to a NVIDIA Jetson was equipped with a bandpass infrared filter (840-865 nm, Bock Optronics) and positioned directly in
+		front of the animal to record 8-bit behavior videos at 90 frames per second with a resolution of 640 x 320 pixels (Figure 1A). After an initial baseline
+		period, grooming behavior was evoked by delivering a drop of water onto the orofacial area once per minute for 20 minutes. Each water drop stimulus was
+		preceded by a 1-second 10kHz tone followed by a 1-second delay period (Figure 1B). For each mouse, at least two spontaneous sessions, which contained the
+		audio cue without the water drop stimulus, were recorded before the evoked grooming sessions (Figure 1C). 
 
-2. Methods for processing the data: 
+3. Methods for processing the data: 
 
 
-3. Instrument- or software-specific information needed to interpret the data: 
+4. Instrument- or software-specific information needed to interpret the data: 
 
 	Instruments
 
