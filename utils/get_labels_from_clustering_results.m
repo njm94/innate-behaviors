@@ -53,7 +53,13 @@ for i = 1:size(umap_results.bFiles,1)
         newBfiles(i,:) = strrep(umap_results.bFiles(i,:), 'teamshare/nick', 'teamshare/TM_Lab/nick');
         % newBfiles = umap_results.bFiles;
     else
-        newBfiles(i,:) = strrep(umap_results.bFiles(i,:), '/media/user/teamshare/TM_Lab/', 'Y:');
+        if contains(umap_results.bFiles(i,:), '/media/user/teamshare/TM_Lab/')
+            newBfiles(i,:) = strrep(umap_results.bFiles(i,:), '/media/user/teamshare/TM_Lab/', 'Y:\');
+        elseif contains(umap_results.bFiles(i,:), '/media/user/teamshare/')
+            newBfiles(i,:) = strrep(umap_results.bFiles(i,:), '/media/user/teamshare/', 'Y:\');
+        else
+            disp(['Check filepaths for ', umap_results.bFiles(i,:)])
+        end
         newBfiles(i,:) = strrep(newBfiles(i,:), '/', '\');
     end
 end
