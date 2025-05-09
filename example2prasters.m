@@ -338,7 +338,12 @@ legend({'All neurons', 'Grooming neurons', ''}, 'Location', 'Best')
 gg.Parent.FontSize = 12;
 
 
-h1 = isnormal(ncorr);
+ncorr2 = ncorr;
+for i = 1:length(gcorr)
+    ncorr2(find(ncorr2==gcorr(i),1))=[];
+end
+
+h1 = isnormal(ncorr2);
 h2 = isnormal(gcorr);
 if ~h1 || ~h2
     disp('At least one distribution is not normal')
@@ -346,7 +351,9 @@ else
     disp('Both distributions normal')
 end
 
-[p,h, stats] = ranksum(ncorr, gcorr);
+disp(['Grooming neurons: ', num2str(median(gcorr)),'+/-', num2str(iqr(gcorr))])
+disp(['All other neurons: ', num2str(median(ncorr2)),'+/-', num2str(iqr(ncorr2))])
+[p,h, stats] = ranksum(ncorr2, gcorr);
 disp(['Grooming population is different from all neurons: Wilcoxon RankSum test, p=', num2str(p)])
 axis([-1 1 0 500])
 % saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'neuron_grooming_correlation.svg']))
@@ -404,7 +411,9 @@ else
     disp('Both distributions normal')
 end
 
-[h,p] = ttest(gcorr, gcorrm);
+[h,p, ~, stats] = ttest(gcorr, gcorrm);
+disp(['Grooming: ', num2str(mean(gcorr)),'+/-', num2str(std(gcorr))])
+disp(['Movement: ', num2str(mean(gcorrm)),'+/-', num2str(std(gcorrm))])
 disp(['Grooming population vs all neurons: Paired t-test, p=', num2str(p)])
 % saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'groomingpop_groomingvsmovementcorrelation.svg']))
 
@@ -567,6 +576,14 @@ for i = 1:size(long_groom_mat,1)
     X = long_groom_mat(i,round(blen*fs):ep_length(i));
     t = xt(X, fs);
     avg_slope(i,:) = polyfit(t, X, 1);
+
+    % one episode has nans at end - likely due to episode occuring at the
+    % end of the session
+    if isnan(avg_slope(i,1))
+        X = X(1:find(isnan(X),1)-1);
+        t = xt(X, fs);
+        avg_slope(i,:) = polyfit(t, X, 1);
+    end
     
     % figure, plot(t, X)
     % f = fit(t,X,'exp1')

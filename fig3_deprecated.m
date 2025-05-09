@@ -98,7 +98,7 @@ for j = 1:length(data_list{1})+1
 
     
     % remove point events from event matrix
-    % idx = contains(events.Properties.VariableNames, 'Drop') | ...
+    % idx = contains(events.Properties.VariableNames, close al'Drop') | ...
     %     contains(events.Properties.VariableNames, 'Video') | ...
     %     contains(events.Properties.VariableNames, 'Flail') ;
     idx = contains(events.Properties.VariableNames, 'Lick') | ...
@@ -113,6 +113,10 @@ for j = 1:length(data_list{1})+1
     eth_events = removevars(events, idx);
     
     bmat = any(table2array(groom_events),2);
+    if ~any(bmat)
+        continue
+    end
+
     [episodes, idx] = aggregate(bmat, aggregation_sz);
     episode_durations = diff(idx, 1, 2)/fs;
 
@@ -177,10 +181,6 @@ for j = 1:length(data_list{1})+1
     % get ROIs - seeds are in atlas coords
     [seeds, labels] = get_seeds();
 
-    % use these vars to find contiguous stretch of stationary behavior
-    % which is same duration as grooming- we will overwrite tmp in the loop
-    % starting with longest grooming behavior first, so we avoid choosing
-    % same time
     any_behavior = any([bmat, LeftMove, RightMove], 2);
     tmp = any_behavior;
 
@@ -190,25 +190,42 @@ for j = 1:length(data_list{1})+1
 
         tmp_idx(i,:) = [idx(i,1)-round(blen*fs), idx(i,2)+round(blen*fs)];
         try 
+
             dFF_crop = dFF(:,:,tmp_idx(i,1):tmp_idx(i,2));
-    
-            % get into atlas coords
-            dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
-            ts = getTimeseries(dFF_crop, seeds, 2);
-    
+
             % set windows
             prewin = 1:round(blen*fs);
             earlywin = round(blen*fs)+1:2*round(blen*fs);
-            latewin = size(ts,1)-2*round(blen*fs):size(ts,1)-round(blen*fs);
-            postwin = size(ts,1)-round(blen*fs)+1:size(ts,1);
+            latewin = size(dFF_crop,3)-2*round(blen*fs):size(dFF_crop,3)-round(blen*fs);
+            postwin = size(dFF_crop,3)-round(blen*fs)+1:size(dFF_crop,3);
+
+            % fname = ['dFF_', mouse_id, '_', exp_date, '_', num2str(i)];
+            % fileID = fopen(['/home/user/teamshare/TM_Lab/nick/behavior/grooming/1p/outputs/', filesep, fname, '.raw'],'w', 'l');
+            % fwrite(fileID, single(dFF_crop),'single');
+            % fclose(fileID);
     
-            % pre_corrmat{j}(:,:,i) = corrcoef(ts(prewin, :));
-            % early_corrmat{j}(:,:,i) = corrcoef(ts(earlywin, :));
-            % late_corrmat{j}(:,:,i) = corrcoef(ts(latewin, :));
-            % post_corrmat{j}(:,:,i) = corrcoef(ts(postwin, :));
+
+%             % get into atlas coords
+%             dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
+%             ts = getTimeseries(dFF_crop, seeds, 2);
+%             
+%             if i == 1
+%                 figure
+%                 mask_warp = imwarp(mask, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
+%                 imagesc(mask_warp), hold on
+%                 scatter(seeds(:,1), seeds(:,2))
+%             end
+%                
+%             pre_corrmat{j}(:,:,i) = corrcoef(ts(prewin, :));
+%             early_corrmat{j}(:,:,i) = corrcoef(ts(earlywin, :));
+%             late_corrmat{j}(:,:,i) = corrcoef(ts(latewin, :));
+%             post_corrmat{j}(:,:,i) = corrcoef(ts(postwin, :));
+
+            % continue
     
             global_signal{j}{i,:} = squeeze(mean(dFF_crop, [1 2], 'omitnan'));
             roi_signal{j}{i} = ts;
+
     
     
             % find a period of time that is equal in length with no activity
@@ -286,7 +303,8 @@ for i = 1:length(global_signal)
     if ~isempty(global_signal{i})
         for j = 1:length(global_signal{i})
             if ~isempty(global_signal{i}{j})
-                all_global{counter} = global_signal{i}{j}(1:end-(round(blen*fs)));
+                % all_global{counter} = global_signal{i}{j}(1:end-(round(blen*fs)));
+                all_global{counter} = global_signal{i}{j};
                 all_dur(counter) = length(all_global{counter});
                 counter = counter + 1;
             end
@@ -337,9 +355,9 @@ figure, hold on
 shadedErrorBar(t(1:p50), mean(mat_global(:,1:p50), 'omitnan'), std(mat_global(:,1:p50), 'omitnan'), 'k', 1)
 line([0 0], ylim, 'Color', [0 0 0], 'LineWidth', 2)
 
-% xticklabels([])
-% yticklabels([])
-% exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_average.png']), 'Resolution', 300)
+xticklabels([])
+yticklabels([])
+exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'longgroom_average.png']), 'Resolution', 300)
 
 %%
 t = xt(mat_global, fs, 2)-5;
@@ -353,19 +371,22 @@ dff_early = mean(mat_global(:,t_early), 2, 'omitnan');
 
 for i = 1:length(all_dur)
     t_late_idx = all_dur(sort_idx(i));
-    t_late = t_late_idx - blen*fs;
-    dff_late(i) = mean(mat_global(i, t_late:end), 'omitnan');
+    t_late = t_late_idx - 2*blen*fs;
+    dff_late(i) = mean(mat_global(i, t_late:t_late_idx-blen*fs), 'omitnan');
+    dff_post(i) = mean(mat_global(i, t_late_idx-blen*fs + 1: end), 'omitnan');
+    % t_late = t_late_idx - blen*fs;
+    % dff_late(i) = mean(mat_global(i, t_late:end), 'omitnan');
 end
 % t_late = t>5;
 % dff_late = mean(mat_global(:,t_late), 2, 'omitnan');
 
 
-plot_data = [dff_pre, dff_early, dff_late'];
+plot_data = [dff_pre, dff_early, dff_late', dff_post'];
 figure, boxplot(plot_data, 'Colors', 'k', 'Symbol', '')
 hold on
-swarmchart(repmat([1 2 3], size(dff_early,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
+swarmchart(repmat([1 2 3 4], size(dff_early,1), 1), plot_data, 'k', 'XJitterWidth', 0.25)
 ylabel('Mean cortical \DeltaF/F_0 (\sigma)')
-xticklabels({'Before 5s', 'First 5s', 'Last 5s'})
+xticklabels({'Before 5s', 'First 5s', 'Last 5s', 'After 5s'})
 ax = gca;
 ax.FontSize = 14;
 
@@ -375,10 +396,10 @@ ax.FontSize = 14;
 
 clc
 % Create a table with the data
-tbl = array2table(plot_data, 'VariableNames', {'Pre', 'Early', 'Late'});
+tbl = array2table(plot_data, 'VariableNames', {'Before', 'Early', 'Late', 'After'});
 
 % Define the repeated measures model
-rm = fitrm(tbl, 'Pre-Late ~ 1', 'WithinDesign', [1 2 3]'); % 3 time periods
+rm = fitrm(tbl, 'Before-After ~ 1', 'WithinDesign', [1 2 3 4]'); % 3 time periods
 
 % Run repeated-measures ANOVA
 ranova_results = ranova(rm);
@@ -602,3 +623,4 @@ for j = 1:length(mice)
     end
     
 end
+

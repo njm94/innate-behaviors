@@ -50,7 +50,8 @@ end
 % Match behavior files using the boris filename
 for i = 1:size(umap_results.bFiles,1)
     if isunix
-        newBfiles = umap_results.bFiles;
+        newBfiles(i,:) = strrep(umap_results.bFiles(i,:), 'teamshare/nick', 'teamshare/TM_Lab/nick');
+        % newBfiles = umap_results.bFiles;
     else
         newBfiles(i,:) = strrep(umap_results.bFiles(i,:), '/media/user/teamshare/TM_Lab/', 'Y:');
         newBfiles(i,:) = strrep(newBfiles(i,:), '/', '\');
