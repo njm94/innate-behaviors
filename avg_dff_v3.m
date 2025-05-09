@@ -8,7 +8,7 @@ clc, clear, close all
 addpath('/home/user/Documents/grooming/utils')
 
 
-cluster_data = fix_path('Y:\nick\behavior\grooming\20241112141427_behavior_clustering.mat');
+% cluster_data = fix_path('Y:\nick\behavior\grooming\20241112141427_behavior_clustering.mat');
 cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
 fileID = fopen('expt1_datalist.txt','r');
 
