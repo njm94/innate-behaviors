@@ -2,14 +2,15 @@ clear
 load(fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat'))
 
 figure, hold on
-labs = unique(dendrogram_labels);
+
+label_map = {'Right', 'Left', 'Left Asymmetric', 'Elliptical Left', 'Elliptical Right', 'Right Asymmetric', 'Elliptical'};
 labs = unique(cellstr(manual_labels));
-% manual_label_map = 1:7;
+manual_label_map = {'Elliptical', 'Elliptical Asymmetric', 'Large Bilateral', 'Left', 'Left Asymmetric', 'Right', 'Right Asymmetric'};
 for i = 1:length(labs)
-    % scatter(embedding(dendrogram_labels==labs(i),1), embedding(dendrogram_labels==labs(i),2),'.')
+%     scatter(embedding(dendrogram_labels==labs(i),1), embedding(dendrogram_labels==labs(i),2),'.')
     scatter(embedding(strcmp(cellstr(manual_labels), labs{i}), 1), embedding(strcmp(cellstr(manual_labels), labs{i}), 2), '.')
 end
-legend(labs, 'Box','off')
+legend(manual_label_map, 'Box','off')
 %%
 ax = gca;
 saveas(ax, fix_path(['Y:\nick\behavior\grooming\figures\','manual_UMAP', '.svg']))
@@ -29,6 +30,8 @@ bFiles = cellstr(newBfiles);
 %%
 clc
 behavior_files = unique(bFiles);
+labs = unique(dendrogram_labels);
+
 
 counts = cell(1, length(labs));
 % figure
@@ -95,7 +98,7 @@ for i = 1:length(counts)
     
     
     ax = gca;
-    exportgraphics(ax, fix_path(append('Y:\nick\behavior\grooming\figures\', label_map(i),'.png')), 'Resolution', 300, 'ContentType', 'image')
+%     exportgraphics(ax, fix_path(append('Y:\nick\behavior\grooming\figures\', label_map(i),'.png')), 'Resolution', 300, 'ContentType', 'image')
 end
 
 

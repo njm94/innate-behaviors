@@ -1,4 +1,4 @@
-function [events, b_idx, t, video_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_tsv, include_boris, prune_outliers)
+function [events, b_idx, t, video_end, cluster_labels] = get_labels_from_clustering_results(cluster_data, boris_tsv, include_boris)
 % Get labels from UMAP clustering analysis in the same format as read_boris
 %
 % Inputs: 
@@ -7,7 +7,6 @@ function [events, b_idx, t, video_end, cluster_labels] = get_labels_from_cluster
 %                   video end information)
 %   include_boris   (include lick and drop information from BORIS file into
 %                   event matrix. Default FALSE)
-%   prune_outliers  (exclude behaviors with a low silhouette score (<0) )
 %
 % Outputs:
 %       events          (Binary table [trial_length x num_behaviors])
@@ -21,7 +20,6 @@ function [events, b_idx, t, video_end, cluster_labels] = get_labels_from_cluster
 %       [events, b_idx, t] = read_boris(boris_tsv, len);
 
 if nargin<3 || isempty(include_boris), include_boris = false; end
-if nargin<4 || isempty(prune_outliers), prune_outliers = false; end
 
 % load umap clustering results
 % umap_file = fix_path('Y:\nick\behavior\grooming\220241108104909_behavior_clustering.mat');
@@ -39,12 +37,6 @@ label_map = ["Right", "Left", "Left Asymmetric", "Elliptical Left", ...
 
 % get video end information from boris
 [boris_events, ~, t, video_end] = read_boris(boris_tsv);
-
-if prune_outliers
-    prune_idx = umap_results.silhouette_vals<0;
-else
-    prune_idx = false(size(umap_results.silhouette_vals));
-end
 
 
 % Match behavior files using the boris filename
@@ -64,11 +56,8 @@ for i = 1:size(umap_results.bFiles,1)
     end
 end
 
-% prune outliers if specified
+
 bFiles = cellstr(newBfiles);
-bFiles = bFiles(~prune_idx);
-labels = labels(~prune_idx);
-b_idx = b_idx(~prune_idx,:);
 clear newBfiles
 
 matchingIndex = strcmp(bFiles, boris_tsv);

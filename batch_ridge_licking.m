@@ -24,7 +24,7 @@ current_mouse = '';
 
 %%
 k = 0.2;
-expts_to_analyze = hyl3_idx;
+expts_to_analyze = gt33_idx;
 for j = 1:length(expts_to_analyze)+1
      try
         data_dir = data_list{expts_to_analyze(j)};
@@ -224,6 +224,15 @@ for j = 1:length(expts_to_analyze)+1
 
     clear U s V Vbrain
 end
+
+%% make averaged map
+
+dff = zscore(reshape(Umaster*Vmaster, 128, 128, size(Vmaster,2)), [], 3);
+
+figure, imagesc(mean(dff(:,:,lick_rate>=1),3))
+colorbar
+colormap(bluewhitered())
+
 
 
 %%
