@@ -230,7 +230,7 @@ end
 
 fullLabels
 visual = true;
-cBetaRight = check_beta('Lick', fullLabels, fullIdx, Umaster, mean(catcell(3,fullBeta),3), Vfull, [], visual);
+cBetaRight = check_beta('LickRate', fullLabels, fullIdx, Umaster, mean(catcell(3,fullBeta),3), Vfull, [], visual);
 
 %%
 
