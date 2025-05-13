@@ -579,6 +579,7 @@ for j = 1:length(mice)
         
         behavior_map = behavior_map(:,:,j);
         behavior_map = nanmask(:,:,j).*imwarp(behavior_map, tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)));
+        
         all_behavior_maps{i}(:,:,j) = behavior_map;
         v = prctile(behavior_map(:), thresh);
         binary_maps{i}(:,:,j) = behavior_map >= v;

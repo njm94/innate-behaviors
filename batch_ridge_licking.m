@@ -67,76 +67,88 @@ for j = 1:length(expts_to_analyze)+1
             lick_rate = catcell(1,lick_rate);
 %             new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
 
-            % ridge here
-            disp('Building design matrix')
-            opts.frameRate = fs;
-            opts.sPostTime=round(fs*2);
-            opts.mPreTime = ceil(0.5 * fs);  % precede motor events to capture preparatory activity in frames (used for eventType 3)
-            opts.mPostTime = ceil(2 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
-            opts.framesPerTrial = min_trial_length; % nr. of frames per trial
-            opts.folds = 10; %nr of folds for cross-validation
-            
-            regressor_mat = [mvtOn' lick_start]; 
-            % Full-Trial events:    new_trial
-            % Peri-Stimulus events: 
-            [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3], opts);
-            regLabels = {'Movement', 'Lick'}; %some movement variables
-%             regLabels = {'Movement', 'Lick', 'LickRate'}; %some movement variables
-%             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 1], opts);
-%             regLabels = {'Movment', 'Lick', 'Trial'}; %some movement variables
-%             fullR = [dMat lick_rate];
-            fullR = [dMat];
-%             regIdx = [regIdx; max(regIdx)+1];
-
-            disp('Running ridge regression with 10-fold cross-validation')
-            [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Vmaster, regLabels, regIdx, regLabels, opts.folds);
+% commented for speed
+%             % ridge here
+%             disp('Building design matrix')
+%             opts.frameRate = fs;
+%             opts.sPostTime=round(fs*2);
+%             opts.mPreTime = ceil(0.5 * fs);  % precede motor events to capture preparatory activity in frames (used for eventType 3)
+%             opts.mPostTime = ceil(2 * fs);   % follow motor events for mPostStim in frames (used for eventType 3)
+%             opts.framesPerTrial = min_trial_length; % nr. of frames per trial
+%             opts.folds = 10; %nr of folds for cross-validation
+%             
+%             regressor_mat = [mvtOn' lick_start]; 
+%             % Full-Trial events:    new_trial
+%             % Peri-Stimulus events: 
+%             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3], opts);
+%             regLabels = {'Movement', 'Lick'}; %some movement variables
+% %             regLabels = {'Movement', 'Lick', 'LickRate'}; %some movement variables
+% %             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 1], opts);
+% %             regLabels = {'Movment', 'Lick', 'Trial'}; %some movement variables
+% %             fullR = [dMat lick_rate];
+%             fullR = [dMat];
+% %             regIdx = [regIdx; max(regIdx)+1];
+% 
+%             
+%             disp('Running ridge regression with 10-fold cross-validation')
+%             [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Vmaster, regLabels, regIdx, regLabels, opts.folds);
 %             save([fPath 'cvFull.mat'], 'Vfull', 'fullBeta', 'fullR', 'fullIdx', 'fullRidge', 'fullLabels', '-v7.3'); %save some results
-            
-            fullMat = modelCorr(Vmaster,Vfull,Umaster) .^2;
+%             
+%             fullMat = modelCorr(Vmaster,Vfull,Umaster) .^2;
+% 
+%             % break
+% 
+%             disp('Running reduced models')
+%             reducedMat = [];
+%             for i = 1:length(regLabels)
+%                 reduced = fullR;
+%                 cIdx = regIdx == i;
+%                 if ~any(cIdx)
+%                     disp(['No ', regLabels{i}, '  events found. Skipping...'])
+%                     continue
+%                 end
+%                 reduced(:, cIdx) = reduced(randperm(size(reduced, 1)), cIdx);
+%             
+%                 [Vreduced{i}, reducedBeta{i}, reducedR, reducedIdx, reducedRidge, reducedLabels] = crossValModel(reduced, Vmaster, regLabels, regIdx, regLabels, opts.folds);
+%                 reducedMat(:, i) = modelCorr(Vmaster, Vreduced{i}, Umaster) .^2; %compute explained variance
+%             end
+% 
+%             % save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
+% 
+%             figure
+%             subplot(3, 1, 1)
+%             imagesc(reshape(fullMat, [128 128]))
+%             xticks([])
+%             c=colorbar;
+%             title('FullMat')
+%             c.Label.String = 'cvR^2';
+%             yticks([])
+%             for i = 1:length(regLabels)
+%                 subplot(3, 1, i+1)
+%                 imagesc(reshape(fullMat - reducedMat(:,i), [128 128]))
+%                 c=colorbar;
+%                 title(regLabels{i})
+%                 c.Label.String = '\DeltaR^2';
+%             
+%                 xticks([])
+%                 yticks([])
+%             end
+% 
+%
+%             savefig(gcf, [fPath 'drinking_summary.fig'])
+% commented for speed ^^
 
-            % break
 
-            disp('Running reduced models')
-            reducedMat = [];
-            for i = 1:length(regLabels)
-                reduced = fullR;
-                cIdx = regIdx == i;
-                if ~any(cIdx)
-                    disp(['No ', regLabels{i}, '  events found. Skipping...'])
-                    continue
-                end
-                reduced(:, cIdx) = reduced(randperm(size(reduced, 1)), cIdx);
-            
-                [Vreduced{i}, reducedBeta{i}, reducedR, reducedIdx, reducedRidge, reducedLabels] = crossValModel(reduced, Vmaster, regLabels, regIdx, regLabels, opts.folds);
-                reducedMat(:, i) = modelCorr(Vmaster, Vreduced{i}, Umaster) .^2; %compute explained variance
-            end
+            % make averaged map
+            dff = zscore(reshape(Umaster*Vmaster, 128, 128, size(Vmaster,2)), [], 3);
+            figure, imagesc(mean(dff(:,:,lick_rate>=1),3).*mask)
+            colorbar
+            colormap(bluewhitered())
+            nanmask = mask;
+            nanmask(mask==0) = nan;
+            savefig(gcf, [fPath 'average_licking_map.fig'])
 
-            % save([fPath 'cvReduced.mat'], 'Vreduced', 'reducedBeta', 'reducedR', 'reducedIdx', 'reducedRidge', 'reducedLabels', '-v7.3'); %save some results
-
-            figure
-            subplot(3, 1, 1)
-            imagesc(reshape(fullMat, [128 128]))
-            xticks([])
-            c=colorbar;
-            title('FullMat')
-            c.Label.String = 'cvR^2';
-            yticks([])
-            for i = 1:length(regLabels)
-                subplot(3, 1, i+1)
-                imagesc(reshape(fullMat - reducedMat(:,i), [128 128]))
-                c=colorbar;
-                title(regLabels{i})
-                c.Label.String = '\DeltaR^2';
-            
-                xticks([])
-                yticks([])
-            end
-
-%             twer
-
-        
-            savefig(gcf, [fPath 'drinking_summary.fig'])
-
+            save([fPath 'outputs.mat'], 'Vmaster', 'lick*', 'mvt*', 'min_trial_length', 'nanmask', '-v7.3')            
 
             % all mice completed - break the loop
             if j == length(data_list{1})+1, break; end
@@ -231,21 +243,7 @@ for j = 1:length(expts_to_analyze)+1
     clear U s V Vbrain
 end
 
-%% make averaged map
 
-dff = zscore(reshape(Umaster*Vmaster, 128, 128, size(Vmaster,2)), [], 3);
-%%
-figure, imagesc(mean(dff(:,:,lick_rate>=1),3).*mask)
-colorbar
-colormap(bluewhitered())
-
-%%
-nanmask = mask;
-nanmask(mask==0) = nan;
-
-figure, plot(squeeze(mean(dff.*nanmask, [1 2], 'omitnan')))
-hold on, patchplot(arr2idx(lick_rate>=1), [-2 4], 'm', 0.2)
-patchplot(arr2idx(mvt), [-2 4], 'k', 0.2)
 
 
 
@@ -259,6 +257,149 @@ cBetaRight = check_beta('Lick', fullLabels, fullIdx, Umaster, mean(catcell(3,ful
 
 %%
 
+load('allenDorsalMap.mat');
+fPath = 'Y:\nick\behavior\grooming\figures';
+
+data_list = {'Y:\pankaj\closedloop_rig5_data\GER2_ai94_drinking', ...
+    'Y:\pankaj\closedloop_rig5_data\HYL3_tta_drinking', ...
+    'Y:\pankaj\closedloop_rig5_data\ECR2_thy1_drinking', ...
+    'Y:\pankaj\closedloop_rig5_data\GT33_tta_drinking'};
+
+example_mouse = 2;
+figure, hold on
+clear lick_map
+axis off, hold on
+for p = 1:length(dorsalMaps.edgeOutline)
+    plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
+    xticks([])
+    yticks([])
+end
+set(gca, 'YDir', 'reverse');
+for i = 1:length(data_list)
+    load([data_list{i}, filesep, 'mask.mat'])
+    h = openfig([data_list{i}, filesep, 'outputs' filesep, 'average_licking_map.fig']);
+    load([data_list{i}, filesep, 'atlas_tform.mat'])
+
+    nanmask = mask;
+    nanmask(mask==0) = nan;
+    lick_map(:,:,i) = imwarp(h.Children(2).Children.CData.*nanmask, tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
+
+    if i == example_mouse
+        img_data = h.Children(2).Children.CData.*nanmask;
+        figure; bb=imagesc(img_data);
+        set(bb, 'AlphaData', ~isnan(img_data))
+        caxis([-0.2 1.2])
+        axis off
+        exportgraphics(gcf, fix_path([fPath, filesep, 'drinking_lick_dff_example.png']), 'Resolution', 300)
+        close(gcf)
+        figure, axis off, caxis([-0.2 1.2])
+        colorbar
+        exportgraphics(gcf, fix_path([fPath, filesep, 'drinking_lick_dff_example_colorbar.png']), 'Resolution', 300)
+        close(gcf)
+    end
+    close(h)
+    v = prctile(lick_map(:,:,i), 80);
+    binary_maps(:,:,i) = lick_map(:,:,i)>=v;
+    contourf(binary_maps(:,:,i).*i, [i-0.1 i-0.1], 'FaceAlpha', 0.25)
+
+    
+    
+end
+
+% exportgraphics(gcf, fix_path([fPath, filesep, 'drinking_lick_dff_contours.png']), 'Resolution', 300)
+%%
+
+figure, hold on
+clear lick_map binary_maps
+axis off, hold on
+for p = 1:length(dorsalMaps.edgeOutline)
+    plot(dorsalMaps.edgeOutline{p}(:, 2), dorsalMaps.edgeOutline{p}(:, 1), 'k', 'LineWidth', 1);
+    xticks([])
+    yticks([])
+end
+set(gca, 'YDir', 'reverse');
+for i = 1:length(data_list)
+    load([data_list{i}, filesep, 'mask.mat'])
+    nanmask = mask;
+    nanmask(mask==0) = nan;
+    load([data_list{i}, filesep, 'atlas_tform.mat'])
+    h = openfig([data_list{i}, filesep, 'outputs' filesep, 'drinking_summary.fig']);    
+    for j = 1:length(h.Children)
+        switch(h.Children(j).Title.String)
+            case 'Lick' 
+                lick_map(:,:,i) = imwarp(h.Children(j).Children.CData.*nanmask, tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
+            otherwise
+                continue
+        end
+    end
+
+    close(h)
+
+    v = prctile(lick_map(:,:,i), 80);
+    binary_maps(:,:,i) = lick_map(:,:,i)>=v;
+    contourf(binary_maps(:,:,i).*i, [i-0.1 i-0.1], 'FaceAlpha', 0.25)
+
+end
+
+exportgraphics(gcf, fix_path([fPath, filesep, 'drinking_lick_dcvr2_contours.png']), 'Resolution', 300)
+
+%%
+
+clear, clc
+data_list = {'Y:\pankaj\closedloop_rig5_data\GER2_ai94_drinking', ...
+    'Y:\pankaj\closedloop_rig5_data\HYL3_tta_drinking', ...
+    'Y:\pankaj\closedloop_rig5_data\ECR2_thy1_drinking', ...
+    'Y:\pankaj\closedloop_rig5_data\GT33_tta_drinking'};
+
+example_mouse = data_list{2};
+load([example_mouse, filesep, 'outputs', filesep, 'outputs.mat'])
+load([example_mouse, filesep, 'Umaster.mat'])
+load([example_mouse, filesep, 'mask.mat'])
+nanmask = mask;
+nanmask(nanmask==0) = nan;
+%%
+% look at first 4 trials as example
+num_trials = 4;
+figure, 
+for i = 1:num_trials
+    idx = min_trial_length*(i-1)+1:min_trial_length*i;
+    dff = zscore(reshape(Umaster*Vmaster(:,idx), 128, 128, []),[],3);
+    t = xt(dff, 30, 3);
+    subplot(num_trials,1,i), hold on, 
+    plot(t, squeeze(mean(dff.*nanmask, [1 2], 'omitnan')), 'k', 'LineWidth', 1)
+    ax=gca;
+    patchplot(t(arr2idx(lick_rate(idx)>=1)), [ax.YLim(1) ax.YLim(2)], 'm', 0.2)
+    patchplot(t(arr2idx(mvt(idx))), [ax.YLim(1) ax.YLim(2)], 'b', 0.2)
+    plot(t, squeeze(mean(dff.*nanmask, [1 2], 'omitnan')), 'k', 'LineWidth', 1)
+%     plot(t, smoothdata(lick_rate(idx), 'gaussian', 10))
+    axis tight
+end
+
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'drinking_4trials.svg']))
+%% Plot lick rates for trial structure figure.
+% Use just the example mouse since others have variable durations
+
+for i = 1:12
+    idx = min_trial_length*(i-1)+1:min_trial_length*i;
+    lick_rate_compile(i,:) = lick_rate(idx);
+end
+% idx = 1:4*min_trial_length;
+% test = zscore(reshape(Umaster*Vmaster(:,idx), 128, 128, []),[],3);
+% figure
+% imagesc(mean(test(:,:,lick_rate(idx)>=1),3))
+figure, shadedErrorBar(t, mean(lick_rate_compile), std(lick_rate_compile)./sqrt(size(lick_rate_compile,1)))
+axis tight
+% figure, shadedErrorBar(t, mean(lick_rate_compile), std(lick_rate_compile))
+xlabel('Time (s)')
+ylabel('Licks per second')
+
+%% Plot the averaged dFF map
+figure
+h = openfig('Y:\pankaj\closedloop_rig5_data\HYL3_tta_drinking\outputs\average_licking_map.fig')
+taetae
+% lick_map = 
+colormap parula
+%%
 % figure
 fs = 90;
 fullLabels
