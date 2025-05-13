@@ -24,7 +24,7 @@ current_mouse = '';
 
 %%
 k = 0.2;
-expts_to_analyze = gt33_idx;
+expts_to_analyze = 1:length(data_list);
 for j = 1:length(expts_to_analyze)+1
      try
         data_dir = data_list{expts_to_analyze(j)};
@@ -53,17 +53,19 @@ for j = 1:length(expts_to_analyze)+1
             num_trials = length(Vmaster);
             for i = 1:num_trials
                 Vmaster{i} = Vmaster{i}(:,1:min_trial_length);
+                mvt{i} = mvt{i}(1:min_trial_length);
                 mvtOn{i} = mvtOn{i}(1:min_trial_length);
                 lick_start{i} = lick_start{i}(1:min_trial_length);
                 lick_timer{i} = lick_timer{i}(1:min_trial_length);
                 lick_rate{i} = lick_rate{i}(1:min_trial_length);
             end
             Vmaster = catcell(2, Vmaster);
+            mvt = catcell(1, mvt);
             mvtOn = catcell(1, mvtOn)';
             lick_start = catcell(1, lick_start);
             lick_timer = catcell(1, lick_timer);
             lick_rate = catcell(1,lick_rate);
-            new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
+%             new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
 
             % ridge here
             disp('Building design matrix')
@@ -78,11 +80,13 @@ for j = 1:length(expts_to_analyze)+1
             % Full-Trial events:    new_trial
             % Peri-Stimulus events: 
             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3], opts);
-            regLabels = {'Movement', 'Lick', 'LickRate'}; %some movement variables
+            regLabels = {'Movement', 'Lick'}; %some movement variables
+%             regLabels = {'Movement', 'Lick', 'LickRate'}; %some movement variables
 %             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 1], opts);
 %             regLabels = {'Movment', 'Lick', 'Trial'}; %some movement variables
-            fullR = [dMat lick_rate];
-            regIdx = [regIdx; max(regIdx)+1];
+%             fullR = [dMat lick_rate];
+            fullR = [dMat];
+%             regIdx = [regIdx; max(regIdx)+1];
 
             disp('Running ridge regression with 10-fold cross-validation')
             [Vfull, fullBeta, ~, fullIdx, fullRidge, fullLabels] = crossValModel(fullR, Vmaster, regLabels, regIdx, regLabels, opts.folds);
@@ -118,7 +122,7 @@ for j = 1:length(expts_to_analyze)+1
             c.Label.String = 'cvR^2';
             yticks([])
             for i = 1:length(regLabels)
-                subplot(4, 1, i+1)
+                subplot(3, 1, i+1)
                 imagesc(reshape(fullMat - reducedMat(:,i), [128 128]))
                 c=colorbar;
                 title(regLabels{i})
@@ -128,10 +132,10 @@ for j = 1:length(expts_to_analyze)+1
                 yticks([])
             end
 
-            twer
+%             twer
 
         
-            % savefig(gcf, [fPath 'summary.fig'])
+            savefig(gcf, [fPath 'drinking_summary.fig'])
 
 
             % all mice completed - break the loop
@@ -140,7 +144,8 @@ for j = 1:length(expts_to_analyze)+1
         count = 1;
         disp('Loading master basis set')
         load([mouse_root_dir filesep 'Umaster.mat'])
-        clear Vmaster ipsi contra bilat fll_move flr_move audio_tone water_drop
+%         new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
+        clear Vmaster mvtOn lick_start lick_timer lick_rate mvt 
         current_mouse = mouse_id;
         load([mouse_root_dir filesep 'mask.mat'])
 
@@ -203,9 +208,10 @@ for j = 1:length(expts_to_analyze)+1
     tailbase = sqrt(dlc_speed(:,10).^2 + dlc_speed(:,11).^2);
     
     all_movement = sqrt(fl_l.^2 + fl_r.^2 + hl_l.^2 + hl_r.^2 + snout.^2 + tailbase.^2);
-    mvt = resample(all_movement, size(Vmaster{count},2), length(all_movement));
+    mov = resample(all_movement, size(Vmaster{count},2), length(all_movement));
+    mvt{count} = mov > mean(mov) + std(mov);
 %     k = 10;
-    mvtOn{count} = get_on_time(mvt > mean(mvt) + std(mvt));
+    mvtOn{count} = get_on_time(mvt{count});
 
     disp('Reading BORIS')
     [events, b_idx, b_tab] = read_boris(boris_file);
@@ -228,10 +234,18 @@ end
 %% make averaged map
 
 dff = zscore(reshape(Umaster*Vmaster, 128, 128, size(Vmaster,2)), [], 3);
-
-figure, imagesc(mean(dff(:,:,lick_rate>=1),3))
+%%
+figure, imagesc(mean(dff(:,:,lick_rate>=1),3).*mask)
 colorbar
 colormap(bluewhitered())
+
+%%
+nanmask = mask;
+nanmask(mask==0) = nan;
+
+figure, plot(squeeze(mean(dff.*nanmask, [1 2], 'omitnan')))
+hold on, patchplot(arr2idx(lick_rate>=1), [-2 4], 'm', 0.2)
+patchplot(arr2idx(mvt), [-2 4], 'k', 0.2)
 
 
 
@@ -239,7 +253,7 @@ colormap(bluewhitered())
 
 fullLabels
 visual = true;
-cBetaRight = check_beta('LickRate', fullLabels, fullIdx, Umaster, mean(catcell(3,fullBeta),3), Vfull, [], visual);
+cBetaRight = check_beta('Lick', fullLabels, fullIdx, Umaster, mean(catcell(3,fullBeta),3), Vfull, [], visual);
 
 %%
 
