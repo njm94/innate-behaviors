@@ -40,19 +40,15 @@ These data are available under a Creative Commons Attribution 4.0 International 
 DATA & FILE OVERVIEW
 ---------------------
 
-1. File List
+1. Folder List
 
-   A. Folder:     registration
-      Short description:       Contains MATLAB scripts for registering 2-photon data to Allen Institute CCF
+   A. registration: Contains MATLAB scripts for registering 2-photon data to Allen Institute CCF
 
-   B. Folder:     python
-      Short description:       Contains Python and Jupyter Notebook scripts for pre-processing the data
+   B. python: Contains Python and Jupyter Notebook scripts for pre-processing the data
 
-   C. Folder:     utils
-      Short description:       Contains helper functions used throughout the analysis
+   C. utils: Contains helper functions used throughout the analysis
 
-   D. Folder:     ridgeModel
-      Short description:       Contains the git repository from https://github.com/musall/ridgeModel
+   D. ridgeModel: Contains the git repository from https://github.com/musall/ridgeModel
 
 
 ---------------------------
