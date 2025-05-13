@@ -40,21 +40,15 @@ These data are available under a Creative Commons Attribution 4.0 International 
 DATA & FILE OVERVIEW
 ---------------------
 
-1. File List
+1. Folder List
 
-   A. Folder:     1p
-      Short description:       Contains a list of folders named by SubjectID_Genotype. Each folder contains a list of folders named by YYYYMMDDHHmmss when data was collected
+   registration: Contains MATLAB scripts for registering 2-photon data to Allen Institute CCF
 
-   B. Folder:     2p
-      Short description: 
+   python: Contains Python and Jupyter Notebook scripts for pre-processing the data
 
-   C. Folder name:      mouse_grooming-nick-2023-11-27
-      Short description: 
-	Note: 
+   utils: Contains helper functions used throughout the analysis
 
-   D. Folder name: 
-      Short description: 
-	Note: 
+   ridgeModel: Contains the git repository from https://github.com/musall/ridgeModel
 
 
 ---------------------------
