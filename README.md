@@ -42,13 +42,13 @@ DATA & FILE OVERVIEW
 
 1. Folder List
 
-   A. registration: Contains MATLAB scripts for registering 2-photon data to Allen Institute CCF
+   registration: Contains MATLAB scripts for registering 2-photon data to Allen Institute CCF
 
-   B. python: Contains Python and Jupyter Notebook scripts for pre-processing the data
+   python: Contains Python and Jupyter Notebook scripts for pre-processing the data
 
-   C. utils: Contains helper functions used throughout the analysis
+   utils: Contains helper functions used throughout the analysis
 
-   D. ridgeModel: Contains the git repository from https://github.com/musall/ridgeModel
+   ridgeModel: Contains the git repository from https://github.com/musall/ridgeModel
 
 
 ---------------------------
