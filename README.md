@@ -42,19 +42,17 @@ DATA & FILE OVERVIEW
 
 1. File List
 
-   A. Folder:     1p
-      Short description:       Contains a list of folders named by SubjectID_Genotype. Each folder contains a list of folders named by YYYYMMDDHHmmss when data was collected
+   A. Folder:     registration
+      Short description:       Contains MATLAB scripts for registering 2-photon data to Allen Institute CCF
 
-   B. Folder:     2p
-      Short description: 
+   B. Folder:     python
+      Short description:       Contains Python and Jupyter Notebook scripts for pre-processing the data
 
-   C. Folder name:      mouse_grooming-nick-2023-11-27
-      Short description: 
-	Note: 
+   C. Folder:     utils
+      Short description:       Contains helper functions used throughout the analysis
 
-   D. Folder name: 
-      Short description: 
-	Note: 
+   D. Folder:     ridgeModel
+      Short description:       Contains the git repository from https://github.com/musall/ridgeModel
 
 
 ---------------------------
