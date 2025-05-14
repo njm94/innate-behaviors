@@ -11,6 +11,9 @@ function timeseries = getTimeseries(data, coords, radius)
 if nargin == 1
     timeseries = squeeze(nanmedian(nanmedian(data,2),1));
 else
+    if nargin<3
+        radius = 2;
+    end
     
     T = size(data, 3);
     R = size(coords, 1);
