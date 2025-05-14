@@ -42,7 +42,7 @@ DATA & FILE OVERVIEW
 
 1. Folder List
 
-   registration: Contains MATLAB scripts for registering 2-photon data to Allen Institute CCF
+   registration: Contains MATLAB scripts for registering 1- and 2-photon data to Allen Institute CCF
 
    python: Contains Python and Jupyter Notebook scripts for pre-processing the data
 
