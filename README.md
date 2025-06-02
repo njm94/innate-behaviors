@@ -1,18 +1,16 @@
 --------------------
-GENERAL INFORMATION
+AUTHOR INFORMATION
 --------------------
 
-Author Information
-	
-Principal Investigator Contact Information
-	Name: Timothy Murphy
-	Institution: University of British Colombia
-	Email: thmurphy@mail.ubc.ca
-    
-Associate or Co-investigator Contact Information
-	Name: Nicholas Michelson
-	Institution: University of British Colombia
- 	Email: njm89@student.ubc.ca
+A. Principal Investigator Contact Information
+	 Name: Timothy Murphy
+	 Institution: University of British Colombia
+	 Email: thmurphy@mail.ubc.ca
+
+B. Associate or Co-investigator Contact Information
+	 Name: Nicholas Michelson
+	 Institution: University of British Colombia
+  	 Email: njm89@student.ubc.ca
 
 ---------------------------
 SHARING/ACCESS INFORMATION
