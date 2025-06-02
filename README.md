@@ -26,20 +26,12 @@ SHARING/ACCESS INFORMATION
 This code is available under a Creative Commons Attribution 4.0 International (CC BY 4.0) license <https://creativecommons.org/licenses/by/4.0/> 
 
 2. Links/relationships to ancillary data sets or software packages: 
-https://osf.io/fa2ut/
+
+The data used in the analysis can be found here: https://osf.io/fa2ut/
+
+This analysis makes use of some of the functions from another repository found here: https://github.com/musall/ridgeModel
 
 3. Recommended citation for this dataset: 
 
----------------------
-FILE OVERVIEW
----------------------
 
-1. Folder List
-
-   registration: Contains MATLAB scripts for registering 1- and 2-photon data to Allen Institute CCF
-
-   python: Contains Python and Jupyter Notebook scripts for pre-processing the data
-
-   utils: Contains helper functions used throughout the analysis
-
-   ridgeModel: Contains the git repository from https://github.com/musall/ridgeModel
+    
