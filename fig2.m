@@ -14,10 +14,6 @@ formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
 current_mouse = ''; 
 
-
-% mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
-%     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
-%     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'};
 mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148'; ...
@@ -31,7 +27,6 @@ mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
 cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clustering.mat');
-% data_list{1} = mp_list;
 
 fs = 90 ;
 
@@ -52,27 +47,14 @@ right_idx = [3:6,10:12,16:18,22:24];
 spontaneous = [1,2,8,9,14,15,20,21];
 evoked = [3:7,10:13,16:19,22:25];
 
-% states = ["Stationary", "Elliptical", "Asymmetric", ...
-%     "Elliptical Right", "Elliptical Left", "Unilateral"];
-
-% states = ["Stationary", "Elliptical", "Right Asymmetric", "Left Asymmetric" ...
-%     "Elliptical Right", "Elliptical Left", "Unilateral"];
-
-
-% states = states(randperm(length(states)));
 states = ["Start", "Right", "Left","Elliptical", "Right Asymmetric", "Left Asymmetric" ...
 "Elliptical Right", "Elliptical Left", "Stop"];
 eth_states = [states, "Lick", "Drop"];
 prop_comp_matrix = zeros(4, 7);
 
-% states = ["Start", "Unilateral","Elliptical", "Right Asymmetric", "Left Asymmetric" ...
-% "Elliptical Right", "Elliptical Left", "Stop"];
-
 aggregation_sz = 3;
 
-% data_list{1} = [data_list{1}(evoked); mp_list];
 data_list{1} = [data_list{1}; mp_list];
-% data_list{1} = mp_list;
 
 include_boris = true;
 
@@ -110,9 +92,7 @@ for j = 1:N
  
     else 
         continue
-        % the snippets are a soon-to-be deprecated analysis method. Remove 
-        % this when fully transitioned to the BORIS labels
-        [snippets, labels] = parse_snippets(snippets_dir);
+
     end
 
 
@@ -285,8 +265,7 @@ ax = gcf;
 
 
 %%
-% dat = B(2:6, 2:6, 1);
-% dat = B;
+
 dat = mean(tmat,3, 'omitnan');
 
 [M,Q]=community_louvain(dat);
@@ -395,14 +374,10 @@ axis([0.5 1.75 -1 1])
 function [y,x] = set_xy_states(last_state, current_state, state_order)
         start_idx = find(strcmpi(state_order, 'Start'));
         ellip_idx = find(strcmpi(state_order, 'Elliptical'));
-        % assym_idx = find(strcmpi(state_order, 'Asymmetric'));
         right_assym_idx = find(strcmpi(state_order, 'Right Asymmetric'));
         left_assym_idx = find(strcmpi(state_order, 'Left Asymmetric'));
-        bilat_idx = find(strcmpi(state_order, 'Bilateral'));
         ellip_right_idx = find(strcmpi(state_order, 'Elliptical Right'));
         ellip_left_idx = find(strcmpi(state_order, 'Elliptical Left'));
-        % ellip_assym_idx = find(strcmpi(state_order, 'Elliptical Asymmetric'));
-        uni_idx = find(strcmpi(state_order, 'Unilateral'));
         right_idx = find(strcmpi(state_order, 'Right'));
         left_idx = find(strcmpi(state_order, 'Left'));
         stop_idx =  find(strcmpi(state_order, 'Stop'));
@@ -413,24 +388,16 @@ function [y,x] = set_xy_states(last_state, current_state, state_order)
                 case 'Elliptical'
                     y = ellip_idx;
                 case 'Right Asymmetric' 
-                    % y = assym_idx;
                     y = right_assym_idx;
                 case 'Left Asymmetric'
-                    % y = assym_idx;
                     y = left_assym_idx;
                 case 'Elliptical Right'
-                    % y = ellip_assym_idx;
                     y = ellip_right_idx;
                 case 'Elliptical Left'
-                    % y = ellip_assym_idx;
                     y = ellip_left_idx;
-                case 'Large Bilateral'
-                    y = bilat_idx;
                 case 'Right' 
-                    % y = uni_idx;
                     y = right_idx;
                 case 'Left'
-                    % y = uni_idx;
                     y = left_idx;
                 case 'Stop'
                     y = stop_idx;
@@ -443,24 +410,16 @@ function [y,x] = set_xy_states(last_state, current_state, state_order)
                 case 'Elliptical'
                     x = ellip_idx;
                 case 'Right Asymmetric' 
-                    % x = assym_idx;
                     x = right_assym_idx;
                 case 'Left Asymmetric'
-                    % x = assym_idx;
                     x = left_assym_idx;
                 case 'Elliptical Left'
-                    % x = ellip_assym_idx;
                     x = ellip_left_idx;
                 case 'Elliptical Right'
-                    % x = ellip_assym_idx;
                     x = ellip_right_idx;
-                case 'Large Bilateral'
-                    x = bilat_idx;
                 case 'Right' 
-                    % x = uni_idx;
                     x = right_idx;
                 case 'Left'
-                    % x = uni_idx;
                     x = left_idx;
                 case 'Stop'
                     x = stop_idx;

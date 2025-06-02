@@ -56,16 +56,14 @@ for j = 1:length(expts_to_analyze)+1
                 mvt{i} = mvt{i}(1:min_trial_length);
                 mvtOn{i} = mvtOn{i}(1:min_trial_length);
                 lick_start{i} = lick_start{i}(1:min_trial_length);
-                lick_timer{i} = lick_timer{i}(1:min_trial_length);
                 lick_rate{i} = lick_rate{i}(1:min_trial_length);
             end
             Vmaster = catcell(2, Vmaster);
             mvt = catcell(1, mvt);
             mvtOn = catcell(1, mvtOn)';
             lick_start = catcell(1, lick_start);
-            lick_timer = catcell(1, lick_timer);
-            lick_rate = catcell(1,lick_rate);
-%             new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
+            lick_rate = catcell(1, lick_rate);
+
 
 % commented for speed
             % ridge here
@@ -82,12 +80,7 @@ for j = 1:length(expts_to_analyze)+1
             % Peri-Stimulus events: 
             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3], opts);
             regLabels = {'Movement', 'Lick'}; %some movement variables
-%             regLabels = {'Movement', 'Lick', 'LickRate'}; %some movement variables
-%             [dMat, regIdx] = makeDesignMatrix(regressor_mat, [3, 3, 1], opts);
-%             regLabels = {'Movment', 'Lick', 'Trial'}; %some movement variables
-%             fullR = [dMat lick_rate];
             fullR = [dMat];
-%             regIdx = [regIdx; max(regIdx)+1];
 
             
             disp('Running ridge regression with 10-fold cross-validation')
@@ -134,7 +127,6 @@ for j = 1:length(expts_to_analyze)+1
                 yticks([])
             end
 
-
             savefig(gcf, [fPath 'drinking_summary.fig'])
 % commented for speed ^^
 
@@ -156,14 +148,10 @@ for j = 1:length(expts_to_analyze)+1
         count = 1;
         disp('Loading master basis set')
         load([mouse_root_dir filesep 'Umaster.mat'])
-%         new_trial = repmat([1 zeros(1, min_trial_length-1)], 1, num_trials);
         clear Vmaster mvtOn lick_start lick_timer lick_rate mvt 
         current_mouse = mouse_id;
         load([mouse_root_dir filesep 'mask.mat'])
 
-        %     %% draw mask - might be needed for memory management
-        %     frame = loadtiff(frame_file);
-        %     mask = draw_roi(frame, 4);
     else
         fPath = [mouse_root_dir filesep 'outputs' filesep];
     end
@@ -222,7 +210,6 @@ for j = 1:length(expts_to_analyze)+1
     all_movement = sqrt(fl_l.^2 + fl_r.^2 + hl_l.^2 + hl_r.^2 + snout.^2 + tailbase.^2);
     mov = resample(all_movement, size(Vmaster{count},2), length(all_movement));
     mvt{count} = mov > mean(mov) + std(mov);
-%     k = 10;
     mvtOn{count} = get_on_time(mvt{count});
 
     disp('Reading BORIS')
@@ -230,13 +217,8 @@ for j = 1:length(expts_to_analyze)+1
     lick = zeros(size(mvtOn{count}));
     lick(b_idx{1}(:,1)) = 1;
     lick_rate{count} = movsum(lick, fs);
-    % lick_start{count}(b_idx{1}(:,1)) = 1;
     lick_start{count} = lick;
-    [~, lick_timer{count}] = start_timer(lick, k, fs);
 
-%     lick_duration = b_idx{1}(end,end)-b_idx{1}(1,1);
-%     lick_timer{count} = zeros(size(mvtOn{count}));
-%     lick_timer{count}(b_idx{1}(1,1):b_idx{1}(end,end)) = 1:lick_duration+1;
 
     count = count + 1;
 
@@ -341,7 +323,7 @@ for i = 1:length(data_list)
 
 end
 
-exportgraphics(gcf, fix_path([fPath, filesep, 'drinking_lick_dcvr2_contours.png']), 'Resolution', 300)
+% exportgraphics(gcf, fix_path([fPath, filesep, 'drinking_lick_dcvr2_contours.png']), 'Resolution', 300)
 
 
 %% plot contours for move dcvr2
@@ -380,7 +362,7 @@ for i = 1:length(data_list)
 
 end
 
-exportgraphics(gcf, fix_path([fPath, filesep, 'drinking_move_dcvr2_contours.png']), 'Resolution', 300)
+% exportgraphics(gcf, fix_path([fPath, filesep, 'drinking_move_dcvr2_contours.png']), 'Resolution', 300)
 
 
 %% Plot example trials
@@ -416,7 +398,7 @@ for i = 1:num_trials
     
 end
 
-saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'drinking_4trials.svg']))
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'drinking_4trials.svg']))
 %% Plot lick rates for trial structure figure.
 % Use just the example mouse since others have variable durations
 
@@ -437,8 +419,6 @@ ylabel('Licks per second')
 %% Plot the averaged dFF map
 figure
 h = openfig('Y:\pankaj\closedloop_rig5_data\HYL3_tta_drinking\outputs\average_licking_map.fig')
-taetae
-% lick_map = 
 colormap parula
 
 
@@ -500,7 +480,7 @@ t = xt(tmp, 30, 1)-0.5;
 plot(t, tmp)
 line([t(1) t(end)], [0 0], 'Color', [0 0 0])
 vline([0 0.5 1], {'k', 'k', 'k'})
-saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'drinking_betas_timeseries.svg']))
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'drinking_betas_timeseries.svg']))
 
 %% movement betas
 visual = false;
@@ -538,60 +518,9 @@ t = xt(tmp, 30, 1)-0.5;
 plot(t, tmp)
 line([t(1) t(end)], [0 0], 'Color', [0 0 0])
 vline([0 0.5 1], {'k', 'k', 'k'})
-saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'drinking_movement_betas_timeseries.svg']))
+% saveas(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'drinking_movement_betas_timeseries.svg']))
 
 
-%%
-% figure
-fs = 90;
-fullLabels
-for i = 14
-    
-    test = reshape(Umaster*fullBeta{1}(fullIdx==i,:)', 128, 128, []);
-    indices = floor(1:fs/4:size(test,3));
-    if size(test,3)>1
-        figure, imagesc(imtile(test.*mask, 'Frames', indices, 'GridSize', [1 length(indices)]))
-        yticks([]);
-        xticks((128:256:11*256)/2)
-        xticklabels(-0.5:0.25:2)
-        caxis([-max(abs(clim)) max(abs(clim))]);
-        colormap(bluewhitered())
-        c=colorbar;
-        c.Label.String = 'Beta';
-        c.FontSize = 12;
-        xlabel('Time (s)')
-    else
-        figure, imagesc(test.*mask)
-        xticks([])
-        yticks([])
-        caxis([-max(abs(clim)) max(abs(clim))]);
-        colormap(bluewhitered())
-        c=colorbar;
-        c.Label.String = 'Beta';
-        c.FontSize = 14;
-    end
-end
-
-
-%%
-
-
-figure, plot(xt(lick_start, fs), lick_start*50, 'm')
-hold on,
-test = reshape(Umaster*Vmaster, 128, 128, []);
-plot(xt(lick_start, fs), squeeze(mean(test, [1 2])),'k', 'LineWidth', 1)
-xlabel('Time (s)')
-axis tight
-%%
-%  start_timer(lick, k, fs)
-test = aggregate(lick, k, fs)
-%%
-
-fs = 30;
-k = 0.2;
-[start_idx, b_timer] = start_timer(test, k, fs);
-
-%%
 
 function new_dat = get_on_time(data)
 new_dat = zeros(size(data));
@@ -599,23 +528,5 @@ d = diff(data);
 t_on = find(d>0)+ 1;
 
 new_dat(t_on) = 1;
-
-end
-
-function [start_idx, behavior_timer] = start_timer(data, k, fs)
-% takes a binary event vector (data) and aggregation window size (k)
-% aggregates all behavior events and creates a linear ramp
-% also outputs start of each aggregated behavior session
-
-
-idx = arr2idx(aggregate(data, k, fs));
-start_idx = zeros(size(data));
-start_idx(idx(:,1)) = 1;
-
-behavior_timer = zeros(size(data));
-for i = 1:size(idx,1)
-    tmp = 1:(idx(i,2)-idx(i,1))+1;
-    behavior_timer(idx(i,1):idx(i,2)) = tmp;
-end
 
 end

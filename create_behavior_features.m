@@ -1,23 +1,5 @@
 % Make behavior features for UMAP representation
 %
-% 1) Read boris behavior events
-% 2) Read deeplabcut file
-% 3) Create NxM feature matrix, where N is number of facial grooming
-% strokes and M is number of features
-% 4) Create Nx1 label matrix
-% 5) Compute UMAP on behavior feature matrix color-coded by manual labels
-%
-% Features to use:
-%   Duration (num frames)
-%   Interspersed with lick (0 or 1)
-%   Depth in chain (0 to n) ??
-%   Left paw Ymax / Right paw Ymax (ratio)
-%   Paw starting position relative to nose
-%       Left,   x
-%       Left,   y
-%       Right,  x
-%       Right,  y
-%   
 
 
 
@@ -34,13 +16,7 @@ end
 
 formatSpec = '%s';
 data_list = textscan(fileID, formatSpec);
-mp_list1 = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
-    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
-    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
-    };
-mp_list2 = {'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240729'; ...
-    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
-    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802'};
+
 
 mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
     'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903'; ...
@@ -54,7 +30,7 @@ mp_list = {'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925'; ...
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 data_list{1} = [data_list{1}; mp_list];
-% data_list{1} = mp_list;
+
 current_mouse = '';
 
 fs = 90 ;
@@ -197,29 +173,7 @@ for j = 1:length(data_list{1})%mp_idx %23:length(data_list{1})+1
     fll_vx = dlc_vel(:,7);
     fll_vy = dlc_vel(:,8);
 
-    %%
-    % figure
-    % for i = 1:size(stroke_events,2)
-    %     tmp = logical(table2array(stroke_events(:,i)));
-    %     subplot(1,7,i), hold on
-    %     plot(flr_x(tmp), -flr_y(tmp))
-    %     plot(fll_x(tmp), -fll_y(tmp))
-    %     axis([200 450 -250 0])
-    %     title(stroke_events.Properties.VariableNames{i})
-    % end
 
-
-%%
-
-%   Duration (num frames)
-%   Interspersed with lick (0 or 1)
-%   Depth in chain (0 to n) ??
-%   Left paw Ymax / Right paw Ymax (ratio)
-%   Paw starting position relative to nose
-%       Left,   x
-%       Left,   y
-%       Right,  x
-%       Right,  y
 
     %% 
 
@@ -349,10 +303,6 @@ for j = 1:length(data_list{1})%mp_idx %23:length(data_list{1})+1
     end
 
 end
-
-% TO DO: compute instantaneous rate for behaviors
-% direction at max speed
-
 
 
 %%

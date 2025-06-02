@@ -174,16 +174,6 @@ for j = 1:length(data_list{1})+1
     
     clear dlc_speed fll_speed flr_speed
 
-    % get ROIs - seeds are in atlas coords
-    [seeds, labels] = get_seeds();
-
-    % use these vars to find contiguous stretch of stationary behavior
-    % which is same duration as grooming- we will overwrite tmp in the loop
-    % starting with longest grooming behavior first, so we avoid choosing
-    % same time
-    any_behavior = any([bmat, LeftMove, RightMove], 2);
-    tmp = any_behavior;
-
     for i = 1:size(idx,1)
         % crop data frames to include rest frames before and after grooming
         % episodes
@@ -194,25 +184,17 @@ for j = 1:length(data_list{1})+1
     
             % get into atlas coords
             dFF_crop = imwarp(dFF_crop, atlas_tform.tform, 'interp', 'nearest', 'OutputView', imref2d(size(dorsalMaps.dorsalMapScaled)), 'FillValues', nan);
-            ts = getTimeseries(dFF_crop, seeds, 2);
     
             % set windows
             prewin = 1:round(blen*fs);
             earlywin = round(blen*fs)+1:2*round(blen*fs);
-            latewin = size(ts,1)-2*round(blen*fs):size(ts,1)-round(blen*fs);
-            postwin = size(ts,1)-round(blen*fs)+1:size(ts,1);
+            latewin = size(dFF_crop,3)-2*round(blen*fs):sizesize(dFF_crop,3)-round(blen*fs);
+            postwin = size(dFF_crop,3)-round(blen*fs)+1:sizesize(dFF_crop,3);
     
-            % pre_corrmat{j}(:,:,i) = corrcoef(ts(prewin, :));
-            % early_corrmat{j}(:,:,i) = corrcoef(ts(earlywin, :));
-            % late_corrmat{j}(:,:,i) = corrcoef(ts(latewin, :));
-            % post_corrmat{j}(:,:,i) = corrcoef(ts(postwin, :));
-    
-            global_signal{j}{i,:} = squeeze(mean(dFF_crop, [1 2], 'omitnan'));
-            roi_signal{j}{i} = ts;
-    
+            global_signal{j}{i,:} = squeeze(mean(dFF_crop, [1 2], 'omitnan'));  
     
             % find a period of time that is equal in length with no activity
-            groom_dur{j}(i) = size(ts,1)*fs - 2*round(blen*fs);
+            groom_dur{j}(i) = size(dFF_crop,3)*fs - 2*round(blen*fs);
 
             % get behavior ethogram data
             eth_states{j}{i} = eth_events(tmp_idx(i,1):tmp_idx(i,2), :);
@@ -240,17 +222,11 @@ end
 % end
 
 
-
-
-
-
-
 %%
-% clc
-% 7 2
-% 4 1
+% examples
 didx = 7;
 sidx = 2;
+
 figure('Position', [186 304 1399 562])
 states = ["Start", "Right", "Left", "Elliptical", ...
     "Right Asymmetric", "Left Asymmetric", ...
@@ -344,10 +320,8 @@ line([0 0], ylim, 'Color', [0 0 0], 'LineWidth', 2)
 %%
 t = xt(mat_global, fs, 2)-5;
 t_pre = t<=0;
-% t_on = abs(t)<=1;
 t_early = t>0 & t<=5;
 dff_pre = mean(mat_global(:, t_pre), 2, 'omitnan');
-% dff_on = mean(mat_global(:, t_on), 2, 'omitnan');
 dff_early = mean(mat_global(:,t_early), 2, 'omitnan');
 
 
@@ -356,8 +330,6 @@ for i = 1:length(all_dur)
     t_late = t_late_idx - blen*fs;
     dff_late(i) = mean(mat_global(i, t_late:end), 'omitnan');
 end
-% t_late = t>5;
-% dff_late = mean(mat_global(:,t_late), 2, 'omitnan');
 
 
 plot_data = [dff_pre, dff_early, dff_late'];
@@ -370,8 +342,6 @@ ax = gca;
 ax.FontSize = 14;
 
 
-% [p,~,stats] = anova1([dff_on, dff_early, dff_late])
-% [c,m,h,gnames] = multcompare(stats);
 
 clc
 % Create a table with the data
@@ -400,12 +370,6 @@ for i = 1:length(all_global)
     t = xt(X, fs, 1);
     avg_slope(i,:) = polyfit(t, X, 1);
     
-    % figure, plot(t, X)
-    % f = fit(t,X,'exp1')
-    % hold on, plot(t, f)
-    % hfdhd
-    % linslope(i) = p(1);
-    % disp(p)
 end
 close all
 figure, boxplot(avg_slope(:,1), 'Colors', 'k', 'Symbol', '')
@@ -463,13 +427,6 @@ line([400 400+scalebar_length], [520 520], 'Color', [0 0 0], 'LineWidth', 2)
 
 %%
 exportgraphics(gcf, fix_path(['Y:\nick\behavior\grooming\figures\', 'example1pimage.png']), 'Resolution', 300)
-
-
-
-
-%%
-
-
 
 
 
