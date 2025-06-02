@@ -6,19 +6,6 @@ addpath('C:\Users\user\Documents\Nick\grooming\utils')
 
 formatSpec = '%s';
 
-% mp_list = {
-%     'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240802';
-%     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240729';
-%     'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
-
-
-mp_list = {'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240731';
-    'Y:\nick\behavior\grooming\2p\ECL3_thy1\20240802';
-    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240729';
-    'Y:\nick\behavior\grooming\2p\IDR3_tTA6s\20240731';
-    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231113155903';
-    'Y:\nick\behavior\grooming\2p\ETR3_thy1\20231115174148';
-    'Y:\nick\behavior\grooming\2p\RR3_tTA8s\20240802'};
 
 
 mp_list = {%'Y:\nick\behavior\grooming\2p\ETR2_thy1\20231113143925';

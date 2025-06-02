@@ -221,7 +221,7 @@ for j = 1:N
         bmat = any(table2array(stroke_events),2);
         % snippets = arr2idx(bmat);
     else 
-        
+        continue;
         [snippets, labels] = parse_snippets(snippets_dir);
 
         % remove licks
