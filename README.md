@@ -31,7 +31,7 @@ This code is available under a Creative Commons Attribution 4.0 International (C
 
 	This analysis uses code provided by the Churchland lab here: https://github.com/musall/ridgeModel
 
-3. Recommended citation for this dataset: 
+3. Recommended citation for this code: 
 
 
     
