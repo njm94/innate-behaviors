@@ -3,7 +3,7 @@
 clc, clear, close all
 fileID = fopen('expt1_datalist.txt','r');
 addpath('C:\Users\user\Documents\Nick\grooming\utils')
-
+addpath(genpath('/home/user/Documents/grooming/utils'))
 formatSpec = '%s';
 
 
@@ -26,7 +26,7 @@ cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clust
 
 fs = 90;
 aggregation_sz = 3; % window of time to aggregate behaviors
-addpath(genpath('/home/user/Documents/grooming/utils'))
+
 try load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
 catch
     load('/home/user/Documents/grooming/utils/allen_map/allenDorsalMap.mat');
@@ -313,6 +313,8 @@ ylabel('# Neurons')
 legend({'All neurons', 'Grooming neurons', ''}, 'Location', 'Best')
 gg.Parent.FontSize = 12;
 
+% for stats comparison, remove the grooming population from rest of
+% neuronal population
 ncorr2 = ncorr;
 for i = 1:length(gcorr)
     ncorr2(find(ncorr2==gcorr(i),1))=[];
@@ -607,6 +609,7 @@ cluster_data = fix_path('Y:\nick\behavior\grooming\20241114092737_behavior_clust
 dmetric = 'cosine';
 
 addpath(genpath('C:\Users\user\Documents\Nick\grooming\utils'))
+addpath(genpath('/home/user/Documents/grooming/utils'))
 try load('C:\Users\user\Documents\Nick\grooming\utils\allen_map\allenDorsalMap.mat');
 catch
     load('/home/user/Documents/grooming/utils/allen_map/allenDorsalMap.mat');
@@ -614,7 +617,7 @@ end
 
 fs = 90;
 include_boris = true;
-%%
+
 
 %%
 
@@ -664,7 +667,6 @@ for i = 1:length(mp_list)
 
     end
     total_neurons = total_neurons + length(x3);
-    figure(1), scatter(x3, y3, 'k.')
 
     %%
     % Load BORIS file
@@ -703,22 +705,6 @@ for i = 1:length(mp_list)
     Bmean = cat(2, Bmean, mean(Nresample(:, logical(fllthresh)),2));
     labs = [labs, 'FLR', 'FLL'];
 
-    %%
-    figure, hold on
-    for j = 1:size(event_table,2)
-        tmp = corr(event_table(:,j), Nresample');
-        plot(sort(tmp))
-    end
-    legend(labs, 'Location', 'Best')
-
-
-    t = xt(Nresample, fs, 2);
-    figure, hold on
-    for j = 1:size(event_table,2)
-%         subplot(size(event_table,2),1,j)
-        [tmp, I] = sort(corr(event_table(:,j), Nresample'));
-        plot(t,zscore(Nresample(I(end),:))-j*5)
-    end
 
     %% 
     eth_table = array2table(event_table, 'VariableNames', labs(1:size(event_table,2)));
@@ -795,11 +781,12 @@ end
 
 %%
 
-
+% trueM is the cluster results on the data averaged across all mice
 dat = mean(sim_matrix,3,'omitnan');
-
-
 [trueM,Q]=community_louvain(dat);
+
+% M is the cluster results on the data for individual mice
+% ari is the adjusted rand index between each mouse's clusters and averaged
 count = 1;
 clear M ari
 for i = 1:size(sim_matrix,3)
