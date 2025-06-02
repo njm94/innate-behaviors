@@ -27,9 +27,9 @@ This code is available under a Creative Commons Attribution 4.0 International (C
 
 2. Links/relationships to ancillary data sets or software packages: 
 
-	The data used in the analysis can be found here: https://osf.io/fa2ut/
+		The data used in the analysis can be found here: https://osf.io/fa2ut/
 
-	This analysis makes use of some of the functions from another repository found here: https://github.com/musall/ridgeModel
+		This analysis makes use of some of the functions from another repository found here: https://github.com/musall/ridgeModel
 
 3. Recommended citation for this dataset: 
 
