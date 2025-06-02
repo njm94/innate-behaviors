@@ -29,7 +29,7 @@ This code is available under a Creative Commons Attribution 4.0 International (C
 
 	The data used in the analysis can be found here: https://osf.io/fa2ut/
 
-	This analysis uses some of the code provided by the Churchland lab here: https://github.com/musall/ridgeModel
+	This analysis uses code provided by the Churchland lab here: https://github.com/musall/ridgeModel
 
 3. Recommended citation for this dataset: 
 
