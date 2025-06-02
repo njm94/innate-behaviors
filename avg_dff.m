@@ -152,12 +152,6 @@ for j = 1:length(data_list{1})+1
     LeftMove = fll_speed > mean(fll_speed) + std(fll_speed);
     RightMove = flr_speed >  mean(flr_speed) + std(flr_speed);
 
-    % LeftMove = aggregate(fll_speed, )
-    
-    % k = 35; % smoothing kernel - this matches smoothing kernel in grooming detection but may need to change
-    % LeftMove= movmax(fll_speed, k);
-    % RightMove= movmax(flr_speed, k);
-
     clear dlc_speed fll_speed flr_speed
 
     %% load stimulus info from timestamp file
